@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openhexa.toolbox"
+version = "0.1"
+description = "A set of tools to acquire & process data from various sources"
+# authors = [
+#     { name = "Bluesquare", email = "dev@bluesquarehub.com"}
+# ]
+# maintainers = [
+#     { name = "Bluesquare", email = "dev@bluesquarehub.com" }
+# ]
+license = { file = "LICENSE" }
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+requires-python = ">=3.8"
+dependencies = [
+    "requests",
+    "cdsapi",
+    "numpy",
+    "rasterio",
+    "xarray",
+    "python-dateutil",
+    "sqlalchemy",
+    "openhexa.sdk",
+    "fsspec",
+    "s3fs",
+    "gcsfs",
+    "shapely",
+    "netCDF4",
+    "pandas",
+    "polars",
+    "geopandas"
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["openhexa"]
+namespaces = true
+
+[tool.setuptools]
+py-modules = []
+
+[project.urls]
+"Homepage" = "https://github.com/blsq/openhexa-toolbox"
+"Bug Tracker" = "https://github.com/blsq/openhexa-toolbox/issues"
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
