@@ -23,10 +23,10 @@ def use_cache(key: str):
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if not args[0].cache_dir:
+            if not args[0].client.cache_dir:
                 return func(*args, **kwargs)
             else:
-                with Cache(args[0].cache_dir) as cache:
+                with Cache(args[0].client.cache_dir) as cache:
                     if key in cache:
                         return json.loads(cache.get(key))
                     else:
@@ -53,12 +53,18 @@ class DHIS2:
         """
         self.api = Api(connection)
         self.cache_dir = self.setup_cache(cache_dir)
+        self.meta = Metadata(self)
 
     def setup_cache(self, cache_dir: str):
         """Initialize diskcache."""
         cache_dir = os.path.join(cache_dir, urlparse(self.api.url).netloc)
         os.makedirs(cache_dir, exist_ok=True)
         return cache_dir
+
+
+class Metadata:
+    def __init__(self, client: DHIS2):
+        self.client = client
 
     @use_cache("organisation_unit_levels")
     def organisation_unit_levels(self) -> List[dict]:
@@ -69,7 +75,7 @@ class DHIS2:
         list of dict
             Id, number and name of each org unit level.
         """
-        r = self.api.get("filledOrganisationUnitLevels")
+        r = self.client.api.get("filledOrganisationUnitLevels")
         levels = []
         for level in r.json():
             levels.append(
@@ -91,7 +97,7 @@ class DHIS2:
             Id, name, level, path and geometry of all org units.
         """
         org_units = []
-        for page in self.api.get_paged(
+        for page in self.client.api.get_paged(
             "organisationUnits",
             params={"fields": "id,name,level,path,geometry"},
             page_size=1000,
@@ -121,7 +127,7 @@ class DHIS2:
             Id, name, and org units of all org unit groups.
         """
         org_unit_groups = []
-        for page in self.api.get_paged(
+        for page in self.client.api.get_paged(
             "organisationUnitGroups",
             params={"fields": "id,name,organisationUnits"},
             page_size=50,
@@ -150,7 +156,7 @@ class DHIS2:
             Id, name, data elements, indicators and org units of all datasets.
         """
         datasets = []
-        for page in self.api.get_paged(
+        for page in self.client.api.get_paged(
             "dataSets",
             params={
                 "fields": "id,name,dataSetElements,indicators,organisationUnits",
@@ -177,7 +183,7 @@ class DHIS2:
             Id, name, and aggregation type of all data elements.
         """
         elements = []
-        for page in self.api.get_paged(
+        for page in self.client.api.get_paged(
             "dataElements",
             params={"fields": "id,name,aggregationType,zeroIsSignificant"},
             page_size=1000,
@@ -195,7 +201,7 @@ class DHIS2:
             Id, name and data elements of all data element groups.
         """
         de_groups = []
-        for page in self.api.get_paged(
+        for page in self.client.api.get_paged(
             "dataElementGroups",
             params={"fields": "id,name,dataElements"},
             page_size=50,
@@ -222,7 +228,7 @@ class DHIS2:
             Id and name of all category option combos.
         """
         combos = []
-        for page in self.api.get_paged(
+        for page in self.client.api.get_paged(
             "categoryOptionCombos", params={"fields": "id,name"}, page_size=1000
         ):
             combos += page.json().get("categoryOptionCombos")
@@ -238,7 +244,7 @@ class DHIS2:
             Id, name, numerator and denominator of all indicators.
         """
         indicators = []
-        for page in self.api.get_paged(
+        for page in self.client.api.get_paged(
             "indicators",
             params={"fields": "id,name,numerator,denominator"},
             page_size=1000,
@@ -256,7 +262,7 @@ class DHIS2:
             Id, name and indicators of all indicator groups.
         """
         ind_groups = []
-        for page in self.api.get_paged(
+        for page in self.client.api.get_paged(
             "indicatorGroups",
             params={"fields": "id,name,indicators"},
             page_size=50,
