@@ -12,6 +12,11 @@ from .api import Api
 
 
 def use_cache(key: str):
+    """Use sqlite-based diskcache.
+
+    Return json response as a dict if cache is hit. If not, store the response in cache.
+    """
+
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -33,16 +38,34 @@ def use_cache(key: str):
 
 class DHIS2:
     def __init__(self, connection: DHIS2Connection, cache_dir: str = None):
+        """Initialize a new DHIS2 instance.
+
+        Parameters
+        ----------
+        connection : openhexa DHIS2Connection
+            An initialized openhexa dhis2 connection
+        cache_dir : str, optional
+            Cache directory. Actual cache data will be stored under a sub-directory
+            named after the DHIS2 instance domain.
+        """
         self.api = Api(connection)
         self.cache_dir = self.setup_cache(cache_dir)
 
     def setup_cache(self, cache_dir: str):
+        """Initialize diskcache."""
         cache_dir = os.path.join(cache_dir, urlparse(self.api.url).netloc)
         os.makedirs(cache_dir, exist_ok=True)
         return cache_dir
 
     @use_cache("organisation_unit_levels")
     def organisation_unit_levels(self) -> List[dict]:
+        """Get names of all organisation unit levels.
+
+        Return
+        ------
+        list of dict
+            Id, number and name of each org unit level.
+        """
         r = self.api.get("filledOrganisationUnitLevels")
         levels = []
         for level in r.json():
@@ -57,6 +80,13 @@ class DHIS2:
 
     @use_cache("organisation_units")
     def organisation_units(self) -> List[dict]:
+        """Get organisation units metadata.
+
+        Return
+        ------
+        list of dict
+            Id, name, level, path and geometry of all org units.
+        """
         org_units = []
         for page in self.api.get_paged(
             "organisationUnits",
@@ -80,6 +110,13 @@ class DHIS2:
 
     @use_cache("organisation_unit_groups")
     def organisation_unit_groups(self) -> List[dict]:
+        """Get organisation unit groups metadata.
+
+        Return
+        ------
+        list of dict
+            Id, name, and org units of all org unit groups.
+        """
         org_unit_groups = []
         for page in self.api.get_paged(
             "organisationUnitGroups",
@@ -102,6 +139,13 @@ class DHIS2:
 
     @use_cache("datasets")
     def datasets(self) -> List[dict]:
+        """Get datasets metadata.
+
+        Return
+        ------
+        list of dict
+            Id, name, data elements, indicators and org units of all datasets.
+        """
         datasets = []
         for page in self.api.get_paged(
             "dataSets",
@@ -122,6 +166,13 @@ class DHIS2:
 
     @use_cache("data_elements")
     def data_elements(self) -> List[dict]:
+        """Get data elements metadata.
+
+        Return
+        ------
+        list of dict
+            Id, name, and aggregation type of all data elements.
+        """
         elements = []
         for page in self.api.get_paged(
             "dataElements",
@@ -133,6 +184,13 @@ class DHIS2:
 
     @use_cache("data_element_groups")
     def data_element_groups(self) -> List[dict]:
+        """Get data element groups metadata.
+
+        Return
+        ------
+        list of dict
+            Id, name and data elements of all data element groups.
+        """
         de_groups = []
         for page in self.api.get_paged(
             "dataElementGroups",
@@ -153,6 +211,13 @@ class DHIS2:
 
     @use_cache("category_option_combos")
     def category_option_combos(self) -> List[dict]:
+        """Get category option combos metadata.
+
+        Return
+        ------
+        list of dict
+            Id and name of all category option combos.
+        """
         combos = []
         for page in self.api.get_paged(
             "categoryOptionCombos", params={"fields": "id,name"}, page_size=1000
@@ -162,6 +227,13 @@ class DHIS2:
 
     @use_cache("indicators")
     def indicators(self) -> List[dict]:
+        """Get indicators metadata.
+
+        Return
+        ------
+        list of dict
+            Id, name, numerator and denominator of all indicators.
+        """
         indicators = []
         for page in self.api.get_paged(
             "indicators",
@@ -173,6 +245,13 @@ class DHIS2:
 
     @use_cache("indicatorGroups")
     def indicator_groups(self) -> List[dict]:
+        """Get indicator groups metadata.
+
+        Return
+        ------
+        list of dict
+            Id, name and indicators of all indicator groups.
+        """
         ind_groups = []
         for page in self.api.get_paged(
             "indicatorGroups",
@@ -185,7 +264,7 @@ class DHIS2:
                     {
                         "id": group.get("id"),
                         "name": group.get("name"),
-                        "data_elements": [ou.get("id") for ou in group["indicators"]],
+                        "indicators": [ou.get("id") for ou in group["indicators"]],
                     }
                 )
             ind_groups += groups
