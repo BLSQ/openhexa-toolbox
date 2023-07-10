@@ -3,12 +3,15 @@ import os
 from functools import wraps
 from typing import Callable, List
 from urllib.parse import urlparse
+import logging
 
 from diskcache import Cache
 
 from openhexa.sdk.workspaces.connection import DHIS2Connection
 
 from .api import Api
+
+logger = logging.getLogger(__name__)
 
 
 def use_cache(key: str):
