@@ -4,12 +4,14 @@ from functools import wraps
 from typing import Callable, List
 from urllib.parse import urlparse
 import logging
+import datetime
+import itertools
 
 from diskcache import Cache
 
 from openhexa.sdk.workspaces.connection import DHIS2Connection
 
-from .api import Api
+from .api import Api, DHIS2Error
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +54,11 @@ class DHIS2:
             named after the DHIS2 instance domain.
         """
         self.api = Api(connection)
+        self.info = self.system_info()
+        self.version = self.info.get("version")
         self.cache_dir = self.setup_cache(cache_dir)
         self.meta = Metadata(self)
+        self.data_value_sets = DataValueSets(self)
 
     def setup_cache(self, cache_dir: str):
         """Initialize diskcache."""
@@ -61,9 +66,16 @@ class DHIS2:
         os.makedirs(cache_dir, exist_ok=True)
         return cache_dir
 
+    @use_cache("system-info")
+    def system_info(self) -> dict:
+        """Get information on the current system."""
+        r = self.api.get("system/info")
+        return r.json()
+
 
 class Metadata:
     def __init__(self, client: DHIS2):
+        """Methods for accessing metadata API endpoints."""
         self.client = client
 
     @use_cache("organisation_unit_levels")
@@ -277,3 +289,137 @@ class Metadata:
                     }
                 )
             ind_groups += groups
+
+
+class DataValueSets:
+    def __init__(self, client: DHIS2):
+        """Methods for the dataValueSets API endpoint."""
+        self.client = client
+        self.MAX_DATA_ELEMENTS = 50
+        self.MAX_ORG_UNITS = 50
+        self.MAX_PERIODS = 1
+
+    @staticmethod
+    def split_list(src_list: list, length: int) -> List[list]:
+        """Split list into chunks."""
+        for i in range(0, len(src_list), length):
+            yield src_list[i : i + length]
+
+    def split_params(self, params: dict) -> List[dict]:
+        """Split request parameters into chunks.
+
+        We try to chunk on three distinct parameters: period, orgUnit and dataElement -
+        as they are usually the largest ones. NB: all of these parameters are optional.
+        """
+        params_to_chunk = []
+        for param, max_length in zip(
+            ["period", "orgUnit", "dataElement"],
+            [self.MAX_PERIODS, self.MAX_ORG_UNITS, self.MAX_DATA_ELEMENTS],
+        ):
+            if params.get(param):
+                params_to_chunk.append((param, max_length))
+
+        if not params_to_chunk:
+            return [params]
+
+        chunks = []
+        for chunk in itertools.product(
+            *[
+                self.split_list(params.get(param), max_length)
+                for param, max_length in params_to_chunk
+            ]
+        ):
+            p = params.copy()
+            for i, (param, _) in enumerate(params_to_chunk):
+                p[param] = chunk[i]
+            chunks.append(p)
+
+        return chunks
+
+    def get(
+        self,
+        data_elements: List[str] = None,
+        datasets: List[str] = None,
+        data_element_groups: List[str] = None,
+        periods: List[str] = None,
+        start_date: str = None,
+        end_date: str = None,
+        org_units: List[str] = None,
+        org_unit_groups: List[str] = None,
+        children: bool = False,
+        attribute_option_combos: List[str] = None,
+        last_updated: str = None,
+        last_updated_duration: str = None,
+    ) -> List[dict]:
+        """Retrieve data values through the dataValueSets API resource.
+
+        Parameters
+        ----------
+        data_elements : list of str, optional
+            Data element identifiers (requires DHIS2 >= 2.39)
+        datasets : str, optional
+            Dataset identifiers
+        data_element_groups : str, optional
+            Data element groups identifiers
+        periods : list of str, optional
+            Period identifiers in ISO format
+        start_date : str, optional
+            Start date for the time span of the values to export
+        end_date : str, optional
+            End date for the time span of the values to export
+        org_units : list of str, optional
+            Organisation units identifiers
+        org_unit_groups : list of str, optional
+            Organisation unit groups identifiers
+        children : bool, optional (default=False)
+            Whether to include the children in the hierarchy of the organisation units
+        attribute_option_combos : list of str, optional
+            Attribute option combos identifiers
+        last_updated : str, optional
+            Include only data values which are updated since the given time stamp
+        last_updated_duration : str, optional
+            Include only data values which are updated within the given duration. The
+            format is <value><time-unit>, where the supported time units are "d" (days),
+            "h" (hours), "m" (minutes) and "s" (seconds).
+
+        Return
+        ------
+
+        """
+        what = data_elements or datasets or data_element_groups
+        where = org_units or org_unit_groups
+        when = (start_date and end_date) or periods
+        if not what:
+            raise DHIS2Error("No data dimension provided")
+        if not where:
+            raise DHIS2Error("No spatial dimension provided")
+        if not when:
+            raise DHIS2Error("No temporal dimension provided")
+
+        if data_elements and not self.client.version >= 2.39:
+            raise DHIS2Error(
+                "Data elements parameter not supported for DHIS2 versions < 2.39"
+            )
+
+        params = {
+            "dataElement": data_elements,
+            "dataSet": datasets,
+            "dataElementGroup": data_element_groups,
+            "period": periods,
+            "startDate": start_date,
+            "endDate": end_date,
+            "orgUnit": org_units,
+            "orgUnitGroup": org_unit_groups,
+            "children": children,
+            "attributeOptionCombo": attribute_option_combos,
+            "last_updated": last_updated,
+            "last_updated_duration": last_updated_duration,
+        }
+
+        chunks = self.split_params(params)
+        response = []
+        for chunk in chunks:
+            r = self.client.api.get("dataValueSets", params=chunk)
+            response += r.json()["dataValues"]
+
+        return response
