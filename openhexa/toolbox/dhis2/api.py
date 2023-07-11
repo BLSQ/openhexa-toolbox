@@ -3,10 +3,20 @@ from typing import Iterable, Sequence
 
 import requests
 from openhexa.sdk.workspaces.connection import DHIS2Connection
+from openhexa.sdk.pipelines import current_run
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 logger = logging.getLogger(__name__)
+
+
+class DHIS2Error(Exception):
+    def __init__(self, error_msg: dict, *args, **kwargs):
+        msg = (
+            f"{error_msg.get('status')} {error_msg.get('httpStatusCode')}:"
+            f" {error_msg.get('message')}"
+        )
+        super().__init__(msg, *args, **kwargs)
 
 
 class Api:
@@ -35,18 +45,29 @@ class Api:
             url += "/api"
         return url
 
+    @staticmethod
+    def raise_if_error(response: requests.Response):
+        """Raise DHIS2Error with message provided by API."""
+        # raise DHIS2 error if error message is provided
+        if response.status_code != 200 and "json" in response.headers["content-type"]:
+            msg = response.json()
+            if msg.get("status") == "ERROR":
+                raise DHIS2Error(error_msg=msg)
+        # raise with requests if no error message provided
+        response.raise_for_status()
+
     def authenticate(self, username: str, password: str) -> requests.Session():
         """Authentify using Basic Authentication."""
         s = requests.Session()
         s.auth = requests.auth.HTTPBasicAuth(username, password)
         r = s.get(f"{self.url}/system/ping")
-        r.raise_for_status()
+        self.raise_if_error(r)
         logger.info(f"Logged in to '{self.url}' as '{username}'")
         return s
 
     def get(self, endpoint: str, params: dict = None) -> requests.Response:
         r = self.session.get(f"{self.url}/{endpoint}", params=params)
-        r.raise_for_status()
+        self.raise_if_error(r)
         return r
 
     def get_paged(
@@ -58,7 +79,7 @@ class Api:
         params["pageSize"] = page_size
 
         r = self.session.get(f"{self.url}/{endpoint}", params=params)
-        r.raise_for_status()
+        self.raise_if_error(r)
         yield r
 
         if "pager" in r.json():
