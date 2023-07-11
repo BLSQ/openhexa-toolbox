@@ -11,12 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class DHIS2Error(Exception):
-    def __init__(self, error_msg: dict, *args, **kwargs):
-        msg = (
-            f"{error_msg.get('status')} {error_msg.get('httpStatusCode')}:"
-            f" {error_msg.get('message')}"
-        )
-        super().__init__(msg, *args, **kwargs)
+    pass
 
 
 class Api:
@@ -52,7 +47,11 @@ class Api:
         if response.status_code != 200 and "json" in response.headers["content-type"]:
             msg = response.json()
             if msg.get("status") == "ERROR":
-                raise DHIS2Error(error_msg=msg)
+                raise DHIS2Error(
+                    f"{msg.get('status')} {msg.get('httpStatusCode')}:"
+                    f" {msg.get('message')}"
+                )
+
         # raise with requests if no error message provided
         response.raise_for_status()
 
