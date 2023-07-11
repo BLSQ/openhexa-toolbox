@@ -2,8 +2,9 @@ import logging
 from typing import Iterable, Sequence
 
 import requests
-
 from openhexa.sdk.workspaces.connection import DHIS2Connection
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,19 @@ logger = logging.getLogger(__name__)
 class Api:
     def __init__(self, connection: DHIS2Connection):
         self.url = self.parse_api_url(connection.url)
+
+        self.session = requests.Session()
+        adapter = HTTPAdapter(
+            max_retries=Retry(
+                total=3,
+                backoff_factor=5,
+                allowed_methods=["HEAD", "GET"],
+                status_forcelist=[429, 500, 502, 503, 504],
+            )
+        )
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+
         self.session = self.authenticate(connection.username, connection.password)
 
     @staticmethod
