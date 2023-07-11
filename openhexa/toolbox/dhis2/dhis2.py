@@ -384,7 +384,8 @@ class DataValueSets:
 
         Return
         ------
-
+        list of dict
+            Response as a list of dict with data values.
         """
         what = data_elements or datasets or data_element_groups
         where = org_units or org_unit_groups
@@ -423,3 +424,31 @@ class DataValueSets:
             response += r.json()["dataValues"]
 
         return response
+
+    def post(
+        self,
+        data_values: List[dict],
+        import_strategy: str = "CREATE",
+        dry_run: bool = True,
+    ):
+        pass
+
+
+class Analytics:
+    def __init__(self, client: DHIS2):
+        """Methods for the analytics API endpoint."""
+        self.client = client
+
+    def get(self):
+        pass
+
+
+class Tracker:
+    def __init__(self, client: DHIS2):
+        self.client = client
+
+    def get(self):
+        pass
+
+    def post(self):
+        pass
