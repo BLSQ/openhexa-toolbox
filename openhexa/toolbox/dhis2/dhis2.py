@@ -1,13 +1,14 @@
 import json
 import os
 from functools import wraps
-from typing import Callable, List
+from typing import Callable, List, Tuple
 from urllib.parse import urlparse
 import logging
 import datetime
 import itertools
 
 from diskcache import Cache
+import polars as pl
 
 from openhexa.sdk.workspaces.connection import DHIS2Connection
 
@@ -54,11 +55,11 @@ class DHIS2:
             named after the DHIS2 instance domain.
         """
         self.api = Api(connection)
-        self.info = self.system_info()
-        self.version = self.info.get("version")
         self.cache_dir = self.setup_cache(cache_dir)
         self.meta = Metadata(self)
+        self.version = self.meta.system_info().get("version")
         self.data_value_sets = DataValueSets(self)
+        self.analytics = Analytics(self)
 
     def setup_cache(self, cache_dir: str):
         """Initialize diskcache."""
@@ -66,17 +67,17 @@ class DHIS2:
         os.makedirs(cache_dir, exist_ok=True)
         return cache_dir
 
-    @use_cache("system-info")
-    def system_info(self) -> dict:
-        """Get information on the current system."""
-        r = self.api.get("system/info")
-        return r.json()
-
 
 class Metadata:
     def __init__(self, client: DHIS2):
         """Methods for accessing metadata API endpoints."""
         self.client = client
+
+    @use_cache("system-info")
+    def system_info(self) -> dict:
+        """Get information on the current system."""
+        r = self.client.api.get("system/info")
+        return r.json()
 
     @use_cache("organisation_unit_levels")
     def organisation_unit_levels(self) -> List[dict]:
@@ -128,6 +129,16 @@ class Metadata:
                     }
                 )
         return org_units
+
+    @staticmethod
+    def add_parent_organisation_units(org_unit_id: str) -> pl.DataFrame:
+        """Add full org unit hierarchy columns.
+
+        Parameters
+        ----------
+
+        """
+        pass
 
     @use_cache("organisation_unit_groups")
     def organisation_unit_groups(self) -> List[dict]:
@@ -291,6 +302,12 @@ class Metadata:
             ind_groups += groups
 
 
+def _split_list(src_list: list, length: int) -> List[list]:
+    """Split list into chunks."""
+    for i in range(0, len(src_list), length):
+        yield src_list[i : i + length]
+
+
 class DataValueSets:
     def __init__(self, client: DHIS2):
         """Methods for the dataValueSets API endpoint."""
@@ -298,12 +315,6 @@ class DataValueSets:
         self.MAX_DATA_ELEMENTS = 50
         self.MAX_ORG_UNITS = 50
         self.MAX_PERIODS = 1
-
-    @staticmethod
-    def split_list(src_list: list, length: int) -> List[list]:
-        """Split list into chunks."""
-        for i in range(0, len(src_list), length):
-            yield src_list[i : i + length]
 
     def split_params(self, params: dict) -> List[dict]:
         """Split request parameters into chunks.
@@ -325,7 +336,7 @@ class DataValueSets:
         chunks = []
         for chunk in itertools.product(
             *[
-                self.split_list(params.get(param), max_length)
+                _split_list(params.get(param), max_length)
                 for param, max_length in params_to_chunk
             ]
         ):
@@ -438,9 +449,261 @@ class Analytics:
     def __init__(self, client: DHIS2):
         """Methods for the analytics API endpoint."""
         self.client = client
+        self.MAX_DX = 50
+        self.MAX_ORG_UNITS = 50
+        self.MAX_PERIODS = 1
 
-    def get(self):
-        pass
+    @staticmethod
+    def split_dimension_param(param: str) -> Tuple[str, List[str]]:
+        """Split formatted dimension parameter.
+
+        Formatted parameter (e.g. `dx:uid;uid;uid`) is splitted into two parts: id (e.g.
+        `dx`) and items (e.g. `[uid, uid]`).
+
+        Parameters
+        ----------
+        param : str
+            Formatted dimension parameter
+
+        Return
+        ------
+        str
+            Dimension id
+        list of str
+            Dimension items
+        """
+        dim_id, dim_items = param.split(":")
+        if dim_items:
+            dim_items = dim_items.split(";")
+        else:
+            dim_items = []
+        return dim_id, dim_items
+
+    def split_params(self, params: dict) -> List[dict]:
+        """Split JSON parameters expected by the Analytics API endpoint into chunks.
+
+        Dimension parameter is splitted across 3 dimensions (data, time, space) with
+        respect to the `MAX_DX`, `MAX_ORG_UNITS` and `MAX_PERIODS` attributes.
+
+        Parameters
+        ----------
+        params : dict
+            Request parameters
+
+        Return
+        ------
+        list of dict
+            List of chunked request parameters
+        """
+        MAX_DIM_ITEMS = {
+            "dx": self.MAX_DX,
+            "ou": self.MAX_ORG_UNITS,
+            "pe": self.MAX_PERIODS,
+        }
+
+        dimension = params["dimension"]
+
+        dim_chunks = []
+        for dim in dimension:
+            dim_id, dim_items = self.split_dimension_param(dim)
+            if dim_id in MAX_DIM_ITEMS:
+                dim_item_chunks = [
+                    item
+                    for item in _split_list(dim_items, MAX_DIM_ITEMS.get(dim_id, 50))
+                ]
+                dim_item_chunks = [
+                    f"{dim_id}:{';'.join(dim_items)}" for dim_items in dim_item_chunks
+                ]
+                dim_chunks.append(dim_item_chunks)
+            else:
+                dim_chunks.append([dim])
+
+        param_chunks = []
+        for chunk in itertools.product(*dim_chunks):
+            param_chunk = params.copy()
+            param_chunk["dimension"] = chunk
+            param_chunks.append(param_chunk)
+
+        return param_chunks
+
+    @staticmethod
+    def format_dimension_param(
+        data_elements: List[str] = None,
+        data_element_groups: List[str] = None,
+        indicators: List[str] = None,
+        indicator_groups: List[str] = None,
+        periods: List[str] = None,
+        org_units: List[str] = None,
+        org_unit_groups: List[str] = None,
+        org_unit_levels: List[int] = None,
+        include_cocs: bool = True,
+    ) -> List[str]:
+        """Format dimension parameters as expected by the Analytics API endpoint.
+
+        Data dimension parameters are formatted as `dx:<dx_uid>;<dx_uid>`. Periods are
+        formatted as `pe:<period>;<period>`. Org units are formatted as
+        `ou:<ou_uid>;<ou_uid>. Org unit groups and levels are also supported.
+
+        Parameters
+        ----------
+        data_elements : list of str, optional
+            Data element identifiers
+        data_element_groups : str, optional
+            Data element groups identifiers
+        indicators : list of str, optional
+            Indicator identifiers
+        indicator_groups : list of str, optional
+            Indicator groups indifiers
+        periods : list of str, optional
+            Period identifiers in ISO format
+        org_units : list of str, optional
+            Organisation units identifiers
+        org_unit_groups : list of str, optional
+            Organisation unit groups identifiers
+        org_unit_levels : list of int, optional
+            Organisation unit levels
+        include_cocs : bool, optional (default=True)
+            Include category option combos in response
+
+        Return
+        ------
+        list of str
+            Formatted dimension parameters as expected by the Analytics API endpoint
+        """
+        dx = []
+        if data_elements:
+            dx += data_elements
+        if data_element_groups:
+            dx += [f"DE_GROUP-{group}" for group in data_element_groups]
+        if indicators:
+            dx += indicators
+        if indicator_groups:
+            dx += [f"IN_GROUP-{group}" for group in indicator_groups]
+
+        pe = []
+        if periods:
+            pe += [str(p) for p in periods]
+
+        ou = []
+        if org_unit_groups:
+            ou += [f"OU_GROUP-{group}" for group in org_unit_groups]
+        if org_unit_levels:
+            ou += [f"LEVEL-{level}" for level in org_unit_levels]
+        if org_units:
+            ou += org_units
+
+        dimension = [f"dx:{';'.join(dx)}", f"ou:{';'.join(ou)}"]
+        if pe:
+            dimension.append(f"pe:{';'.join(pe)}")
+
+        if include_cocs:
+            dimension.append("co:")
+
+        return dimension
+
+    @staticmethod
+    def merge_chunked_responses(responses: List[dict]) -> dict:
+        """Merge responses from chunked requests."""
+        headers = responses[0]["headers"]
+        rows = []
+        for response in responses:
+            rows += response["rows"]
+        return {"headers": headers, "rows": rows}
+
+    @staticmethod
+    def to_data_values(response: dict) -> List[dict]:
+        """Transform JSON response into data values.
+
+        JSON response from Analytics endpoint is a structure with two keys: headers and
+        rows. This function transforms it into the data values format used by the
+        dataValueSets endpoint, so that it can easily be converted into a pandas or
+        polars dataframe.
+        """
+        data_values = []
+        for row in response["rows"]:
+            data_value = {}
+            for i, header in enumerate(response["headers"]):
+                data_value[header["name"]] = row[i]
+                data_values.append(data_value)
+        return data_values
+
+    def get(
+        self,
+        data_elements: List[str] = None,
+        data_element_groups: List[str] = None,
+        indicators: List[str] = None,
+        indicator_groups: List[str] = None,
+        periods: List[str] = None,
+        org_units: List[str] = None,
+        org_unit_groups: List[str] = None,
+        org_unit_levels: List[int] = None,
+        include_cocs: bool = True,
+    ):
+        """Get requested data values using the Analytics API endpoint.
+
+        If a large number of data elements, indicators, org units or periods are
+        requested by the user, the request will automatically be divided into multiple
+        chunks and merged before being returned.
+
+        Parameters
+        ----------
+        data_elements : list of str, optional
+            Data element identifiers
+        data_element_groups : str, optional
+            Data element groups identifiers
+        indicators : list of str, optional
+            Indicator identifiers
+        indicator_groups : list of str, optional
+            Indicator groups indifiers
+        periods : list of str, optional
+            Period identifiers in ISO format
+        org_units : list of str, optional
+            Organisation units identifiers
+        org_unit_groups : list of str, optional
+            Organisation unit groups identifiers
+        org_unit_levels : list of int, optional
+            Organisation unit levels
+        include_cocs : bool, optional (default=True)
+            Include category option combos in response
+
+        Return
+        ------
+        list of dict
+            Data values
+        """
+        what = data_elements or data_element_groups or indicators or indicator_groups
+        where = org_units or org_unit_groups or org_unit_levels
+        when = bool(periods)
+        if not what:
+            raise DHIS2Error("No data dimension provided")
+        if not where:
+            raise DHIS2Error("No spatial dimension provided")
+        if not when:
+            raise DHIS2Error("No temporal dimension provided")
+
+        dimension = self.format_dimension_param(
+            data_elements=data_elements,
+            data_element_groups=data_element_groups,
+            indicators=indicators,
+            indicator_groups=indicator_groups,
+            periods=periods,
+            org_units=org_units,
+            org_unit_groups=org_unit_groups,
+            org_unit_levels=org_unit_levels,
+            include_cocs=include_cocs,
+        )
+
+        params = {"dimension": dimension, "paging": True, "ignoreLimit": True}
+        params = self.split_params(params)
+
+        responses = []
+        for chunk in params:
+            pages = [p for p in self.client.api.get_paged("analytics", params=chunk)]
+            response = self.client.api.merge_pages(pages)
+            responses.append(response)
+
+        merged_response = self.merge_chunked_responses(responses)
+        return self.to_data_values(merged_response)
 
 
 class Tracker:
