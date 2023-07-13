@@ -1,7 +1,7 @@
 import json
 import os
 from functools import wraps
-from typing import Callable, List, Tuple
+from typing import Callable, List, Tuple, Union
 from urllib.parse import urlparse
 import logging
 import datetime
@@ -9,6 +9,7 @@ import itertools
 
 from diskcache import Cache
 import polars as pl
+import pandas as pd
 
 from openhexa.sdk.workspaces.connection import DHIS2Connection
 
@@ -301,6 +302,195 @@ class Metadata:
                 )
             ind_groups += groups
         return ind_groups
+
+    @staticmethod
+    def _get_uid_from_level(path: str, level: int):
+        """Extract org unit uid from a path string."""
+        parents = path.split("/")[1:-1]
+        if len(parents) >= level:
+            return parents[level - 1]
+        else:
+            return None
+
+    def add_dx_name_column(
+        self,
+        dataframe: Union[pl.DataFrame, pd.DataFrame],
+        dx_id_column: str = "dx",
+    ) -> Union[pl.DataFrame, pd.DataFrame]:
+        """Add column with dx name to input dataframe.
+
+        Parameters
+        ----------
+        dataframe : polars or pandas dataframe
+            Input dataframe with a dx id column
+        org_unit_id_column : str (default="dx")
+            Name of dx id column in input dataframe
+
+        Return
+        ------
+        polars or pandas dataframe
+            Input dataframe with a new "dx_name" column
+        """
+        src_format = _get_dataframe_frmt(dataframe)
+        if src_format == "pandas":
+            df = pl.DataFrame._from_pandas(dataframe)
+        else:
+            df = dataframe
+
+        data_elements = pl.DataFrame(self.data_elements())
+        indicators = pl.DataFrame(self.indicators())
+        dx = pl.concat(
+            [
+                data_elements.select([pl.col("id"), pl.col("name").alias("dx_name")]),
+                indicators.select([pl.col("id"), pl.col("name").alias("dx_name")]),
+            ]
+        )
+
+        df = df.join(
+            other=dx.select([pl.col("id"), pl.col("dx_name")]),
+            how="left",
+            left_on=dx_id_column,
+            right_on="id",
+        )
+
+        if src_format == "pandas":
+            df = df.to_pandas()
+        return df
+
+    def add_coc_name_column(
+        self,
+        dataframe: Union[pl.DataFrame, pd.DataFrame],
+        coc_column: str = "co",
+    ) -> Union[pl.DataFrame, pd.DataFrame]:
+        """Add column with coc name to input dataframe.
+
+        Parameters
+        ----------
+        dataframe : polars or pandas dataframe
+            Input dataframe with a coc id column
+        coc_id_column : str (default="co")
+            Name of coc id column in input dataframe
+
+        Return
+        ------
+        polars or pandas dataframe
+            Input dataframe with a new "co_name" column
+        """
+        src_format = _get_dataframe_frmt(dataframe)
+        if src_format == "pandas":
+            df = pl.DataFrame._from_pandas(dataframe)
+        else:
+            df = dataframe
+
+        coc = pl.DataFrame(self.category_option_combos())
+
+        df = df.join(
+            other=coc.select([pl.col("id"), pl.col("name").alias("co_name")]),
+            how="left",
+            left_on=coc_column,
+            right_on="id",
+        )
+
+        if src_format == "pandas":
+            df = df.to_pandas()
+        return df
+
+    def add_org_unit_name_column(
+        self,
+        dataframe: Union[pl.DataFrame, pd.DataFrame],
+        org_unit_id_column: str = "ou",
+    ) -> Union[pl.DataFrame, pd.DataFrame]:
+        """Add column with org unit name to input dataframe.
+
+        Parameters
+        ----------
+        dataframe : polars or pandas dataframe
+            Input dataframe with a org unit id column
+        org_unit_id_column : str (default="ou")
+            Name of org unit id column in input dataframe
+
+        Return
+        ------
+        polars or pandas dataframe
+            Input dataframe with a new "ou_name" column
+        """
+        src_format = _get_dataframe_frmt(dataframe)
+        if src_format == "pandas":
+            df = pl.DataFrame._from_pandas(dataframe)
+        else:
+            df = dataframe
+
+        org_units = pl.DataFrame(self.organisation_units())
+
+        df = df.join(
+            other=org_units.select([pl.col("id"), pl.col("name").alias("ou_name")]),
+            how="left",
+            left_on=org_unit_id_column,
+            right_on="id",
+        )
+
+        if src_format == "pandas":
+            df = df.to_pandas()
+        return df
+
+    def add_org_unit_parent_columns(
+        self,
+        dataframe: Union[pl.DataFrame, pd.DataFrame],
+        org_unit_id_column: str = "ou",
+    ) -> Union[pl.DataFrame, pd.DataFrame]:
+        """Add parent org units id and names to input dataframe.
+
+        Parameters
+        ----------
+        dataframe : polars or pandas dataframe
+            Input dataframe with a org unit id column
+        org_unit_id_column : str (default="ou")
+            Name of org unit id column in input dataframe
+
+        Return
+        ------
+        polars or pandas dataframe
+            Input dataframe with added columns
+        """
+        src_format = _get_dataframe_frmt(dataframe)
+        if src_format == "pandas":
+            df = pl.DataFrame._from_pandas(dataframe)
+        else:
+            df = dataframe
+
+        levels = pl.DataFrame(self.organisation_unit_levels())
+        org_units = pl.DataFrame(self.organisation_units())
+
+        for lvl in range(1, len(levels)):
+            org_units = org_units.with_columns(
+                pl.col("path")
+                .apply(lambda path: self._get_uid_from_level(path, lvl))
+                .alias(f"parent_level_{lvl}_id")
+            )
+
+            org_units = org_units.join(
+                other=org_units.filter(pl.col("level") == lvl).select(
+                    [
+                        pl.col("id").alias(f"parent_level_{lvl}_id"),
+                        pl.col("name").alias(f"parent_level_{lvl}_name"),
+                    ]
+                ),
+                on=f"parent_level_{lvl}_id",
+                how="left",
+            )
+
+        df = df.join(
+            other=org_units.select(
+                ["id"] + [col for col in org_units.columns if col.startswith("parent_")]
+            ),
+            how="left",
+            left_on=org_unit_id_column,
+            right_on="id",
+        )
+
+        if src_format == "pandas":
+            df = df.to_pandas()
+        return df
 
 
 def _split_list(src_list: list, length: int) -> List[list]:
@@ -717,3 +907,12 @@ class Tracker:
 
     def post(self):
         pass
+
+
+def _get_dataframe_frmt(dataframe: Union[pl.DataFrame, pd.DataFrame]):
+    if isinstance(dataframe, pl.DataFrame):
+        return "polars"
+    elif isinstance(dataframe, pd.DataFrame):
+        return "pandas"
+    else:
+        raise ValueError("Unrecognized dataframe format")
