@@ -22,20 +22,10 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = [
     "requests",
-    "cdsapi",
-    "numpy",
-    "rasterio",
-    "xarray",
     "python-dateutil",
-    "sqlalchemy",
-    "fsspec",
-    "s3fs",
-    "gcsfs",
-    "shapely",
-    "netCDF4",
     "pandas",
     "polars",
-    "geopandas"
+    "diskcache"
 ]
 
 [project.optional-dependencies]
