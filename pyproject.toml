@@ -28,7 +28,6 @@ dependencies = [
     "xarray",
     "python-dateutil",
     "sqlalchemy",
-    "openhexa.sdk",
     "fsspec",
     "s3fs",
     "gcsfs",

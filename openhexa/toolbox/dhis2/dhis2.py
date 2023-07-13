@@ -10,9 +10,8 @@ import pandas as pd
 import polars as pl
 from diskcache import Cache
 
-from openhexa.sdk.workspaces.connection import DHIS2Connection
 
-from .api import Api, DHIS2Error
+from .api import Api, DHIS2Error, DHIS2Connection
 
 logger = logging.getLogger(__name__)
 

@@ -1,17 +1,22 @@
 import logging
-from typing import Iterable, Sequence
+from typing import Iterable, Sequence, Protocol
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from openhexa.sdk.workspaces.connection import DHIS2Connection
 
 logger = logging.getLogger(__name__)
 
 
 class DHIS2Error(Exception):
     pass
+
+
+class DHIS2Connection(Protocol):
+    username: str
+    password: str
+    url: str
 
 
 class Api:
