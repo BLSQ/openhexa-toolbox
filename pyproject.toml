@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "build"]
 
 [tool.setuptools.packages.find]
 where = ["."]
