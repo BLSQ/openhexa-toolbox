@@ -362,7 +362,7 @@ class DataValueSets:
         attribute_option_combos: List[str] = None,
         last_updated: str = None,
         last_updated_duration: str = None,
-    ) -> pl.DataFrame:
+    ) -> List[dict]:
         """Retrieve data values through the dataValueSets API resource.
 
         Parameters
@@ -396,8 +396,8 @@ class DataValueSets:
 
         Return
         ------
-        dataframe
-            Response as a polars dataframe
+        list of dict
+            Response as a list of data values
         """
         what = data_elements or datasets or data_element_groups
         where = org_units or org_unit_groups
@@ -435,7 +435,7 @@ class DataValueSets:
             r = self.client.api.get("dataValueSets", params=chunk)
             response += r.json()["dataValues"]
 
-        return pl.DataFrame(response)
+        return response
 
     def post(
         self,
@@ -639,7 +639,7 @@ class Analytics:
         org_unit_groups: List[str] = None,
         org_unit_levels: List[int] = None,
         include_cocs: bool = True,
-    ):
+    ) -> List[dict]:
         """Get requested data values using the Analytics API endpoint.
 
         If a large number of data elements, indicators, org units or periods are
@@ -705,7 +705,7 @@ class Analytics:
 
         merged_response = self.merge_chunked_responses(responses)
         data_values = self.to_data_values(merged_response)
-        return pl.DataFrame(data_values)
+        return data_values
 
 
 class Tracker:
