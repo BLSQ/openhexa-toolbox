@@ -1,15 +1,14 @@
+import itertools
 import json
+import logging
 import os
 from functools import wraps
 from typing import Callable, List, Tuple, Union
 from urllib.parse import urlparse
-import logging
-import datetime
-import itertools
 
-from diskcache import Cache
-import polars as pl
 import pandas as pd
+import polars as pl
+from diskcache import Cache
 
 from openhexa.sdk.workspaces.connection import DHIS2Connection
 

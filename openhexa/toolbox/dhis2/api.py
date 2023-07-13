@@ -2,10 +2,10 @@ import logging
 from typing import Iterable, Sequence
 
 import requests
-from openhexa.sdk.workspaces.connection import DHIS2Connection
-from openhexa.sdk.pipelines import current_run
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
+
+from openhexa.sdk.workspaces.connection import DHIS2Connection
 
 logger = logging.getLogger(__name__)
 
