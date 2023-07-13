@@ -300,6 +300,7 @@ class Metadata:
                     }
                 )
             ind_groups += groups
+        return ind_groups
 
 
 def _split_list(src_list: list, length: int) -> List[list]:
@@ -361,7 +362,7 @@ class DataValueSets:
         attribute_option_combos: List[str] = None,
         last_updated: str = None,
         last_updated_duration: str = None,
-    ) -> List[dict]:
+    ) -> pl.DataFrame:
         """Retrieve data values through the dataValueSets API resource.
 
         Parameters
@@ -395,8 +396,8 @@ class DataValueSets:
 
         Return
         ------
-        list of dict
-            Response as a list of dict with data values.
+        dataframe
+            Response as a polars dataframe
         """
         what = data_elements or datasets or data_element_groups
         where = org_units or org_unit_groups
@@ -434,7 +435,7 @@ class DataValueSets:
             r = self.client.api.get("dataValueSets", params=chunk)
             response += r.json()["dataValues"]
 
-        return response
+        return pl.DataFrame(response)
 
     def post(
         self,
@@ -703,7 +704,8 @@ class Analytics:
             responses.append(response)
 
         merged_response = self.merge_chunked_responses(responses)
-        return self.to_data_values(merged_response)
+        data_values = self.to_data_values(merged_response)
+        return pl.DataFrame(data_values)
 
 
 class Tracker:
