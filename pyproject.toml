@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openhexa.toolbox"
-version = "0.1.1"
+version = "0.1.2"
 description = "A set of tools to acquire & process data from various sources"
 authors = [
     { name = "Bluesquare", email = "dev@bluesquarehub.com"}
@@ -33,11 +33,7 @@ dev = ["pytest", "build"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["openhexa"]
 namespaces = true
-
-[tool.setuptools]
-py-modules = []
 
 [project.urls]
 "Homepage" = "https://github.com/blsq/openhexa-toolbox"
