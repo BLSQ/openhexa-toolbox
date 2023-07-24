@@ -52,10 +52,7 @@ class Api:
         if response.status_code != 200 and "json" in response.headers["content-type"]:
             msg = response.json()
             if msg.get("status") == "ERROR":
-                raise DHIS2Error(
-                    f"{msg.get('status')} {msg.get('httpStatusCode')}:"
-                    f" {msg.get('message')}"
-                )
+                raise DHIS2Error(f"{msg.get('status')} {msg.get('httpStatusCode')}:" f" {msg.get('message')}")
 
         # raise with requests if no error message provided
         response.raise_for_status()
@@ -74,9 +71,7 @@ class Api:
         self.raise_if_error(r)
         return r
 
-    def get_paged(
-        self, endpoint: str, params: dict = None, page_size: 1000 = None
-    ) -> Iterable[requests.Response]:
+    def get_paged(self, endpoint: str, params: dict = None, page_size: 1000 = None) -> Iterable[requests.Response]:
         """Iterate over all response pages."""
         if params is None:
             params = {}

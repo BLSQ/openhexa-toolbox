@@ -122,9 +122,7 @@ class Metadata:
                         "name": ou.get("name"),
                         "level": ou.get("level"),
                         "path": ou.get("path"),
-                        "geometry": json.dumps(ou.get("geometry"))
-                        if ou.get("geometry")
-                        else None,
+                        "geometry": json.dumps(ou.get("geometry")) if ou.get("geometry") else None,
                     }
                 )
         return org_units
@@ -160,9 +158,7 @@ class Metadata:
                     {
                         "id": group.get("id"),
                         "name": group.get("name"),
-                        "organisation_units": [
-                            ou.get("id") for ou in group["organisationUnits"]
-                        ],
+                        "organisation_units": [ou.get("id") for ou in group["organisationUnits"]],
                     }
                 )
             org_unit_groups += groups
@@ -187,9 +183,7 @@ class Metadata:
         ):
             for ds in page.json()["dataSets"]:
                 row = {"id": ds.get("id"), "name": ds.get("name")}
-                row["data_elements"] = [
-                    dx["dataElement"]["id"] for dx in ds["dataSetElements"]
-                ]
+                row["data_elements"] = [dx["dataElement"]["id"] for dx in ds["dataSetElements"]]
                 row["indicators"] = [indicator["id"] for indicator in ds["indicators"]]
                 row["organisation_units"] = [ou["id"] for ou in ds["organisationUnits"]]
                 datasets.append(row)
@@ -250,9 +244,7 @@ class Metadata:
             Id and name of all category option combos.
         """
         combos = []
-        for page in self.client.api.get_paged(
-            "categoryOptionCombos", params={"fields": "id,name"}, page_size=1000
-        ):
+        for page in self.client.api.get_paged("categoryOptionCombos", params={"fields": "id,name"}, page_size=1000):
             combos += page.json().get("categoryOptionCombos")
         return combos
 
@@ -461,9 +453,7 @@ class Metadata:
 
         for lvl in range(1, len(levels)):
             org_units = org_units.with_columns(
-                pl.col("path")
-                .apply(lambda path: self._get_uid_from_level(path, lvl))
-                .alias(f"parent_level_{lvl}_id")
+                pl.col("path").apply(lambda path: self._get_uid_from_level(path, lvl)).alias(f"parent_level_{lvl}_id")
             )
 
             org_units = org_units.join(
@@ -478,9 +468,7 @@ class Metadata:
             )
 
         df = df.join(
-            other=org_units.select(
-                ["id"] + [col for col in org_units.columns if col.startswith("parent_")]
-            ),
+            other=org_units.select(["id"] + [col for col in org_units.columns if col.startswith("parent_")]),
             how="left",
             left_on=org_unit_id_column,
             right_on="id",
@@ -524,10 +512,7 @@ class DataValueSets:
 
         chunks = []
         for chunk in itertools.product(
-            *[
-                _split_list(params.get(param), max_length)
-                for param, max_length in params_to_chunk
-            ]
+            *[_split_list(params.get(param), max_length) for param, max_length in params_to_chunk]
         ):
             p = params.copy()
             for i, (param, _) in enumerate(params_to_chunk):
@@ -598,9 +583,7 @@ class DataValueSets:
             raise DHIS2Error("No temporal dimension provided")
 
         if data_elements and not self.client.version >= 2.39:
-            raise DHIS2Error(
-                "Data elements parameter not supported for DHIS2 versions < 2.39"
-            )
+            raise DHIS2Error("Data elements parameter not supported for DHIS2 versions < 2.39")
 
         params = {
             "dataElement": data_elements,
@@ -696,13 +679,8 @@ class Analytics:
         for dim in dimension:
             dim_id, dim_items = self.split_dimension_param(dim)
             if dim_id in MAX_DIM_ITEMS:
-                dim_item_chunks = [
-                    item
-                    for item in _split_list(dim_items, MAX_DIM_ITEMS.get(dim_id, 50))
-                ]
-                dim_item_chunks = [
-                    f"{dim_id}:{';'.join(dim_items)}" for dim_items in dim_item_chunks
-                ]
+                dim_item_chunks = [item for item in _split_list(dim_items, MAX_DIM_ITEMS.get(dim_id, 50))]
+                dim_item_chunks = [f"{dim_id}:{';'.join(dim_items)}" for dim_items in dim_item_chunks]
                 dim_chunks.append(dim_item_chunks)
             else:
                 dim_chunks.append([dim])

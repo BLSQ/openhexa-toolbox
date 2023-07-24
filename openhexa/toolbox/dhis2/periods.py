@@ -76,11 +76,7 @@ class Week(Period):
 
     @staticmethod
     def check_period(period: str):
-        if (
-            (len(period) != 6 and len(period) != 7)
-            or period[4] != "W"
-            or period[5] == "0"
-        ):
+        if (len(period) != 6 and len(period) != 7) or period[4] != "W" or period[5] == "0":
             raise ValueError(f'"{period}" is not valid DHIS2 week')
 
     @staticmethod
