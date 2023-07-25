@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "build"]
+dev = ["ruff~=0.0.278", "pytest~=7.3.0", "build~=0.10.0", "pytest-cov~=4.0.0" , "black~=23.7.0", "pre-commit"]
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -40,7 +40,10 @@ namespaces = true
 "Bug Tracker" = "https://github.com/blsq/openhexa-toolbox/issues"
 
 [tool.black]
-line-length = 88
+line-length = 120
 
 [tool.ruff]
-line-length = 88
+line-length = 120
+
+[tool.ruff.pycodestyle]
+max-doc-length = 120
