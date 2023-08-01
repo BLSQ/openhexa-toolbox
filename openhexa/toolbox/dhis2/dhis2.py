@@ -54,7 +54,8 @@ class DHIS2:
             named after the DHIS2 instance domain.
         """
         self.api = Api(connection)
-        self.cache_dir = self.setup_cache(cache_dir)
+        if cache_dir:
+            self.cache_dir = self.setup_cache(cache_dir)
         self.meta = Metadata(self)
         self.version = self.meta.system_info().get("version")
         self.data_value_sets = DataValueSets(self)
