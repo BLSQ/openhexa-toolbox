@@ -142,7 +142,7 @@ class Year(Period):
 
     @staticmethod
     def check_period(period: str):
-        if len(period) != 6:
+        if len(period) != 4:
             raise ValueError(f'"{period}" is not valid DHIS2 year')
 
     @staticmethod
