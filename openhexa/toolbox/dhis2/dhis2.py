@@ -127,16 +127,6 @@ class Metadata:
                 )
         return org_units
 
-    @staticmethod
-    def add_parent_organisation_units(org_unit_id: str) -> pl.DataFrame:
-        """Add full org unit hierarchy columns.
-
-        Parameters
-        ----------
-
-        """
-        pass
-
     @use_cache("organisation_unit_groups")
     def organisation_unit_groups(self) -> List[dict]:
         """Get organisation unit groups metadata.
