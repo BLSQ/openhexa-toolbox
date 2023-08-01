@@ -36,6 +36,24 @@ class Period:
     def __str__(self):
         return self.period
 
+    def __eq__(self, other):
+        return self.period == other.period
+
+    def __ne__(self, other):
+        return self.period != other.period
+
+    def __gt__(self, other):
+        return self.period > other.period
+
+    def __lt__(self, other):
+        return self.period < other.period
+
+    def __ge__(self, other):
+        return self.period >= other.period
+
+    def __le__(self, other):
+        return self.period <= other.period
+
     def __repr__(self):
         return f'"{self.period}"'
 
