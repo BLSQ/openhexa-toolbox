@@ -582,7 +582,7 @@ class DataValueSets:
         if not when:
             raise DHIS2Error("No temporal dimension provided")
 
-        if data_elements and not self.client.version >= 2.39:
+        if data_elements and not self.client.version >= "2.39":
             raise DHIS2Error("Data elements parameter not supported for DHIS2 versions < 2.39")
 
         params = {
