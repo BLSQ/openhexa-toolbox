@@ -99,7 +99,8 @@ class Week(Period):
 
     @staticmethod
     def to_datetime(period: str) -> datetime:
-        return datetime.strptime(period, "%YW%W")
+        # a dummy weekday is added so that strptime can be used
+        return datetime.strptime(period + "1", "%YW%W%w")
 
     @staticmethod
     def to_string(dt: datetime) -> str:
