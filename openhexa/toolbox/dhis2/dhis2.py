@@ -782,7 +782,7 @@ class Analytics:
             data_value = {}
             for i, header in enumerate(response["headers"]):
                 data_value[header["name"]] = row[i]
-                data_values.append(data_value)
+            data_values.append(data_value)
         return data_values
 
     def get(
