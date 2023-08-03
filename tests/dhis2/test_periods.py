@@ -7,11 +7,7 @@ from openhexa.toolbox.dhis2.periods import Day, Week, Month, Year, Quarter, SixM
 def test_day():
     d1 = Day("20220101")
     d2 = Day(datetime(2022, 1, 1))
-<<<<<<< HEAD
     assert d1 == d2
-=======
-    assert d1.period == d2.period
->>>>>>> 549c06d (chore(tests): add tests for dhis2 periods)
 
     with pytest.raises(ValueError):
         Day("2022-01-01")
@@ -31,11 +27,7 @@ def test_day_range():
 def test_week():
     w1 = Week("2022W4")
     w2 = Week(datetime(2022, 1, 25))
-<<<<<<< HEAD
     assert w1 == w2
-=======
-    assert w1.period == w2.period
->>>>>>> 549c06d (chore(tests): add tests for dhis2 periods)
 
     with pytest.raises(ValueError):
         Week("2022W04")
@@ -51,11 +43,7 @@ def test_week_range():
 def test_month():
     m1 = Month("202201")
     m2 = Month(datetime(2022, 1, 1))
-<<<<<<< HEAD
     assert m1 == m2
-=======
-    assert m1.period == m2.period
->>>>>>> 549c06d (chore(tests): add tests for dhis2 periods)
 
     with pytest.raises(ValueError):
         Month("2022-01")
@@ -71,11 +59,7 @@ def test_month_range():
 def test_year():
     y1 = Year("2022")
     y2 = Year(datetime(2022, 1, 1))
-<<<<<<< HEAD
     assert y1 == y2
-=======
-    assert y1.period == y2.period
->>>>>>> 549c06d (chore(tests): add tests for dhis2 periods)
 
 
 def test_year_range():
@@ -88,11 +72,7 @@ def test_year_range():
 def test_quarter():
     q1 = Quarter("2021Q4")
     q2 = Quarter(datetime(2021, 12, 1))
-<<<<<<< HEAD
     assert q1 == q2
-=======
-    assert q1.period == q2.period
->>>>>>> 549c06d (chore(tests): add tests for dhis2 periods)
 
 
 def test_quarter_range():
@@ -105,11 +85,7 @@ def test_quarter_range():
 def test_six_month():
     sm1 = SixMonth("2022S2")
     sm2 = SixMonth(datetime(2022, 12, 1))
-<<<<<<< HEAD
     assert sm1 == sm2
-=======
-    assert sm1.period == sm2.period
->>>>>>> 549c06d (chore(tests): add tests for dhis2 periods)
 
 
 def test_six_month_range():
@@ -122,7 +98,6 @@ def test_six_month_range():
 def test_period_from_string():
     p1 = period_from_string("20220101")
     p2 = Day("20220101")
-<<<<<<< HEAD
     assert p1 == p2
 
     p1 = period_from_string("202201")
@@ -144,26 +119,3 @@ def test_period_from_string():
     p1 = period_from_string("2022S1")
     p2 = SixMonth("2022S1")
     assert p1 == p2
-=======
-    assert p1.period == p2.period
-
-    p1 = period_from_string("202201")
-    p2 = Month("202201")
-    assert p1.period == p2.period
-
-    p1 = period_from_string("2022W1")
-    p2 = Week("2022W1")
-    assert p1.period == p2.period
-
-    p1 = period_from_string("2022")
-    p2 = Year("2022")
-    assert p1.period == p2.period
-
-    p1 = period_from_string("2022Q1")
-    p2 = Quarter("2022Q1")
-    assert p1.period == p2.period
-
-    p1 = period_from_string("2022S1")
-    p2 = SixMonth("2022S1")
-    assert p1.period == p2.period
->>>>>>> 549c06d (chore(tests): add tests for dhis2 periods)
