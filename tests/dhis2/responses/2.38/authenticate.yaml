@@ -1,0 +1,18 @@
+responses:
+- response:
+    auto_calculate_content_length: false
+    body: pong
+    content_type: text/plain
+    method: GET
+    status: 200
+    url: https://play.dhis2.org/2.38.4.3/api/system/ping
+- response:
+    auto_calculate_content_length: false
+    body: '{"contextPath":"https://play.dhis2.org/2.38.4.3","userAgent":"python-requests/2.31.0","calendar":"iso8601","dateFormat":"yyyy-mm-dd","serverDate":"2023-08-08T09:53:04.520","serverTimeZoneId":"Etc/UTC","serverTimeZoneDisplayName":"Coordinated
+      Universal Time","lastAnalyticsTableSuccess":"2023-08-08T00:06:50.013","intervalSinceLastAnalyticsTableSuccess":"9
+      h, 46 m, 14 s","lastAnalyticsTableRuntime":"00:04:11.898","lastSystemMonitoringSuccess":"2019-03-26T17:07:15.418","version":"2.38.4.3","revision":"4119e92","buildTime":"2023-06-30T12:56:10.000","databaseInfo":{"spatialSupport":false},"encryption":false,"emailConfigured":false,"redisEnabled":false,"systemName":"DHIS
+      2 Demo - Sierra Leone","instanceBaseUrl":"https://play.dhis2.org/2.38.4.3","isMetadataVersionEnabled":true}'
+    content_type: text/plain
+    method: GET
+    status: 200
+    url: https://play.dhis2.org/2.38.4.3/api/system/info
