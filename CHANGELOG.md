@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.5](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.4...0.1.5) (2023-08-08)
+
+
+### Bug Fixes
+
+* **dhis2:** fix support for no cache dir ([da92d59](https://github.com/BLSQ/openhexa-toolbox/commit/da92d59b61012ecad855946ce250c337194c8020))
+
+
+### Miscellaneous
+
+* **main:** switch pytest to importlib ([4461a88](https://github.com/BLSQ/openhexa-toolbox/commit/4461a88fa4cc612a8649c1524294511b30a20821))
+* **tests:** add tests for dhis2 periods ([e2589a1](https://github.com/BLSQ/openhexa-toolbox/commit/e2589a1334f8b27ad20cb82090b8581fe197558d))
+* **tests:** simplify period tests ([140879d](https://github.com/BLSQ/openhexa-toolbox/commit/140879d0ea80199457941cd43a9e8aced4590697))
+
 ## [0.1.4](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.3...0.1.4) (2023-08-02)
 
 
