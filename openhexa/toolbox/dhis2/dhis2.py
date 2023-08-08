@@ -56,6 +56,8 @@ class DHIS2:
         self.api = Api(connection)
         if cache_dir:
             self.cache_dir = self.setup_cache(cache_dir)
+        else:
+            self.cache_dir = None
         self.meta = Metadata(self)
         self.version = self.meta.system_info().get("version")
         self.data_value_sets = DataValueSets(self)
