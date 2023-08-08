@@ -26,6 +26,7 @@ dev = [
     "pytest-cov~=4.0.0",
     "black~=23.7.0",
     "pre-commit",
+    "responses",
 ]
 
 [tool.setuptools.packages.find]
