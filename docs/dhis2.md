@@ -9,29 +9,29 @@
 An utility library to acquire and process data from a DHIS2 instance.
 
 <!-- vscode-markdown-toc -->
-* [Installation](#Installation)
-* [Usage](#Usage)
-	* [Connect to an instance](#Connecttoaninstance)
-	* [Caching](#Caching)
-	* [Read metadata](#Readmetadata)
-	* [Read data](#Readdata)
-		* [Data value sets](#Datavaluesets)
-		* [Analytics](#Analytics)
-	* [Joining metadata fields](#Joiningmetadatafields)
-		* [Names](#Names)
-		* [Pyramid](#Pyramid)
-	* [Write data](#Writedata)
-    * [Periods](#Periods)
+* [Installation](#installation)
+* [Usage](#usage)
+	* [Connect to an instance](#connect-to-an-instance)
+	* [Caching](#caching)
+	* [Read metadata](#read-metadata)
+	* [Read data](#read-data)
+		* [Data value sets](#data-value-sets)
+		* [Analytics](#analytics)
+	* [Joining metadata fields](#joining-metadata-fields)
+		* [Names](#names)
+		* [Pyramid](pPyramid)
+	* [Write data](#write-data)
+    * [Periods](#periods)
 
-## <a name='Installation'></a>Installation
+## [Installation](#)
 
 ``` sh
 pip install openhexa.toolbox
 ```
 
-## <a name='Usage'></a>Usage
+## [Usage](#)
 
-### <a name='Connecttoaninstance'></a>Connect to an instance
+### [Connect to an instance](#)
 
 Credentials are required to initialize a connection to a DHIS2 instance, and must be provided through a `Connection` object.
 
@@ -72,7 +72,7 @@ If needed, the OpenHexa SDK dependency can be bypassed by providing a `namedtupl
 >>> dhis = DHIS2(con)
 ```
 
-### <a name='Caching'></a>Caching
+### [Caching](#)
 
 Caching can be activated by providing a cache directory when initializing a new connection.
 
@@ -87,7 +87,7 @@ Caching can be activated by providing a cache directory when initializing a new 
 
 As of now, the library only caches instance metadata and does not handle data queries.
 
-### <a name='Readmetadata'></a>Read metadata
+### [Read metadata](#)
 
 Instance metadata can be accessed through a set of methods under the `DHIS2.meta` namespace. Metadata are always returned as JSON-like objects that can easily be converted into Pandas or Polars dataframes.
 
@@ -144,11 +144,11 @@ The following metadata types are supported:
 * `DHIS2.meta.indicator_groups()`
 * `DHIS2.meta.category_option_combos()`
 
-### <a name='Readdata'></a>Read data
+### [Read data](#)
 
 Data can be accessed through two distinct endpoints: [`dataValueSets`](https://docs.dhis2.org/en/develop/using-the-api/dhis-core-version-240/data.html#webapi_reading_data_values) and [`analytics`](https://docs.dhis2.org/en/develop/using-the-api/dhis-core-version-240/analytics.html). The `dataValueSets` endpoint allows to query raw data values stored in the DHIS2 database, while `analytics` can access aggregated data stored in the DHIS2 analytics tables.
 
-#### <a name='Datavaluesets'></a>Data value sets
+#### [Data value sets](#)
 
 Raw data values can be read using the `DHIS2.data_value_sets.get()` method. The method accepts the following arguments:
 
@@ -260,7 +260,7 @@ shape: (301, 11)
 └────────────┴────────┴────────────┴────────────┴───┴────────────┴────────────┴─────────┴──────────┘
 ```
 
-#### <a name='Analytics'></a>Analytics
+#### [Analytics](#)
 
 Aggregated data from the Analytics tables can be read using the `DHIS2.analytics.get()` method. The method accepts the following arguments:
 
@@ -334,9 +334,9 @@ shape: (14, 5)
 └─────────────┴─────────────┴─────────────┴────────┴───────┘
 ```
 
-### <a name='Joiningmetadatafields'></a>Joining metadata fields
+### [Joining metadata fields](#)
 
-#### <a name='Names'></a>Names
+#### [Names](#)
 
 Helper methods to add name columns in addition to identifiers are available under the `DHIS.meta` namespace:
 
@@ -381,7 +381,7 @@ shape: (14, 6)
 └─────────────┴─────────────┴─────────────┴────────┴───────┴───────────────────────────┘
 ```
 
-#### <a name='Pyramid'></a>Pyramid
+#### [Pyramid](#)
 
 An helper method to add the full org. unit pyramid to a dataframe is available under the `DHIS.meta` namespace:
 
@@ -434,11 +434,11 @@ shape: (14, 11)
 └────────────┴────────────┴───────────┴────────┴───┴───────────┴───────────┴───────────┴───────────┘
 ```
 
-### <a name='Writedata'></a>Write data
+### [Write data](#)
 
 In developement.
 
-### <a name='Periods'></a>Periods
+### [Periods](#)
 
 Helper classes and methods to deal with DHIS2 periods are available in the `openhexa.toolbox.dhis2.periods` module.
 
