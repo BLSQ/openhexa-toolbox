@@ -21,6 +21,7 @@ An utility library to acquire and process data from a DHIS2 instance.
 		* [Names](#Names)
 		* [Pyramid](#Pyramid)
 	* [Write data](#Writedata)
+    * [Periods](#Periods)
 
 ## <a name='Installation'></a>Installation
 
@@ -436,3 +437,27 @@ shape: (14, 11)
 ### <a name='Writedata'></a>Write data
 
 In developement.
+
+### <a name='Periods'></a>Periods
+
+Helper classes and methods to deal with DHIS2 periods are available in the `openhexa.toolbox.dhis2.periods` module.
+
+```python
+>>> from openhexa.toolbox.dhis2.periods import Month, Quarter, period_from_string
+
+>>> m1 = Month("202211")
+>>> m2 = Month("202302")
+>>> m2 > m1
+True
+
+>>> m1.get_range(m2)
+["202211", "202212", "202301", "202302"]
+
+>>> q1 = Quarter("2022Q3")
+>>> q2 = Quarter("2023Q2")
+>>> q1.get_range(q2)
+["2022Q3", "2022Q4", "2023Q1", "2023Q2"]
+
+>>> period_from_string("2022Q3") == q1
+True
+```
