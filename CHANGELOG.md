@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.6](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.5...0.1.6) (2023-08-22)
+
+
+### Features
+
+* **dhis2:** push data values ([c4861af](https://github.com/BLSQ/openhexa-toolbox/commit/c4861af8fc1f4d9a764ff15bc32d897d59880736))
+* **dhis2:** support identifiableObjects endpoint ([46a508c](https://github.com/BLSQ/openhexa-toolbox/commit/46a508c5be321cca0620b25445b3fab025ffaf4a))
+* **dhis2:** support post requests ([41c1702](https://github.com/BLSQ/openhexa-toolbox/commit/41c17027909bd275aad6877ef361e3390c10c93a))
+
 ## [0.1.5](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.4...0.1.5) (2023-08-08)
 
 
