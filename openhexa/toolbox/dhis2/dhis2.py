@@ -699,6 +699,7 @@ class DataValueSets:
         data_values: List[dict],
         import_strategy: str = "CREATE",
         dry_run: bool = True,
+        skip_validation: bool = False,
     ) -> str:
         """Push data values to a DHIS2 instance using the dataValueSets API endpoint.
 
@@ -712,13 +713,16 @@ class DataValueSets:
         dry_run : bool, optional
             Whether to save changes on the server or just return the
             import summary
+        skip_validation : bool, optional (default=False)
+            Skip validation of data values.
 
         Return
         ------
         dict
             Import counts summary
         """
-        self._validate(data_values)
+        if not skip_validation:
+            self._validate(data_values)
 
         if import_strategy not in ("UPDATE", "CREATE", "CREATE_AND_UPDATE", "DELETE"):
             raise ValueError("Invalid import strategy")
