@@ -81,6 +81,22 @@ class Metadata:
         r = self.client.api.get("system/info")
         return r.json()
 
+    def identifiable_objects(self, uid: str) -> dict:
+        """Get metadata from element UID"""
+        cache_key = f"identifiableObject_{uid}"
+        if self.cache_dir:
+            with Cache(self.cache_dir) as cache:
+                if cache_key in cache:
+                    return json.loads(cache.get(cache_key))
+
+        r = self.client.api.get(f"identifiableObjects/{uid}")
+
+        if self.cache_dir:
+            with Cache(self.cache_dir) as cache:
+                cache.set(cache_key, json.dumps(r.json()))
+
+        return r.json()
+
     @use_cache("organisation_unit_levels")
     def organisation_unit_levels(self) -> List[dict]:
         """Get names of all organisation unit levels.
@@ -607,7 +623,7 @@ class DataValueSets:
         import_strategy: str = "CREATE",
         dry_run: bool = True,
     ):
-        pass
+
 
 
 class Analytics:
