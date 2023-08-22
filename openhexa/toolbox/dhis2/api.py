@@ -52,7 +52,7 @@ class Api:
         if response.status_code != 200 and "json" in response.headers["content-type"]:
             msg = response.json()
             if msg.get("status") == "ERROR":
-                raise DHIS2Error(f"{msg.get('status')} {msg.get('httpStatusCode')}:" f" {msg.get('message')}")
+                raise DHIS2Error(f"{msg.get('status')} {msg.get('httpStatusCode')}: {msg.get('message')}")
 
         # raise with requests if no error message provided
         response.raise_for_status()
@@ -111,3 +111,8 @@ class Api:
                 for page in pages:
                     merged_response[key] += page.json()[key]
         return merged_response
+
+    def post(self, endpoint: str, json: dict = None, params: dict = None) -> requests.Response:
+        r = self.session.post(f"{self.url}/{endpoint}", json=json, params=params)
+        self.raise_if_error(r)
+        return r
