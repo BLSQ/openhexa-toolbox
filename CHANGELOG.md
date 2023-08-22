@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.6...0.1.7) (2023-08-22)
+
+
+### Features
+
+* **dhis2:** allow skipping validation of data values ([d2a6b37](https://github.com/BLSQ/openhexa-toolbox/commit/d2a6b37521a71ccd953de8276e633db0ac1a7cec))
+
 ## [0.1.6](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.5...0.1.6) (2023-08-22)
 
 
