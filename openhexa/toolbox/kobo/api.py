@@ -187,13 +187,13 @@ class Api:
                 surveys.append({"uid": asset.get("uid"), "name": asset.get("name")})
         return surveys
 
-    def get_survey(self, uid: str) -> dict:
-        """Get full survey metadata."""
+    def get_survey(self, uid: str) -> Survey:
+        """Get survey from its UID."""
         r = self.session.get(f"{self.url}/assets/{uid}.json")
         r.raise_for_status()
         return Survey(r.json())
 
-    def get_data(self, survey: Survey) -> dict:
+    def get_survey_data(self, survey: Survey) -> dict:
         """Get survey data."""
         r = self.session.get(survey.meta["data"])
         r.raise_for_status()
