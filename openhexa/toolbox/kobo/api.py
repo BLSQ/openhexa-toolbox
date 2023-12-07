@@ -180,6 +180,7 @@ class Api:
         """List UID and names of available surveys."""
         surveys = []
         r = self.session.get(f"{self.url}/assets.json")
+        r.raise_for_status()
         assets = r.json()["results"]
         for asset in assets:
             if asset.get("asset_type") == "survey":
@@ -195,4 +196,5 @@ class Api:
     def get_data(self, survey: Survey) -> dict:
         """Get survey data."""
         r = self.session.get(survey.meta["data"])
+        r.raise_for_status()
         return r.json().get("results")
