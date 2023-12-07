@@ -11,6 +11,9 @@ class Field:
         """Initialize a Field object from json metadata."""
         self.meta = meta
 
+    def __repr__(self) -> str:
+        return f'Field("{self.name}")'
+
     @property
     def uid(self) -> str:
         """Get field UID."""
