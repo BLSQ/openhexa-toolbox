@@ -4,7 +4,7 @@
 	/vscode-markdown-toc-config -->
 <!-- /vscode-markdown-toc -->
 
-# OpenHexa Toolbox DHIS2
+# OpenHEXA Toolbox DHIS2
 
 An utility library to acquire and process data from a DHIS2 instance.
 
@@ -35,38 +35,38 @@ pip install openhexa.toolbox
 
 Credentials are required to initialize a connection to a DHIS2 instance, and must be provided through a `Connection` object.
 
-In an OpenHexa workspace (e.g. in an OpenHexa pipeline or in an OpenHexa notebook), a `Connection` object can be created using the OpenHexa SDK by providing the identifier of the workspace connection.
+In an OpenHEXA workspace (e.g. in an OpenHEXA pipeline or in an OpenHEXA notebook), a `Connection` object can be created using the OpenHEXA SDK by providing the identifier of the workspace connection.
 
-![OpenHexa workspace connection](images/connection_id.png)
+![OpenHEXA workspace connection](images/connection_id.png)
 
 ``` python
 >>> from openhexa.sdk import workspace
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection in an OpenHexa workspace
+>>> # initialize a new connection in an OpenHEXA workspace
 >>> con = workspace.dhis2_connection("DHIS2_PLAY")
 >>> dhis = DHIS2(con)
 ```
 
-Outside an OpenHexa workspace, a connection can be manually created using the SDK by providing the instance URL, an username and a password.
+Outside an OpenHEXA workspace, a connection can be manually created using the SDK by providing the instance URL, an username and a password.
 
 
 ``` python
 >>> from openhexa.sdk.workspaces.connections import DHIS2Connection
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection outside an OpenHexa workspace
+>>> # initialize a new connection outside an OpenHEXA workspace
 >>> con = DHIS2Connection(url="https://play.dhis2.org/40.0.1", username="admin", password="district")
 >>> dhis = DHIS2(con)
 ```
 
-If needed, the OpenHexa SDK dependency can be bypassed by providing a `namedtuple` instead of a `Connection` object.
+If needed, the OpenHEXA SDK dependency can be bypassed by providing a `namedtuple` instead of a `Connection` object.
 
 ``` python
 >>> from collections import namedtuple
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection outside an OpenHexa workspace
+>>> # initialize a new connection outside an OpenHEXA workspace
 >>> Connection = namedtuple("Connection", ["url", "username", "password"])
 >>> con = Connection(url="https://play.dhis2.org/40.0.1", username="admin", password="district")
 >>> dhis = DHIS2(con)
@@ -80,7 +80,7 @@ Caching can be activated by providing a cache directory when initializing a new 
 >>> from openhexa.sdk import workspace
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection in an OpenHexa workspace
+>>> # initialize a new connection in an OpenHEXA workspace
 >>> con = workspace.dhis2_connection("DHIS2_PLAY")
 >>> dhis = DHIS2(con, cache_dir=".cache")
 ```
@@ -96,7 +96,7 @@ Instance metadata can be accessed through a set of methods under the `DHIS2.meta
 >>> from openhexa.sdk import workspace
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection in an OpenHexa workspace
+>>> # initialize a new connection in an OpenHEXA workspace
 >>> con = workspace.dhis2_connection("DHIS2_PLAY")
 >>> dhis = DHIS2(con, cache_dir=".cache")
 
@@ -203,7 +203,7 @@ Data values are returned in a JSON-like list of dictionaries that can be convert
 >>> from openhexa.sdk import workspace
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection in an OpenHexa workspace
+>>> # initialize a new connection in an OpenHEXA workspace
 >>> con = workspace.dhis2_connection("DHIS2_PLAY")
 >>> dhis = DHIS2(con, cache_dir=".cache")
 
@@ -303,7 +303,7 @@ Data values are returned in a JSON-like list of dictionaries that can be convert
 >>> from openhexa.sdk import workspace
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection in an OpenHexa workspace
+>>> # initialize a new connection in an OpenHEXA workspace
 >>> con = workspace.dhis2_connection("DHIS2_PLAY")
 >>> dhis = DHIS2(con, cache_dir=".cache")
 
@@ -349,7 +349,7 @@ Helper methods to add name columns in addition to identifiers are available unde
 >>> from openhexa.sdk import workspace
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection in an OpenHexa workspace
+>>> # initialize a new connection in an OpenHEXA workspace
 >>> con = workspace.dhis2_connection("DHIS2_PLAY")
 >>> dhis = DHIS2(con, cache_dir=".cache")
 
@@ -392,7 +392,7 @@ An helper method to add the full org. unit pyramid to a dataframe is available u
 >>> from openhexa.sdk import workspace
 >>> from openhexa.toolbox.dhis2 import DHIS2
 
->>> # initialize a new connection in an OpenHexa workspace
+>>> # initialize a new connection in an OpenHEXA workspace
 >>> con = workspace.dhis2_connection("DHIS2_PLAY")
 >>> dhis = DHIS2(con, cache_dir=".cache")
 
