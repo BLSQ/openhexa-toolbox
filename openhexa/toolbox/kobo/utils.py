@@ -5,6 +5,7 @@ import polars as pl
 from shapely.geometry import Point
 
 from .api import Api, Field, Survey
+from .parse import cast_values
 
 
 def field_from_name(name: str, survey: Survey) -> Field:
@@ -59,18 +60,13 @@ def rename_columns(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
-# def get_formatted_survey(survey_uid: str, api: Api) -> pl.DataFrame:
-#     """Get formatted dataframe of a given survey."""
-#     survey = api.get_survey(survey_uid)
-#     data = api.get_data(survey)
-#     df = pl.DataFrame(data)
-#     df = parse_values(df, survey)
-#     mapping = {}
-#     for column in df.columns:
-#         if "/" in column:
-#             mapping[column] = column.split("/")[-1]
-#     df = df.rename(mapping)
-#     return df
+def to_dataframe(survey: Survey) -> pl.DataFrame:
+    """Get survey data as a polars dataframe."""
+    rows = survey.get_data()
+    df = pl.DataFrame(rows)
+    df = rename_columns(df)  # use kobo field names
+    df = cast_values(df, survey)  # use kobo field types
+    return df
 
 
 def to_geodataframe(df: pl.DataFrame) -> gpd.GeoDataFrame:
