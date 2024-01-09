@@ -1,4 +1,4 @@
-"""Utility functions to parse survey data responses from the API into structured
+"""Utility functions to cast survey data responses from the API into structured
 dataframes.
 """
 
@@ -10,22 +10,22 @@ from shapely.geometry import Point
 from .api import Field, Survey
 
 
-def parse_integer(value: str):
+def cast_integer(value: str):
     try:
         return int(value)
     except ValueError:
         return None
 
 
-def parse_decimal(value: str):
+def cast_decimal(value: str):
     try:
         return float(value)
     except ValueError:
         return None
 
 
-def parse_select_one(value: str, field: Field, survey: Survey) -> str:
-    """Parse value of a field of type `select_one`."""
+def cast_select_one(value: str, field: Field, survey: Survey) -> str:
+    """Cast value of a field of type `select_one`."""
     assert field.type == "select_one"
     if not value:
         return None
@@ -35,8 +35,8 @@ def parse_select_one(value: str, field: Field, survey: Survey) -> str:
             return choice.get("label")[0]
 
 
-def parse_select_multiple(value: str, field: Field, survey: Survey) -> List[str]:
-    """Parse value of a field of type `select_multiple`."""
+def cast_select_multiple(value: str, field: Field, survey: Survey) -> List[str]:
+    """Cast value of a field of type `select_multiple`."""
     assert field.type == "select_multiple"
     if not value:
         return None
@@ -48,14 +48,14 @@ def parse_select_multiple(value: str, field: Field, survey: Survey) -> List[str]
     return labels
 
 
-def parse_geopoint(value: str) -> Point:
+def cast_geopoint(value: str) -> dict:
     if not value:
         return None
     y, x, _, _ = value.split(" ")
-    return Point(x, y)
+    return Point(x, y).__geo_interface__
 
 
-def parse_calculate(value: str) -> str:
+def cast_calculate(value: str) -> str:
     if not value:
         return None
     if value == "NaN":
@@ -66,32 +66,48 @@ def parse_calculate(value: str) -> str:
         return value
 
 
-def parse_values(df: pl.DataFrame, survey: Survey) -> pl.DataFrame:
-    """Try to parse survey fields in a dataframe."""
-    xpaths = [field.xpath for field in survey.fields]
+def cast_values(df: pl.DataFrame, survey: Survey) -> pl.DataFrame:
+    """Cast field values according to field metadata.
+
+    Parameters
+    ----------
+    df : dataframe
+        A Polars dataframe with KoboToolbox field names as column names.
+    survey : Survey
+        A KoboToolbox survey.
+
+    Return
+    ------
+    df : dataframe
+        Input dataframe with casted values.
+    """
+    names = [field.get("name") for field in survey.fields]
 
     for column in df.columns:
-        if column not in xpaths:
+        if column not in names:
             continue
 
-        field = survey.get_field_from_xpath(column)
+        field = survey.get_field_from_name(column)
 
         if field.type == "integer":
-            df = df.with_columns(pl.col(column).apply(lambda x: parse_integer(x)))
+            df = df.with_columns(pl.col(column).apply(lambda x: cast_integer(x)))
 
         elif field.type == "decimal":
-            df = df.with_columns(pl.col(column).apply(lambda x: parse_decimal(x)))
+            df = df.with_columns(pl.col(column).apply(lambda x: cast_decimal(x)))
 
         elif field.type == "select_one":
-            df = df.with_columns(pl.col(column).apply(lambda x: parse_select_one(x, field, survey)))
+            df = df.with_columns(pl.col(column).apply(lambda x: cast_select_one(x, field, survey)))
 
         elif field.type == "select_multiple":
-            df = df.with_columns(pl.col(column).apply(lambda x: parse_select_multiple(x, field, survey)))
+            df = df.with_columns(pl.col(column).apply(lambda x: cast_select_multiple(x, field, survey)))
 
         elif field.type == "geopoint":
-            df = df.with_columns(pl.col(column).apply(lambda x: parse_geopoint(x)))
+            df = df.with_columns(pl.col(column).apply(lambda x: cast_geopoint(x)))
 
         elif field.type == "calculate":
-            df = df.with_columns(pl.col(column).apply(lambda x: parse_calculate(x)))
+            df = df.with_columns(pl.col(column).apply(lambda x: cast_calculate(x)))
+
+        elif field.type == "date":
+            df = df.with_columns(pl.col(column).str.strptime(dtype=pl.Date))
 
     return df
