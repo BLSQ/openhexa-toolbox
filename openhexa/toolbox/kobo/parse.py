@@ -90,7 +90,7 @@ def cast_values(df: pl.DataFrame, survey: Survey) -> pl.DataFrame:
     df : dataframe
         Input dataframe with casted values.
     """
-    names = [field.get("name") for field in survey.fields]
+    names = [field.name for field in survey.fields]
 
     for column in df.columns:
         if column not in names:
