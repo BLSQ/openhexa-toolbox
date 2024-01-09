@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from functools import cached_property
+from pathlib import Path
 from typing import List
+from urllib.parse import urlparse
 
 import requests
 import requests_cache
@@ -102,7 +104,7 @@ class Survey:
                 choice_lists[list_name].append(choice)
         return choice_lists
 
-    def _get_data(self) -> dict:
+    def get_data(self) -> List[dict]:
         """Download survey data."""
         r = self.client.session.get(self.meta["data"])
         r.raise_for_status()
@@ -169,6 +171,7 @@ class Api:
     def __init__(self, url: str, cache_dir: str = None):
         self.url = url.rstrip("/")
         if cache_dir:
+            cache_dir = Path(cache_dir, urlparse(url).netloc)
             self.session = requests_cache.CachedSession(cache_dir)
         else:
             self.session = requests.Session()
