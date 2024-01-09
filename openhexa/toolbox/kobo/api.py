@@ -190,7 +190,8 @@ class Api:
         r.raise_for_status()
         return r.json()["results"]
 
-    def list_surveys(self) -> List[dict]:
+    @cached_property
+    def surveys(self) -> List[dict]:
         """List UID and names of available surveys."""
         surveys = []
         assets = self._get_assets()
