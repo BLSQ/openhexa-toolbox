@@ -83,8 +83,7 @@ def to_geodataframe(df: pl.DataFrame) -> gpd.GeoDataFrame:
 def get_fields_mapping(survey: Survey) -> pl.DataFrame:
     """Get a mapping of fields names, types and labels as a dataframe."""
     mapping = []
-    for field in survey.fields:
-        f = survey.get_field(field["uid"])
+    for f in survey.fields:
         if f.label and f.name and f.type:
             mapping.append({"name": f.name, "type": f.type, "label": f.label})
     return pl.DataFrame(mapping)
