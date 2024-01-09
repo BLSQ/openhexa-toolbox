@@ -5,7 +5,6 @@ import polars as pl
 from shapely.geometry import Point
 
 from .api import Api, Field, Survey
-from .parse import parse_values
 
 
 def field_from_name(name: str, survey: Survey) -> Field:
@@ -47,18 +46,31 @@ def download_attachments(df: pl.DataFrame, dst_dir: str, api: Api):
                 _download(url, dst_dir, api)
 
 
-def get_formatted_survey(survey_uid: str, api: Api) -> pl.DataFrame:
-    """Get formatted dataframe of a given survey."""
-    survey = api.get_survey(survey_uid)
-    data = api.get_data(survey)
-    df = pl.DataFrame(data)
-    df = parse_values(df, survey)
+def rename_columns(df: pl.DataFrame) -> pl.DataFrame:
+    """Use field names instead of xpaths as columns.
+
+    E.g. "group1/DATE" becomes "DATE".
+    """
     mapping = {}
     for column in df.columns:
         if "/" in column:
             mapping[column] = column.split("/")[-1]
     df = df.rename(mapping)
     return df
+
+
+# def get_formatted_survey(survey_uid: str, api: Api) -> pl.DataFrame:
+#     """Get formatted dataframe of a given survey."""
+#     survey = api.get_survey(survey_uid)
+#     data = api.get_data(survey)
+#     df = pl.DataFrame(data)
+#     df = parse_values(df, survey)
+#     mapping = {}
+#     for column in df.columns:
+#         if "/" in column:
+#             mapping[column] = column.split("/")[-1]
+#     df = df.rename(mapping)
+#     return df
 
 
 def to_geodataframe(df: pl.DataFrame) -> gpd.GeoDataFrame:
@@ -72,11 +84,11 @@ def to_geodataframe(df: pl.DataFrame) -> gpd.GeoDataFrame:
     return geodf
 
 
-def get_fields_mapping(df: pl.DataFrame, survey: Survey) -> pl.DataFrame:
+def get_fields_mapping(survey: Survey) -> pl.DataFrame:
     """Get a mapping of fields names, types and labels as a dataframe."""
-    fields = []
-    for column in df.columns:
-        field = field_from_name(column, survey)
-        if field:
-            fields.append({"name": field.name, "type": field.type, "label": field.label})
-    return pl.DataFrame(fields)
+    mapping = []
+    for field in survey.fields:
+        f = survey.get_field(field["uid"])
+        if f.label and f.name and f.type:
+            mapping.append({"name": f.name, "type": f.type, "label": f.label})
+    return pl.DataFrame(mapping)

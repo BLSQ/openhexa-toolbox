@@ -1,5 +1,8 @@
 """KoboToolbox API."""
 
+from __future__ import annotations
+
+from functools import cached_property
 from typing import List
 
 import requests
@@ -47,35 +50,12 @@ class Field:
         """Get the list of available choices for the field."""
         return self.meta.get("select_from_list_name")
 
-    @property
-    def condition(self) -> str:
-        """Get the condition for which the question must be answered."""
-        if self.meta.get("relevant"):
-            return self.parse_condition(self.meta.get("relevant"))
-        else:
-            return None
-
-    @staticmethod
-    def parse_condition(expression: str) -> dict:
-        """Transform the conditionnal expression string into a string that can be
-        evaluated by Python.
-
-        Assumes that the variable name that contain record data is named `record`.
-        """
-        expression = expression.replace("selected(${", "(record.get('")
-        expression = expression.replace("${", "record.get('")
-        expression = expression.replace("}", "')")
-        expression = expression.replace(", ", " == ")
-        return expression
-
 
 class Survey:
-    def __init__(self, meta: dict):
+    def __init__(self, client: Api, meta: dict):
         """Initialize a Survey object from json metadata."""
+        self.client = client
         self.meta = meta
-        if "content" in meta:
-            self.fields = self.parse_fields()
-            self.choices = self.parse_choices()
 
     def __repr__(self) -> str:
         return f'Survey("{self.name}")'
@@ -88,19 +68,28 @@ class Survey:
     def name(self) -> str:
         return self.meta.get("name")
 
-    @property
-    def description(self) -> str:
-        return self.meta["settings"].get("description")
+    @cached_property
+    def fields(self) -> List[dict]:
+        """All available fields in survey."""
+        fields = []
+        for meta in self.meta["content"]["survey"]:
+            fields.append({"uid": meta.get("$kuid"), "name": meta.get("name", "")})
+        return fields
 
-    @property
-    def country(self) -> str:
-        return self.meta["settings"].get("country")
+    def get_field(self, uid: str) -> Field:
+        """Get field object from its UID."""
+        for meta in self.meta["content"]["survey"]:
+            if meta.get("$kuid") == uid:
+                return Field(meta)
 
-    def parse_fields(self) -> List[Field]:
-        """Transform fields json metadata into Field objects."""
-        return [Field(f) for f in self.meta["content"]["survey"]]
+    def get_field_from_name(self, name: str) -> Field:
+        """Get field object from its name."""
+        for meta in self.meta["content"]["survey"]:
+            if meta.get("name") == name:
+                return Field(meta)
 
-    def parse_choices(self) -> dict:
+    @cached_property
+    def choices(self) -> dict:
         """Get all choice lists."""
         choice_lists = {}
         if "choices" not in self.meta["content"]:
@@ -112,6 +101,23 @@ class Survey:
                     choice_lists[list_name] = []
                 choice_lists[list_name].append(choice)
         return choice_lists
+
+    def _get_data(self) -> dict:
+        """Download survey data."""
+        r = self.client.session.get(self.meta["data"])
+        r.raise_for_status()
+        return r.json().get("results")
+
+    @cached_property
+    def _xpaths_labels_mapping(self) -> dict:
+        """Get a mapping of fields xpaths and labels."""
+        mapping = {}
+        for field in self.fields:
+            xpath = field.meta.get("$xpath")
+            label = field.meta.get("label")
+            if xpath and label:
+                mapping[xpath] = " ".join(label[0].split())
+        return mapping
 
     def get_field_from_xpath(self, xpath: str) -> Field:
         """Get field object from its xpath."""
@@ -132,10 +138,6 @@ class Survey:
                     raise ValueError("No label found for xpath")
         raise ValueError("Field not found")
 
-    def get_field(self, name: str) -> Field:
-        """Get survey field object based on its name."""
-        return [f for f in self.fields if f.name.lower() == name.lower()][0]
-
     @property
     def labels(self) -> dict:
         """Get a mapping of fields xpaths and labels."""
@@ -147,7 +149,6 @@ class Survey:
                 mapping[xpath] = " ".join(label[0].split())
         return mapping
 
-    @property
     def value_from_choice(self, choice: str):
         """Get choice value from choice id."""
         choices = self.choices.get(choice)
@@ -179,12 +180,15 @@ class Api:
         if "Authorization" not in self.session.headers:
             raise AuthenticationError("Not authenticated")
 
+    def _get_assets(self) -> List[dict]:
+        r = self.session.get(f"{self.url}/assets.json")
+        r.raise_for_status()
+        return r.json()["results"]
+
     def list_surveys(self) -> List[dict]:
         """List UID and names of available surveys."""
         surveys = []
-        r = self.session.get(f"{self.url}/assets.json")
-        r.raise_for_status()
-        assets = r.json()["results"]
+        assets = self._get_assets()
         for asset in assets:
             if asset.get("asset_type") == "survey":
                 surveys.append({"uid": asset.get("uid"), "name": asset.get("name")})
@@ -194,7 +198,7 @@ class Api:
         """Get survey from its UID."""
         r = self.session.get(f"{self.url}/assets/{uid}.json")
         r.raise_for_status()
-        return Survey(r.json())
+        return Survey(client=self, meta=r.json())
 
     def get_survey_data(self, survey: Survey) -> dict:
         """Get survey data."""
