@@ -2,12 +2,15 @@
 dataframes.
 """
 
+import logging
 from typing import List
 
 import polars as pl
 from shapely.geometry import Point
 
 from .api import Field, Survey
+
+logging.basicConfig(level=logging.INFO)
 
 
 def cast_integer(value: str):
@@ -32,7 +35,10 @@ def cast_select_one(value: str, field: Field, survey: Survey) -> str:
     choices = survey.choices.get(field.list_name)
     for choice in choices:
         if choice.get("name") == value:
-            return choice.get("label")[0]
+            if choice.get("label"):
+                return choice["label"][0]
+            else:
+                return None
 
 
 def cast_select_multiple(value: str, field: Field, survey: Survey) -> List[str]:
@@ -44,7 +50,10 @@ def cast_select_multiple(value: str, field: Field, survey: Survey) -> List[str]:
     labels = []
     for choice in choices:
         if choice.get("name") in value.split(" "):
-            labels.append(choice.get("label")[0])
+            if choice.get("label"):
+                labels.append(choice.get("label")[0])
+            else:
+                labels.append(None)
     return labels
 
 
@@ -87,25 +96,27 @@ def cast_values(df: pl.DataFrame, survey: Survey) -> pl.DataFrame:
         if column not in names:
             continue
 
+        logging.debug(f"casting {column} values")
+
         field = survey.get_field_from_name(column)
 
         if field.type == "integer":
-            df = df.with_columns(pl.col(column).apply(lambda x: cast_integer(x)))
+            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_integer(x)))
 
         elif field.type == "decimal":
-            df = df.with_columns(pl.col(column).apply(lambda x: cast_decimal(x)))
+            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_decimal(x)))
 
         elif field.type == "select_one":
-            df = df.with_columns(pl.col(column).apply(lambda x: cast_select_one(x, field, survey)))
+            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_select_one(x, field, survey)))
 
         elif field.type == "select_multiple":
-            df = df.with_columns(pl.col(column).apply(lambda x: cast_select_multiple(x, field, survey)))
+            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_select_multiple(x, field, survey)))
 
         elif field.type == "geopoint":
-            df = df.with_columns(pl.col(column).apply(lambda x: cast_geopoint(x)))
+            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_geopoint(x)))
 
         elif field.type == "calculate":
-            df = df.with_columns(pl.col(column).apply(lambda x: cast_calculate(x)))
+            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_calculate(x)))
 
         elif field.type == "date":
             df = df.with_columns(pl.col(column).str.strptime(dtype=pl.Date))
