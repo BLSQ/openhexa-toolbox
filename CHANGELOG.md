@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.7...0.1.8) (2024-02-08)
+
+
+### Bug Fixes
+
+* **dhis2:** do not raise an error if push is successfull ([01cf5cd](https://github.com/BLSQ/openhexa-toolbox/commit/01cf5cda9ff993303918be9732cedb3170929f0e))
+
 ## [0.1.7](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.6...0.1.7) (2023-08-22)
 
 
