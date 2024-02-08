@@ -741,7 +741,7 @@ class DataValueSets:
             else:
                 summary = r.json()
 
-            if summary.get("status") != "SUCCESS":
+            if r.status_code != 200:
                 raise DHIS2Error(summary.get("description"))
 
             for key in ["imported", "updated", "ignored", "deleted"]:
