@@ -16,7 +16,15 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.8"
-dependencies = ["requests", "python-dateutil", "pandas", "polars", "diskcache"]
+dependencies = [
+    "requests",
+    "python-dateutil",
+    "pandas",
+    "shapely",
+    "geopandas",
+    "polars",
+    "diskcache",
+]
 
 [project.optional-dependencies]
 dev = [
