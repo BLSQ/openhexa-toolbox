@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from functools import cached_property
-from pathlib import Path
 from typing import List
-from urllib.parse import urlparse
 
 import requests
-import requests_cache
 
 
 class Field:
@@ -169,14 +165,9 @@ class AuthenticationError(Exception):
 
 
 class Api:
-    def __init__(self, url: str, cache_dir: str = None):
+    def __init__(self, url: str):
         self.url = url.rstrip("/")
-        if cache_dir:
-            cache_dir = Path(cache_dir, urlparse(url).netloc)
-            logging.debug(f"using cache directory {cache_dir}")
-            self.session = requests_cache.CachedSession(cache_dir)
-        else:
-            self.session = requests.Session()
+        self.session = requests.Session()
 
     def authenticate(self, token: str):
         self.session.headers["Authorization"] = f"Token {token}"
