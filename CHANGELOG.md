@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.8...0.2.0) (2024-02-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* add support for kobotoolbox
+
+### Features
+
+* add support for kobotoolbox ([f0af8b3](https://github.com/BLSQ/openhexa-toolbox/commit/f0af8b3935ee34ee0b084fc44565988444328af4))
+
 ## [0.1.8](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.7...0.1.8) (2024-02-08)
 
 
