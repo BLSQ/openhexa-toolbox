@@ -118,18 +118,26 @@ class Metadata:
         return levels
 
     @use_cache("organisation_units")
-    def organisation_units(self) -> List[dict]:
+    def organisation_units(self, filter: str = None) -> List[dict]:
         """Get organisation units metadata.
+
+        Parameters
+        ----------
+        filter: str, optional
+            DHIS2 query filter
 
         Return
         ------
         list of dict
             Id, name, level, path and geometry of all org units.
         """
+        params = {"fields": "id,name,level,path,geometry"}
+        if filter:
+            params["filter"] = filter
         org_units = []
         for page in self.client.api.get_paged(
             "organisationUnits",
-            params={"fields": "id,name,level,path,geometry"},
+            params=filter,
             page_size=1000,
         ):
             page = page.json()
@@ -198,18 +206,26 @@ class Metadata:
         return datasets
 
     @use_cache("data_elements")
-    def data_elements(self) -> List[dict]:
+    def data_elements(self, filter: str = None) -> List[dict]:
         """Get data elements metadata.
+
+        Parameters
+        ----------
+        filter: str, optional
+            DHIS2 query filter
 
         Return
         ------
         list of dict
             Id, name, and aggregation type of all data elements.
         """
+        params = {"fields": "id,name,aggregationType,zeroIsSignificant"}
+        if filter:
+            params["filter"] = filter
         elements = []
         for page in self.client.api.get_paged(
             "dataElements",
-            params={"fields": "id,name,aggregationType,zeroIsSignificant"},
+            params=params,
             page_size=1000,
         ):
             elements += page.json()["dataElements"]
@@ -259,18 +275,26 @@ class Metadata:
         return combos
 
     @use_cache("indicators")
-    def indicators(self) -> List[dict]:
+    def indicators(self, filter: str = None) -> List[dict]:
         """Get indicators metadata.
+
+        Parameters
+        ----------
+        filter: str, optional
+            DHIS2 query filter
 
         Return
         ------
         list of dict
             Id, name, numerator and denominator of all indicators.
         """
+        params = {"fields": "id,name,numerator,denominator"}
+        if filter:
+            params["filter"] = filter
         indicators = []
         for page in self.client.api.get_paged(
             "indicators",
-            params={"fields": "id,name,numerator,denominator"},
+            params=params,
             page_size=1000,
         ):
             indicators += page.json()["indicators"]
