@@ -10,13 +10,12 @@ import pandas as pd
 import polars as pl
 from diskcache import Cache
 
-
-from .api import Api, DHIS2Error, DHIS2Connection
+from .api import Api, DHIS2Connection, DHIS2Error
 
 logger = logging.getLogger(__name__)
 
 
-def use_cache(key: str):
+def use_cache(key: str, expire_time=86400):
     """Use sqlite-based diskcache.
 
     Return json response as a dict if cache is hit. If not, store the response in cache.
@@ -33,7 +32,7 @@ def use_cache(key: str):
                         return json.loads(cache.get(key))
                     else:
                         value = func(*args, **kwargs)
-                        cache.set(key, json.dumps(value))
+                        cache.set(key, json.dumps(value), expire=expire_time)
                         return value
 
         return wrapper
@@ -253,7 +252,9 @@ class Metadata:
             Id and name of all category option combos.
         """
         combos = []
-        for page in self.client.api.get_paged("categoryOptionCombos", params={"fields": "id,name"}, page_size=1000):
+        for page in self.client.api.get_paged(
+            "categoryOptionCombos", params={"fields": "id,name"}, page_size=1000
+        ):
             combos += page.json().get("categoryOptionCombos")
         return combos
 
@@ -462,7 +463,9 @@ class Metadata:
 
         for lvl in range(1, len(levels)):
             org_units = org_units.with_columns(
-                pl.col("path").apply(lambda path: self._get_uid_from_level(path, lvl)).alias(f"parent_level_{lvl}_id")
+                pl.col("path")
+                .apply(lambda path: self._get_uid_from_level(path, lvl))
+                .alias(f"parent_level_{lvl}_id")
             )
 
             org_units = org_units.join(
@@ -477,7 +480,9 @@ class Metadata:
             )
 
         df = df.join(
-            other=org_units.select(["id"] + [col for col in org_units.columns if col.startswith("parent_")]),
+            other=org_units.select(
+                ["id"] + [col for col in org_units.columns if col.startswith("parent_")]
+            ),
             how="left",
             left_on=org_unit_id_column,
             right_on="id",
@@ -639,7 +644,14 @@ class DataValueSets:
                 value_type = self.client.meta.identifiable_objects(de_uid).get("valueType")
                 value_types[de_uid] = value_type
 
-            for key in ["dataElement", "orgUnit", "period", "value", "categoryOptionCombo", "attributeOptionCombo"]:
+            for key in [
+                "dataElement",
+                "orgUnit",
+                "period",
+                "value",
+                "categoryOptionCombo",
+                "attributeOptionCombo",
+            ]:
                 if not dv.get(key):
                     raise ValueError(f"Missing {key} key in data value")
 
@@ -656,7 +668,9 @@ class DataValueSets:
                     raise ValueError(f"Data value {value} is not a valid {value_type}")
 
             elif value_type == "PERCENTAGE":
-                if (not isinstance(value, float) and not isinstance(value, int)) or not (value >= 0 and value <= 100):
+                if (not isinstance(value, float) and not isinstance(value, int)) or not (
+                    value >= 0 and value <= 100
+                ):
                     raise ValueError(f"Data value {value} is not a valid {value_type}")
 
             elif value_type == "INTEGER_POSITIVE":
@@ -812,8 +826,12 @@ class Analytics:
         for dim in dimension:
             dim_id, dim_items = self.split_dimension_param(dim)
             if dim_id in MAX_DIM_ITEMS:
-                dim_item_chunks = [item for item in _split_list(dim_items, MAX_DIM_ITEMS.get(dim_id, 50))]
-                dim_item_chunks = [f"{dim_id}:{';'.join(dim_items)}" for dim_items in dim_item_chunks]
+                dim_item_chunks = [
+                    item for item in _split_list(dim_items, MAX_DIM_ITEMS.get(dim_id, 50))
+                ]
+                dim_item_chunks = [
+                    f"{dim_id}:{';'.join(dim_items)}" for dim_items in dim_item_chunks
+                ]
                 dim_chunks.append(dim_item_chunks)
             else:
                 dim_chunks.append([dim])
