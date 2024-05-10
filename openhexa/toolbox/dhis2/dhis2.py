@@ -268,9 +268,7 @@ class Metadata:
             Id and name of all category option combos.
         """
         combos = []
-        for page in self.client.api.get_paged(
-            "categoryOptionCombos", params={"fields": "id,name"}, page_size=1000
-        ):
+        for page in self.client.api.get_paged("categoryOptionCombos", params={"fields": "id,name"}, page_size=1000):
             combos += page.json().get("categoryOptionCombos")
         return combos
 
@@ -487,9 +485,7 @@ class Metadata:
 
         for lvl in range(1, len(levels)):
             org_units = org_units.with_columns(
-                pl.col("path")
-                .apply(lambda path: self._get_uid_from_level(path, lvl))
-                .alias(f"parent_level_{lvl}_id")
+                pl.col("path").apply(lambda path: self._get_uid_from_level(path, lvl)).alias(f"parent_level_{lvl}_id")
             )
 
             org_units = org_units.join(
@@ -504,9 +500,7 @@ class Metadata:
             )
 
         df = df.join(
-            other=org_units.select(
-                ["id"] + [col for col in org_units.columns if col.startswith("parent_")]
-            ),
+            other=org_units.select(["id"] + [col for col in org_units.columns if col.startswith("parent_")]),
             how="left",
             left_on=org_unit_id_column,
             right_on="id",
@@ -692,9 +686,7 @@ class DataValueSets:
                     raise ValueError(f"Data value {value} is not a valid {value_type}")
 
             elif value_type == "PERCENTAGE":
-                if (not isinstance(value, float) and not isinstance(value, int)) or not (
-                    value >= 0 and value <= 100
-                ):
+                if (not isinstance(value, float) and not isinstance(value, int)) or not (value >= 0 and value <= 100):
                     raise ValueError(f"Data value {value} is not a valid {value_type}")
 
             elif value_type == "INTEGER_POSITIVE":
@@ -850,12 +842,8 @@ class Analytics:
         for dim in dimension:
             dim_id, dim_items = self.split_dimension_param(dim)
             if dim_id in MAX_DIM_ITEMS:
-                dim_item_chunks = [
-                    item for item in _split_list(dim_items, MAX_DIM_ITEMS.get(dim_id, 50))
-                ]
-                dim_item_chunks = [
-                    f"{dim_id}:{';'.join(dim_items)}" for dim_items in dim_item_chunks
-                ]
+                dim_item_chunks = [item for item in _split_list(dim_items, MAX_DIM_ITEMS.get(dim_id, 50))]
+                dim_item_chunks = [f"{dim_id}:{';'.join(dim_items)}" for dim_items in dim_item_chunks]
                 dim_chunks.append(dim_item_chunks)
             else:
                 dim_chunks.append([dim])
