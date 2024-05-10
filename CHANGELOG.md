@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.1](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.0...0.2.1) (2024-05-10)
+
+
+### Features
+
+* **dhis2:** add default expire time to cache ([b8bbeca](https://github.com/BLSQ/openhexa-toolbox/commit/b8bbecad80b164fee32f56e1a9bfc1a488838042))
+* **dhis2:** support query filters for metadata ([46b17b9](https://github.com/BLSQ/openhexa-toolbox/commit/46b17b904f17182168ccf43bf111bc22be6a4538))
+
+
+### Miscellaneous
+
+* fix line length ([440844d](https://github.com/BLSQ/openhexa-toolbox/commit/440844dd2ca7902738926c240e2f10b555821730))
+
 ## [0.2.0](https://github.com/BLSQ/openhexa-toolbox/compare/0.1.8...0.2.0) (2024-02-22)
 
 
