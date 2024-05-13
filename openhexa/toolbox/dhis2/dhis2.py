@@ -137,7 +137,7 @@ class Metadata:
         org_units = []
         for page in self.client.api.get_paged(
             "organisationUnits",
-            params=filter,
+            params=params,
             page_size=1000,
         ):
             page = page.json()
