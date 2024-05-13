@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.1...0.2.2) (2024-05-13)
+
+
+### Bug Fixes
+
+* **dhis2:** invalid params argument ([070379b](https://github.com/BLSQ/openhexa-toolbox/commit/070379bd9ea9c0a4638e87be323ea79ab967bf15))
+
 ## [0.2.1](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.0...0.2.1) (2024-05-10)
 
 
