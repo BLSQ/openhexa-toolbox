@@ -619,11 +619,12 @@ class DataValueSets:
         if data_elements and not self.client.version >= "2.39":
             raise DHIS2Error("Data elements parameter not supported for DHIS2 versions < 2.39")
 
-        if all([isinstance(pe, Period) for pe in periods]):
-            # convert Period objects to ISO strings
-            periods = [str(pe) for pe in periods]
-        elif not all([isinstance(pe, str) for pe in periods]):
-            raise ValueError("Mixed period types")
+        if periods:
+            if all([isinstance(pe, Period) for pe in periods]):
+                # convert Period objects to ISO strings
+                periods = [str(pe) for pe in periods]
+            elif not all([isinstance(pe, str) for pe in periods]):
+                raise ValueError("Mixed period types")
 
         params = {
             "dataElement": data_elements,
