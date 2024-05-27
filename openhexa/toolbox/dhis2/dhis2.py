@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from functools import wraps
-from typing import Callable, List, Tuple, Union
+from typing import Callable, Generator, List, Tuple, Union
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -512,7 +512,7 @@ class Metadata:
         return df
 
 
-def _split_list(src_list: list, length: int) -> List[list]:
+def _split_list(src_list: list, length: int) -> Generator[List]:
     """Split list into chunks."""
     for i in range(0, len(src_list), length):
         yield src_list[i : i + length]
