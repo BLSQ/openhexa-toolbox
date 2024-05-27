@@ -11,6 +11,7 @@ import polars as pl
 from diskcache import Cache
 
 from .api import Api, DHIS2Connection, DHIS2Error
+from .periods import Period
 
 logger = logging.getLogger(__name__)
 
@@ -559,7 +560,7 @@ class DataValueSets:
         data_elements: List[str] = None,
         datasets: List[str] = None,
         data_element_groups: List[str] = None,
-        periods: List[str] = None,
+        periods: List[str | Period] = None,
         start_date: str = None,
         end_date: str = None,
         org_units: List[str] = None,
@@ -579,7 +580,7 @@ class DataValueSets:
             Dataset identifiers
         data_element_groups : str, optional
             Data element groups identifiers
-        periods : list of str, optional
+        periods : list of str or Period, optional
             Period identifiers in ISO format
         start_date : str, optional
             Start date for the time span of the values to export
@@ -617,6 +618,12 @@ class DataValueSets:
 
         if data_elements and not self.client.version >= "2.39":
             raise DHIS2Error("Data elements parameter not supported for DHIS2 versions < 2.39")
+
+        if all([isinstance(pe, Period) for pe in periods]):
+            # convert Period objects to ISO strings
+            periods = [str(pe) for pe in periods]
+        elif not all([isinstance(pe, str) for pe in periods]):
+            raise ValueError("Mixed period types")
 
         params = {
             "dataElement": data_elements,
@@ -965,7 +972,7 @@ class Analytics:
         data_element_groups: List[str] = None,
         indicators: List[str] = None,
         indicator_groups: List[str] = None,
-        periods: List[str] = None,
+        periods: List[str | Period] = None,
         org_units: List[str] = None,
         org_unit_groups: List[str] = None,
         org_unit_levels: List[int] = None,
@@ -987,7 +994,7 @@ class Analytics:
             Indicator identifiers
         indicator_groups : list of str, optional
             Indicator groups indifiers
-        periods : list of str, optional
+        periods : list of str or Period, optional
             Period identifiers in ISO format
         org_units : list of str, optional
             Organisation units identifiers
@@ -1012,6 +1019,12 @@ class Analytics:
             raise DHIS2Error("No spatial dimension provided")
         if not when:
             raise DHIS2Error("No temporal dimension provided")
+
+        if all([isinstance(pe, Period) for pe in periods]):
+            # convert Period objects to ISO strings
+            periods = [str(pe) for pe in periods]
+        elif not all([isinstance(pe, str) for pe in periods]):
+            raise ValueError("Mixed period types")
 
         dimension = self.format_dimension_param(
             data_elements=data_elements,
