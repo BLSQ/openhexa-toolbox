@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.3](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.2...0.2.3) (2024-05-27)
+
+
+### Features
+
+* **dhis2:** support Period objects in get requests ([6b0860d](https://github.com/BLSQ/openhexa-toolbox/commit/6b0860da09ef129111e0d06ffe405f2de74a30eb))
+
+
+### Bug Fixes
+
+* **dhis2:** compatibility with python&lt;=3.10 ([cfc0ff4](https://github.com/BLSQ/openhexa-toolbox/commit/cfc0ff45cff6f6a4e8ab6e4a86253ed03db8ecb0))
+* **dhis2:** fix bad type ([0a15d0c](https://github.com/BLSQ/openhexa-toolbox/commit/0a15d0c92e383c4d6903c6a2ca44814feaff6d72))
+* **dhis2:** fix typing annotation ([ee0c5db](https://github.com/BLSQ/openhexa-toolbox/commit/ee0c5dbbc0a60b8ae67d868481fa707b2cbd70b5))
+* **dhis2:** ignore chunks without data values ([fd0623e](https://github.com/BLSQ/openhexa-toolbox/commit/fd0623ed73d11ffe4c9e0d9ef2fcb4b8cea0eb04))
+* **dhis2:** support null periods parameter ([e36e280](https://github.com/BLSQ/openhexa-toolbox/commit/e36e2800f2e5d74aebadbe3440b2ed7a98c74ac8))
+
 ## [0.2.2](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.1...0.2.2) (2024-05-13)
 
 
