@@ -637,7 +637,9 @@ class DataValueSets:
         response = []
         for chunk in chunks:
             r = self.client.api.get("dataValueSets", params=chunk)
-            response += r.json()["dataValues"]
+            r_json = r.json()
+            if "dataValues" in r_json:
+                response += r.json()["dataValues"]
 
         return response
 
