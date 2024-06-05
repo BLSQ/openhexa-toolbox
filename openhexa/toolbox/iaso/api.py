@@ -4,7 +4,8 @@ import os
 
 import requests
 import stringcase
-
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 class IASOError(Exception):
     def __init__(self, message: str):
@@ -87,6 +88,17 @@ class Api:
         session = requests.Session()
         headers = {"Authorization": f"Bearer {self.response.json().get("access")}"}
         session.headers.update(headers)
+        self.session = requests.Session()
+        adapter = HTTPAdapter(
+            max_retries=Retry(
+                total=3,
+                backoff_factor=5,
+                allowed_methods=["HEAD", "GET"],
+                status_forcelist=[429, 500, 502, 503, 504],
+            )
+        )
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
         return session
 
     @staticmethod
