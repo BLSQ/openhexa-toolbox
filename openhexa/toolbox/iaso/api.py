@@ -71,22 +71,29 @@ class IASOConnection:
 class Api:
     connection: IASOConnection
     session: requests.Session
+    token: str
+    refresh_token: str
 
     def __init__(self, connection: IASOConnection):
         self.connection = connection
-        self.authenticated_session = self.authenticate()
+        self.session = self.authenticate()
 
-    def get(self, endpoint: str, params: dict = None) -> requests.Response:
-        parsed_url = self.parse_api_url(endpoint)
-        return self.session.get(parsed_url, params)
+    def get(self, endpoint: str) -> requests.Response:
+        parsed_url = self.parse_api_url(self.connection.url + endpoint)
+        return self.session.get(parsed_url)
 
+    def post(self, endpoint: str, data) -> requests.Response:
+        parsed_url = self.parse_api_url(self.connection.url + endpoint)
+        return self.session.post(parsed_url, data=data)
 
     def authenticate(self):
-        credentials = {"username": self.username, "password": self.password}
-        response = requests.post(self.server + "/api/token/", json=credentials)
+        credentials = {"username": self.connection.username, "password": self.connection.password}
+        response = requests.post(self.connection.url + "/api/token/", json=credentials)
         self.raise_if_error(response)
         session = requests.Session()
-        headers = {"Authorization": f"Bearer {self.response.json().get("access")}"}
+        self.token = response.json()["access"]
+        self.refresh_token = response.json()["refresh"]
+        headers = {"Authorization": f"Bearer {self.token}", "User-Agent": "openhexa-toolbox"}
         session.headers.update(headers)
         self.session = requests.Session()
         adapter = HTTPAdapter(
@@ -111,7 +118,7 @@ class Api:
 
     @staticmethod
     def raise_if_error(response: requests.Response):
-        """Raise DHIS2Error with message provided by API."""
+        """Raise IASOError with message provided by API."""
         if response.status_code != 200 and "json" in response.headers["content-type"]:
             msg = response.json()
             if msg.get("status") == "ERROR":
@@ -120,12 +127,3 @@ class Api:
         # raise with requests if no error message provided
         response.raise_for_status()
 
-    def request(self, method, url, *args, **kwargs):
-        full_url = f"{self.server_url}/{url.lstrip('/').rstrip('/')}/"
-        try:
-            resp = super().request(method, full_url, *args, **kwargs)
-            resp.raise_for_status()
-            return resp
-        except requests.RequestException as e:
-            logging.exception(e)
-            raise
