@@ -37,7 +37,6 @@ class ConnectionDoesNotExist(Exception):
 @dataclasses.dataclass
 class IASOConnection:
     """IASO connection.
-
     See https://github.com/BLSQ/iaso for more information.
     """
 
@@ -118,12 +117,8 @@ class Api:
 
     @staticmethod
     def raise_if_error(response: requests.Response):
-        """Raise IASOError with message provided by API."""
-        if response.status_code != 200 and "json" in response.headers["content-type"]:
-            msg = response.json()
-            if msg.get("status") == "ERROR":
-                raise IASOError(f"{msg.get('status')} {msg.get('httpStatusCode')}: {msg.get('message')}")
-
+        if response.status_code > 300 and "json" in response.headers["content-type"]:
+            raise IASOError(f"{response.json()}")
         # raise with requests if no error message provided
         response.raise_for_status()
 

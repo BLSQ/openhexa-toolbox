@@ -87,3 +87,23 @@ class TestIasoAPI:
         iaso = IASO(self.iaso_connection)
         r = iaso.get_submissions_forms([781], [149])
         assert len(r) > 0
+
+    def test_failing_forms(self, mock_responses):
+        mock_responses.add(
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200
+        )
+        mock_responses.add(
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/forms",
+            json={"message": "Form submission failed"},
+            status=500
+        )
+        iaso = IASO(self.iaso_connection)
+        try:
+            r = iaso.get_submissions_forms([781], [149])
+        except Exception as e:
+            assert str(e) == "{'message': 'Form submission failed'}"
+
