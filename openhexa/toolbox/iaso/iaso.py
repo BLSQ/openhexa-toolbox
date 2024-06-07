@@ -24,11 +24,15 @@ class IASO:
         response = self.api.get("/api/forms")
         forms = response.json().get("forms")
         return forms
-    def get_submissions_forms(self, org_units: typing.List[int]=[], projects: typing.List[int]= []) -> dict:
-        responses = self.api.post("/api/forms", data={"org_units": org_units, "projects": projects})
+
+    def get_submissions_forms(self, org_units=None, projects=None) -> dict:
+        responses = self.api.post("/api/forms",
+                                  data={"org_units": org_units or [],
+                                        "projects": projects or []
+                                        })
         return responses.json().get("forms")
 
-    def get_submission_form_in_csv(self, form_id: str) -> dict:
+    def get_submission_form_in_csv(self, form_id: str) -> DataFrame:
         get_forms_url = f"/api/instances/?form_ids={form_id}&csv=true"
         response = self.api.get(get_forms_url)
         forms = pd.read_csv(io.StringIO(response.content.decode('utf-8')))
