@@ -25,7 +25,7 @@ dependencies = [
     "polars",
     "diskcache",
     "stringcase",
-    "pandas"
+    "pyjwt"
 ]
 
 [project.optional-dependencies]

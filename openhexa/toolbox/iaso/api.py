@@ -1,11 +1,11 @@
-import dataclasses
 import logging
-import os
+from datetime import datetime, timezone
 
 import requests
-import stringcase
+import jwt
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
+
 
 class IASOError(Exception):
     def __init__(self, message: str):
@@ -20,12 +20,12 @@ class IASOError(Exception):
         logging.error(f"IASO Error : {self.message}")
 
 
-
 class ConnectionDoesNotExist(Exception):
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
         self.log_error()
+
     def __str__(self):
         return self.message
 
@@ -33,68 +33,39 @@ class ConnectionDoesNotExist(Exception):
         logging.error(f"Connection Error : {self.message}")
 
 
-
-@dataclasses.dataclass
-class IASOConnection:
-    """IASO connection.
-    See https://github.com/BLSQ/iaso for more information.
-    """
-
-    url: str
-    username: str
-    password: str
-
-    def __repr__(self):
-        """Safe representation of the IASO connection (no credentials)."""
-        return f"IASOConnection(url='{self.url}', username='{self.username}')"
-
-    def __init__(self, identifier: str = None):
-        """Get a IASO connection by identifier.
-
-        Parameters
-        ----------
-        identifier : str
-            The identifier of the connection in the OpenHEXA backend
-        """
-        identifier = identifier
-        try:
-            env_variable_prefix = stringcase.constcase(identifier.lower())
-            self.url = os.environ[f"{env_variable_prefix}_URL"]
-            self.username = os.environ[f"{env_variable_prefix}_USERNAME"]
-            self.password = os.environ[f"{env_variable_prefix}_PASSWORD"]
-        except KeyError:
-            raise ConnectionDoesNotExist(f'No IASO connection for "{identifier}"')
-
-
-
-class Api:
-    connection: IASOConnection
-    session: requests.Session
-    token: str
-    refresh_token: str
-
-    def __init__(self, connection: IASOConnection):
-        self.connection = connection
+class ApiClient(requests.Session):
+    def __init__(self, server_url: str, username: str, password: str):
+        super().__init__()
+        self.server_url = server_url.rstrip("/")
+        self.username = username
+        self.password = password
+        self.headers.update(
+            {
+                "User-Agent": "Openhexa-Toolbox",
+            }
+        )
+        self._refresh_token = None
+        self.token = None
         self.session = self.authenticate()
 
-    def get(self, endpoint: str) -> requests.Response:
-        parsed_url = self.parse_api_url(self.connection.url + endpoint)
-        return self.session.get(parsed_url)
-
-    def post(self, endpoint: str, data) -> requests.Response:
-        parsed_url = self.parse_api_url(self.connection.url + endpoint)
-        return self.session.post(parsed_url, data=data)
+    def request(self, method, url, *args, **kwargs):
+        full_url = f"{self.server_url}/{url.lstrip('/').rstrip('/')}/"
+        try:
+            resp = super().request(method, full_url, *args, **kwargs)
+            self.raise_if_error(resp)
+            return resp
+        except requests.RequestException as exc:
+            logging.exception(exc)
+            raise
 
     def authenticate(self):
-        credentials = {"username": self.connection.username, "password": self.connection.password}
-        response = requests.post(self.connection.url + "/api/token/", json=credentials)
-        self.raise_if_error(response)
-        session = requests.Session()
-        self.token = response.json()["access"]
-        self.refresh_token = response.json()["refresh"]
-        headers = {"Authorization": f"Bearer {self.token}", "User-Agent": "openhexa-toolbox"}
-        session.headers.update(headers)
-        self.session = requests.Session()
+        credentials = {"username": self.username, "password": self.password}
+        response = self.request("POST", "/api/token/", json=credentials)
+        json_data = response.json()
+        self.token = json_data["access"]
+        self.token_expiry = self.decode_token_expiry(self.token)
+        self._refresh_token = json_data["refresh"]
+        self.headers.update({"Authorization": f"Bearer {self.token}"})
         adapter = HTTPAdapter(
             max_retries=Retry(
                 total=3,
@@ -103,22 +74,26 @@ class Api:
                 status_forcelist=[429, 500, 502, 503, 504],
             )
         )
-        self.session.mount("https://", adapter)
-        self.session.mount("http://", adapter)
-        return session
+        self.mount("https://", adapter)
+        self.mount("http://", adapter)
+        return self
 
-    @staticmethod
-    def parse_api_url(url: str) -> str:
-        """Ensure that API URL is correctly formatted."""
-        url = url.rstrip("/")
-        if "/api" not in url:
-            url += "/api"
-        return url
+    def refresh_session(self):
+        response = self.request("POST", "/api/token/refresh/", json={"refresh": self._refresh_token})
+        self.token = response.json()["access"]
+        self.headers.update({"Authorization": f"Bearer {self.token}"})
 
-    @staticmethod
-    def raise_if_error(response: requests.Response):
-        if response.status_code > 300 and "json" in response.headers["content-type"]:
-            raise IASOError(f"{response.json()}")
-        # raise with requests if no error message provided
+    def raise_if_error(self, response: requests.Response):
+        if response.status_code >= 300 and "json" in response.headers.get("content-type", ""):
+            raise Exception(f"{response.json()}")
+        if response.status_code == 401 and self._refresh_token:
+            self._refresh_token()
         response.raise_for_status()
+
+    def decode_token_expiry(self, token):
+        decoded_token = jwt.decode(token, options= {"verify_signature":False})
+        exp_timestamp = decoded_token.get("exp")
+        if exp_timestamp:
+            return datetime.fromtimestamp(exp_timestamp, timezone.utc)
+        return None
 

@@ -1,4 +1,4 @@
-from .api import Api
+from .api import ApiClient
 from .iaso import IASO
 
-__all__ = ["IASO", "Api"]
+__all__ = ["IASO", "ApiClient"]
