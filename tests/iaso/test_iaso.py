@@ -7,8 +7,8 @@ from tests.iaso.fixtures.iaso_api_fixtures import (
     iaso_mocked_auth_token,
     iaso_mocked_forms,
     iaso_mocked_orgunits,
-    iaso_mocked_projects,
     iaso_mocked_refreshed_auth_token,
+    iaso_mocked_projects,
 )
 
 IASO_CONNECTION_IDENTIFIER = "IASO_BRU"
@@ -36,7 +36,8 @@ class TestIasoAPI:
         mock_responses.add(
             responses.GET, "https://iaso-staging.bluesquare.org/api/projects/", json=iaso_mocked_projects, status=200
         )
-        iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "user", "test")
+
+        iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "username", "password")
         iaso = IASO(iaso_api_client)
         r = iaso.get_projects()
         assert len(r) > 0
