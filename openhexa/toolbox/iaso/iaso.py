@@ -60,7 +60,7 @@ class IASO:
 
     def get_for_forms(
         self, page: int = 0, limit: int = 10, as_dataframe: bool = False, **kwargs
-    ) -> dict | pl.DataFrame:
+    ) -> typing.Union[dict, pl.DataFrame]:
         """
         Fetches form submissions from IASO filtered only by URL paramters. Method is paginated by default.
         Pagination can be modified and additional arguments can be passed as key value parameters.
