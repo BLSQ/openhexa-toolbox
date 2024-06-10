@@ -20,19 +20,6 @@ class IASOError(Exception):
         logging.error(f"IASO Error : {self.message}")
 
 
-class ConnectionDoesNotExist(Exception):
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
-        self.log_error()
-
-    def __str__(self):
-        return self.message
-
-    def log_error(self):
-        logging.error(f"Connection Error : {self.message}")
-
-
 class ApiClient(requests.Session):
     def __init__(self, server_url: str, username: str, password: str):
         super().__init__()
@@ -44,9 +31,10 @@ class ApiClient(requests.Session):
                 "User-Agent": "Openhexa-Toolbox",
             }
         )
-        self._refresh_token = None
         self.token = None
-        self.session = self.authenticate()
+        self.token_expiry = None
+        self._refresh_token = None
+        self.authenticate()
 
     def request(self, method, url, *args, **kwargs):
         full_url = f"{self.server_url}/{url.lstrip('/').rstrip('/')}/"
@@ -76,7 +64,6 @@ class ApiClient(requests.Session):
         )
         self.mount("https://", adapter)
         self.mount("http://", adapter)
-        return self
 
     def refresh_session(self):
         response = self.request("POST", "/api/token/refresh/", json={"refresh": self._refresh_token})
@@ -92,9 +79,8 @@ class ApiClient(requests.Session):
         response.raise_for_status()
 
     def decode_token_expiry(self, token):
-        decoded_token = jwt.decode(token, options= {"verify_signature":False})
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
         exp_timestamp = decoded_token.get("exp")
         if exp_timestamp:
             return datetime.fromtimestamp(exp_timestamp, timezone.utc)
         return None
-

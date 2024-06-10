@@ -5,9 +5,7 @@ import polars as pl
 
 
 class IASO:
-    def __init__(
-        self, client : ApiClient
-    ) -> None:
+    def __init__(self, client: ApiClient) -> None:
         self.api_client = client
 
     def get_projects(self, **kwargs) -> dict:
