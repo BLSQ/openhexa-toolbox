@@ -92,10 +92,8 @@ class IASO:
         return forms
 
     def post_for_forms(
-        self,
-            org_units: typing.List[int],
-            projects: typing.List[int],
-            page: int = 0, limit: int = 10, **kwargs) -> dict:
+        self, org_units: typing.List[int], projects: typing.List[int], page: int = 0, limit: int = 10, **kwargs
+    ) -> dict:
         """
         Fetches form submissions from IASO filtered by POST form. Method is paginated by default.
         Pagination can be modified and additional arguments can be passed as key value parameters.

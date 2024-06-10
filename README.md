@@ -29,5 +29,5 @@ pip install openhexa.toolbox
 
 ## Modules
 
-[**openhexa.toolbox.dhis2**](docs/dhis2.md)<br>
-Acquire and process data from DHIS2 instances
+[**openhexa.toolbox.dhis2**](docs/dhis2.md) - Acquire and process data from DHIS2 instances <br>
+[**openhexa.toolbox.iaso**](docs/iaso.md) - Acquire and process data from IASO instances <br>

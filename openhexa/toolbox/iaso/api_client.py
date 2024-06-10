@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from typing import Union
 
 import requests
 import jwt
@@ -115,7 +116,7 @@ class ApiClient(requests.Session):
         response.raise_for_status()
 
     @staticmethod
-    def decode_token_expiry(token: str) -> datetime | None:
+    def decode_token_expiry(token: str) -> Union[datetime, None]:
         """
         Decodes base64 encoded JWT token and returns expiry time from 'exp' field of the JWT token
 

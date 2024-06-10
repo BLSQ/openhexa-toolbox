@@ -40,7 +40,7 @@ iaso.get_projects()
 # Fetch organisation units 
 iaso.get_org_units()
 # Fetch forms filtering by organisaiton units and projects that you have permissions to
-iaso.post_for_forms(org_units=[781], projects=[149])
+iaso.get_for_forms(page=1, limit=1, as_dataframe=True, ids="1,2,3")
 # Fetch forms filtering by url parameters and with choice to fetch them as dataframe
 iaso.post_for_forms(org_units=[781], projects=[149])
 ```
