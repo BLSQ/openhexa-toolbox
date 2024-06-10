@@ -37,7 +37,7 @@ class ApiClient(requests.Session):
         self.authenticate()
 
     def request(self, method, url, *args, **kwargs):
-        full_url = f"{self.server_url}/{url.lstrip('/').rstrip('/')}/"
+        full_url = f"{self.server_url}/{url.strip('/')}/"
         try:
             resp = super().request(method, full_url, *args, **kwargs)
             self.raise_if_error(resp)

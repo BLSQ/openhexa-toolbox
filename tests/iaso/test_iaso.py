@@ -62,7 +62,7 @@ class TestIasoAPI:
         )
         iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "user", "test")
         iaso = IASO(iaso_api_client)
-        r = iaso.get_submissions_forms([781], [149])
+        r = iaso.post_for_forms(org_units=[781], projects=[149])
         assert len(r) > 0
 
     def test_failing_forms(self, mock_responses):
@@ -78,7 +78,7 @@ class TestIasoAPI:
         iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "user", "test")
         iaso = IASO(iaso_api_client)
         try:
-            iaso.get_submissions_forms([781], [149])
+            iaso.post_for_forms([781], [149])
         except Exception as e:
             assert str(e) == "{'message': 'Form submission failed'}"
 
@@ -100,6 +100,6 @@ class TestIasoAPI:
         )
         iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "user", "test")
         iaso = IASO(iaso_api_client)
-        iaso.get_submissions_forms([781], [149])
+        iaso.post_for_forms([781], [149])
         assert mock_responses.calls[2].request.url == "https://iaso-staging.bluesquare.org/api/token/refresh/"
         assert iaso_api_client.token == iaso_mocked_refreshed_auth_token["access"]
