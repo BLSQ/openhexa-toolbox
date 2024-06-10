@@ -85,9 +85,9 @@ class ApiClient(requests.Session):
 
     def raise_if_error(self, response: requests.Response):
         if response.status_code >= 300 and "json" in response.headers.get("content-type", ""):
-            raise Exception(f"{response.json()}")
+            raise IASOError(f"{response.json()}")
         if response.status_code == 401 and self._refresh_token:
-            self._refresh_token()
+            self.refresh_session()
         response.raise_for_status()
 
     def decode_token_expiry(self, token):

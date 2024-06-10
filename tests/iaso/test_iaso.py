@@ -2,7 +2,7 @@ import pytest
 import responses
 
 from openhexa.toolbox.iaso import IASO
-from openhexa.toolbox.iaso.api import ApiClient
+from openhexa.toolbox.iaso.api_client import ApiClient
 from tests.iaso.fixtures.iaso_api_fixtures import (
     iaso_mocked_auth_token,
     iaso_mocked_forms,

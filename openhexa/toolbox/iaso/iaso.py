@@ -1,6 +1,6 @@
 import io
 
-from openhexa.toolbox.iaso.api import ApiClient
+from openhexa.toolbox.iaso.api_client import ApiClient
 import polars as pl
 
 
@@ -10,12 +10,12 @@ class IASO:
     ) -> None:
         self.api_client = client
 
-    def get_projects(self) -> dict:
-        response = self.api_client.request("GET", "/api/projects")
+    def get_projects(self, **kwargs) -> dict:
+        response = self.api_client.request("GET", "/api/projects", params=kwargs)
         return response.json().get("projects")
 
-    def get_org_units(self) -> dict:
-        response = self.api_client.request("GET", "/api/orgunits")
+    def get_org_units(self, **kwargs) -> dict:
+        response = self.api_client.request("GET", "/api/orgunits", params=kwargs)
         return response.json().get("orgUnits")
 
     def get_all_submissions_forms(self) -> dict:
