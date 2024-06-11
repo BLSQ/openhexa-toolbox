@@ -1,7 +1,7 @@
 
 # OpenHEXA Toolbox IASO
 
-Client to fetch data from IASO 
+Module to fetch data from IASO 
 
 * [Installation](#installation)
 * [Usage](#usage)
@@ -22,13 +22,11 @@ password to connect to an instance of IASO. You have as well to provide the host
 * Staging environment https://iaso-staging.bluesquare.org/api
 * Production environment https://iaso.bluesquare.org/api
 
-Import IASO ApiClient and IASO module as:
+Import IASO module as:
 ```
 from openhexa.toolbox.iaso import IASO
-from openhexa.toolbox.iaso.api_client import ApiClient
 
-iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "username", "password")
-iaso = IASO(iaso_api_client)
+iaso = IASO("https://iaso-staging.bluesquare.org","username", "password")
 ```
 
 ### [Read data](#)
@@ -39,10 +37,11 @@ permissions for.
 iaso.get_projects()
 # Fetch organisation units 
 iaso.get_org_units()
-# Fetch forms filtering by organisaiton units and projects that you have permissions to
-iaso.get_for_forms(page=1, limit=1, as_dataframe=True, ids="1,2,3")
-# Fetch forms filtering by url parameters and with choice to fetch them as dataframe
-iaso.post_for_forms(org_units=[781], projects=[149])
+# Fetch submitted forms filtered by form_ids passed in url parameters and with choice to fetch them as dataframe
+iaso.get_form_instances(page=1, limit=1, as_dataframe=True, 
+	dataframe_columns=["Date de création","Date de modification","Org unit"], ids=276)
+# Fetch forms filtered by organisaiton units and projects that you have permissions to
+iaso.get_forms(org_units=[781], projects=[149])
 ```
 
 You can as well provide additional parameters to the method to filter on desired values as key value arguments. 
