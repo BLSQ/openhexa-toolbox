@@ -24,6 +24,8 @@ dependencies = [
     "geopandas",
     "polars",
     "diskcache",
+    "stringcase",
+    "pyjwt"
 ]
 
 [project.optional-dependencies]
