@@ -13,7 +13,9 @@ class IASO:
     def __init__(self, server_url: str, username: str, password: str) -> None:
         """
         Initializes the IASO toolbox.
-        :param client: The IASO toolbox client.
+        :param server_url: IASO server URL
+        :param username: IASO instance username
+        :param password: IASO instance password
 
         Examples:
             >>> from openhexa.toolbox.iaso import IASO
@@ -38,7 +40,7 @@ class IASO:
 
         params = kwargs
         params.update({"page": page, "limit": limit})
-        response = self.api_client.request("GET", "/api/projects", params=params)
+        response = self.api_client.get("/api/projects", params=params)
         return response.json().get("projects")
 
     def get_org_units(self, page: int = 0, limit: int = 10, **kwargs) -> dict:
@@ -55,7 +57,7 @@ class IASO:
         """
         params = kwargs
         params.update({"page": page, "limit": limit})
-        response = self.api_client.request("GET", "/api/orgunits", params=kwargs)
+        response = self.api_client.get("/api/orgunits", params=params)
         return response.json().get("orgUnits")
 
     def get_form_instances(
@@ -89,10 +91,10 @@ class IASO:
         params.update({"page": page, "limit": limit})
         if as_dataframe:
             params.update({"csv": "true"})
-            response = self.api_client.request("GET", "/api/instances", params=params)
+            response = self.api_client.get("/api/instances", params=params)
             forms = pl.read_csv(io.StringIO(response.content.decode("utf-8")))[dataframe_columns]
             return forms
-        response = self.api_client.request("GET", "/api/instances/", params=kwargs)
+        response = self.api_client.get("/api/instances/", params=kwargs)
         forms = response.json().get("instances")
         return forms
 
@@ -120,5 +122,5 @@ class IASO:
             raise ValueError("Values for org_units and projects cannot be empty lists")
         params = kwargs
         params.update({"page": page, "limit": limit, "org_units": org_units, "projects": projects})
-        response = self.api_client.request("POST", "/api/forms", data=params)
+        response = self.api_client.post("/api/forms", data=params)
         return response.json().get("forms")

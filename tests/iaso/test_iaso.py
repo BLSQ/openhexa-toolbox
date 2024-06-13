@@ -12,8 +12,6 @@ from tests.iaso.fixtures.iaso_api_fixtures import (
     iaso_mocked_instances,
 )
 
-IASO_CONNECTION_IDENTIFIER = "IASO_BRU"
-
 
 class TestIasoAPI:
     @pytest.fixture
@@ -26,7 +24,7 @@ class TestIasoAPI:
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
         )
 
-        iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "nfilipchukpathways", "uvz*wbg5jht1fxr0WCQ")
+        iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "username", "password")
         iaso_api_client.authenticate()
         assert iaso_api_client.token == iaso_mocked_auth_token["access"]
 
