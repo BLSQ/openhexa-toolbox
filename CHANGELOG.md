@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.3...0.2.4) (2024-06-13)
+
+
+### Features
+
+* **IASOClient:** implement IASO client ([a46e67e](https://github.com/BLSQ/openhexa-toolbox/commit/a46e67ed27072f3597e95a5ed0d029d278e5e071))
+
 ## [0.2.3](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.2...0.2.3) (2024-05-27)
 
 
