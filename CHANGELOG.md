@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.4...0.2.5) (2024-06-19)
+
+
+### Bug Fixes
+
+* **deps:** Remove unused 'stringcase' dependency ([1d2a9db](https://github.com/BLSQ/openhexa-toolbox/commit/1d2a9db9b05ee7089dc21011ae99efb282b770f7))
+
 ## [0.2.4](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.3...0.2.4) (2024-06-13)
 
 
