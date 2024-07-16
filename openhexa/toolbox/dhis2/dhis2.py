@@ -16,31 +16,6 @@ from .periods import Period
 logger = logging.getLogger(__name__)
 
 
-def use_cache(key: str, expire_time=86400):
-    """Use sqlite-based diskcache.
-
-    Return json response as a dict if cache is hit. If not, store the response in cache.
-    """
-
-    def decorator(func: Callable):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if not args[0].client.cache_dir:
-                return func(*args, **kwargs)
-            else:
-                with Cache(args[0].client.cache_dir) as cache:
-                    if key in cache:
-                        return json.loads(cache.get(key))
-                    else:
-                        value = func(*args, **kwargs)
-                        cache.set(key, json.dumps(value), expire=expire_time)
-                        return value
-
-        return wrapper
-
-    return decorator
-
-
 class DHIS2:
     def __init__(self, connection: DHIS2Connection, cache_dir: str = None):
         """Initialize a new DHIS2 instance.
@@ -53,21 +28,11 @@ class DHIS2:
             Cache directory. Actual cache data will be stored under a sub-directory
             named after the DHIS2 instance domain.
         """
-        self.api = Api(connection)
-        if cache_dir:
-            self.cache_dir = self.setup_cache(cache_dir)
-        else:
-            self.cache_dir = None
+        self.api = Api(connection, cache_dir)
         self.meta = Metadata(self)
         self.version = self.meta.system_info().get("version")
         self.data_value_sets = DataValueSets(self)
         self.analytics = Analytics(self)
-
-    def setup_cache(self, cache_dir: str):
-        """Initialize diskcache."""
-        cache_dir = os.path.join(cache_dir, urlparse(self.api.url).netloc)
-        os.makedirs(cache_dir, exist_ok=True)
-        return cache_dir
 
 
 class Metadata:
@@ -75,29 +40,17 @@ class Metadata:
         """Methods for accessing metadata API endpoints."""
         self.client = client
 
-    @use_cache("system-info")
     def system_info(self) -> dict:
         """Get information on the current system."""
         r = self.client.api.get("system/info")
-        return r.json()
+        return r
 
     def identifiable_objects(self, uid: str) -> dict:
         """Get metadata from element UID"""
         cache_key = f"identifiableObject_{uid}"
-        if self.client.cache_dir:
-            with Cache(self.client.cache_dir) as cache:
-                if cache_key in cache:
-                    return json.loads(cache.get(cache_key))
-
         r = self.client.api.get(f"identifiableObjects/{uid}")
+        return r
 
-        if self.client.cache_dir:
-            with Cache(self.client.cache_dir) as cache:
-                cache.set(cache_key, json.dumps(r.json()))
-
-        return r.json()
-
-    @use_cache("organisation_unit_levels")
     def organisation_unit_levels(self) -> List[dict]:
         """Get names of all organisation unit levels.
 
@@ -108,7 +61,7 @@ class Metadata:
         """
         r = self.client.api.get("filledOrganisationUnitLevels")
         levels = []
-        for level in r.json():
+        for level in r:
             levels.append(
                 {
                     "id": level.get("id"),
@@ -118,7 +71,6 @@ class Metadata:
             )
         return levels
 
-    @use_cache("organisation_units")
     def organisation_units(self, filter: str = None) -> List[dict]:
         """Get organisation units metadata.
 
@@ -139,9 +91,7 @@ class Metadata:
         for page in self.client.api.get_paged(
             "organisationUnits",
             params=params,
-            page_size=1000,
         ):
-            page = page.json()
             for ou in page["organisationUnits"]:
                 org_units.append(
                     {
@@ -154,7 +104,6 @@ class Metadata:
                 )
         return org_units
 
-    @use_cache("organisation_unit_groups")
     def organisation_unit_groups(self) -> List[dict]:
         """Get organisation unit groups metadata.
 
@@ -167,10 +116,9 @@ class Metadata:
         for page in self.client.api.get_paged(
             "organisationUnitGroups",
             params={"fields": "id,name,organisationUnits"},
-            page_size=50,
         ):
             groups = []
-            for group in page.json().get("organisationUnitGroups"):
+            for group in page.get("organisationUnitGroups"):
                 groups.append(
                     {
                         "id": group.get("id"),
@@ -181,7 +129,6 @@ class Metadata:
             org_unit_groups += groups
         return groups
 
-    @use_cache("datasets")
     def datasets(self) -> List[dict]:
         """Get datasets metadata.
 
@@ -198,7 +145,7 @@ class Metadata:
                 "pageSize": 10,
             },
         ):
-            for ds in page.json()["dataSets"]:
+            for ds in page["dataSets"]:
                 row = {"id": ds.get("id"), "name": ds.get("name")}
                 row["data_elements"] = [dx["dataElement"]["id"] for dx in ds["dataSetElements"]]
                 row["indicators"] = [indicator["id"] for indicator in ds["indicators"]]
@@ -206,7 +153,6 @@ class Metadata:
                 datasets.append(row)
         return datasets
 
-    @use_cache("data_elements")
     def data_elements(self, filter: str = None) -> List[dict]:
         """Get data elements metadata.
 
@@ -227,12 +173,10 @@ class Metadata:
         for page in self.client.api.get_paged(
             "dataElements",
             params=params,
-            page_size=1000,
         ):
-            elements += page.json()["dataElements"]
+            elements += page["dataElements"]
         return elements
 
-    @use_cache("data_element_groups")
     def data_element_groups(self) -> List[dict]:
         """Get data element groups metadata.
 
@@ -245,10 +189,9 @@ class Metadata:
         for page in self.client.api.get_paged(
             "dataElementGroups",
             params={"fields": "id,name,dataElements"},
-            page_size=50,
         ):
             groups = []
-            for group in page.json().get("dataElementGroups"):
+            for group in page.get("dataElementGroups"):
                 groups.append(
                     {
                         "id": group.get("id"),
@@ -259,7 +202,6 @@ class Metadata:
             de_groups += groups
         return de_groups
 
-    @use_cache("category_option_combos")
     def category_option_combos(self) -> List[dict]:
         """Get category option combos metadata.
 
@@ -269,11 +211,10 @@ class Metadata:
             Id and name of all category option combos.
         """
         combos = []
-        for page in self.client.api.get_paged("categoryOptionCombos", params={"fields": "id,name"}, page_size=1000):
-            combos += page.json().get("categoryOptionCombos")
+        for page in self.client.api.get_paged("categoryOptionCombos", params={"fields": "id,name"}):
+            combos += page.get("categoryOptionCombos")
         return combos
 
-    @use_cache("indicators")
     def indicators(self, filter: str = None) -> List[dict]:
         """Get indicators metadata.
 
@@ -294,12 +235,10 @@ class Metadata:
         for page in self.client.api.get_paged(
             "indicators",
             params=params,
-            page_size=1000,
         ):
-            indicators += page.json()["indicators"]
+            indicators += page["indicators"]
         return indicators
 
-    @use_cache("indicatorGroups")
     def indicator_groups(self) -> List[dict]:
         """Get indicator groups metadata.
 
@@ -312,10 +251,9 @@ class Metadata:
         for page in self.client.api.get_paged(
             "indicatorGroups",
             params={"fields": "id,name,indicators"},
-            page_size=50,
         ):
             groups = []
-            for group in page.json().get("indicatorGroups"):
+            for group in page.get("indicatorGroups"):
                 groups.append(
                     {
                         "id": group.get("id"),
@@ -645,9 +583,8 @@ class DataValueSets:
         response = []
         for chunk in chunks:
             r = self.client.api.get("dataValueSets", params=chunk)
-            r_json = r.json()
-            if "dataValues" in r_json:
-                response += r.json()["dataValues"]
+            if "dataValues" in r:
+                response += r["dataValues"]
 
         return response
 

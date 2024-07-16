@@ -142,12 +142,12 @@ class Api:
             Merged response as a dict with merged lists
         """
         merged_response = {}
-        first_page = pages[0].json()
+        first_page = pages[0]
         for key in first_page.keys():
             if isinstance(first_page[key], list):
                 merged_response[key] = []
                 for page in pages:
-                    merged_response[key] += page.json()[key]
+                    merged_response[key] += page[key]
         return merged_response
 
     def post(self, endpoint: str, json: dict = None, params: dict = None) -> requests.Response:
