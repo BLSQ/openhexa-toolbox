@@ -1,14 +1,10 @@
 import itertools
 import json
 import logging
-import os
-from functools import wraps
-from typing import Callable, Iterator, List, Tuple, Union
-from urllib.parse import urlparse
+from typing import Iterator, List, Tuple, Union
 
 import pandas as pd
 import polars as pl
-from diskcache import Cache
 
 from .api import Api, DHIS2Connection, DHIS2Error
 from .periods import Period
@@ -498,7 +494,7 @@ class DataValueSets:
         data_elements: List[str] = None,
         datasets: List[str] = None,
         data_element_groups: List[str] = None,
-        periods: List[Union[str, Period]] = None,
+        periods: List[str | Period] = None,
         start_date: str = None,
         end_date: str = None,
         org_units: List[str] = None,
@@ -519,11 +515,11 @@ class DataValueSets:
         data_element_groups : str, optional
             Data element groups identifiers
         periods : list of str or Period, optional
-            Period identifiers in ISO format
+            Period identifiers in DHIS2 format
         start_date : str, optional
-            Start date for the time span of the values to export
+            Start date for the time span of the values to export (example: "2020-01-01")
         end_date : str, optional
-            End date for the time span of the values to export
+            End date for the time span of the values to export (example: "2020-06-01")
         org_units : list of str, optional
             Organisation units identifiers
         org_unit_groups : list of str, optional
@@ -832,7 +828,7 @@ class Analytics:
         indicator_groups : list of str, optional
             Indicator groups indifiers
         periods : list of str, optional
-            Period identifiers in ISO format
+            Period identifiers in DHIS2 format
         org_units : list of str, optional
             Organisation units identifiers
         org_unit_groups : list of str, optional
@@ -910,7 +906,7 @@ class Analytics:
         data_element_groups: List[str] = None,
         indicators: List[str] = None,
         indicator_groups: List[str] = None,
-        periods: Union[str, Period] = None,
+        periods: List[Union[str, Period]] = None,
         org_units: List[str] = None,
         org_unit_groups: List[str] = None,
         org_unit_levels: List[int] = None,
@@ -933,7 +929,7 @@ class Analytics:
         indicator_groups : list of str, optional
             Indicator groups indifiers
         periods : list of str or Period, optional
-            Period identifiers in ISO format
+            Period identifiers in DHIS2 format
         org_units : list of str, optional
             Organisation units identifiers
         org_unit_groups : list of str, optional
