@@ -46,7 +46,6 @@ class Metadata:
 
     def identifiable_objects(self, uid: str) -> dict:
         """Get metadata from element UID"""
-        cache_key = f"identifiableObject_{uid}"
         r = self.client.api.get(f"identifiableObjects/{uid}")
         return r
 
