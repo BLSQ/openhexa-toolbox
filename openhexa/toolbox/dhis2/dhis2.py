@@ -1,6 +1,7 @@
 import itertools
 import json
 import logging
+from pathlib import Path
 from typing import Iterator, List, Tuple, Union
 
 import pandas as pd
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class DHIS2:
-    def __init__(self, connection: DHIS2Connection, cache_dir: str = None):
+    def __init__(self, connection: DHIS2Connection, cache_dir: str | Path = None):
         """Initialize a new DHIS2 instance.
 
         Parameters
@@ -24,6 +25,8 @@ class DHIS2:
             Cache directory. Actual cache data will be stored under a sub-directory
             named after the DHIS2 instance domain.
         """
+        if isinstance(cache_dir, str):
+            cache_dir = Path(cache_dir)
         self.api = Api(connection, cache_dir)
         self.meta = Metadata(self)
         self.version = self.meta.system_info().get("version")
