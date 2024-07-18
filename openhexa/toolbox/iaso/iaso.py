@@ -25,7 +25,7 @@ class IASO:
         """
         self.api_client = ApiClient(server_url, username, password)
 
-    def get_projects(self, page: int = 0, limit: int = 10, **kwargs) -> dict:
+    def get_projects(self, page: int = 1, limit: int = 10, **kwargs) -> dict:
         """
         Fetches projects list from IASO. Method is paginated by default. Pagination can be modified and additional
         arguments can be passed as key value parameters.
@@ -43,7 +43,7 @@ class IASO:
         response = self.api_client.get("/api/projects", params=params)
         return response.json().get("projects")
 
-    def get_org_units(self, page: int = 0, limit: int = 10, **kwargs) -> dict:
+    def get_org_units(self, page: int = 1, limit: int = 10, **kwargs) -> dict:
         """
         Fetches org units from IASO. Method is paginated by default. Pagination can be modified and additional
         arguments can be passed as key value parameters.
@@ -62,7 +62,7 @@ class IASO:
 
     def get_form_instances(
         self,
-        page: int = 0,
+        page: int = 1,
         limit: int = 10,
         as_dataframe: bool = False,
         dataframe_columns: typing.List[str] = None,
@@ -99,7 +99,7 @@ class IASO:
         return forms
 
     def get_forms(
-        self, org_units: typing.List[int], projects: typing.List[int], page: int = 0, limit: int = 10, **kwargs
+        self, org_units: typing.List[int], projects: typing.List[int], page: int = 1, limit: int = 10, **kwargs
     ) -> dict:
         """
         Fetches forms from IASO. Method is paginated by default.
