@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.6](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.5...0.2.6) (2024-07-18)
+
+
+### Bug Fixes
+
+* **IASOClient:** set default page to 1 ([#27](https://github.com/BLSQ/openhexa-toolbox/issues/27)) ([2601aca](https://github.com/BLSQ/openhexa-toolbox/commit/2601aca97d3d495d3d8439def36457387ed041a2))
+
+
+### Miscellaneous
+
+* Configure Renovate ([#26](https://github.com/BLSQ/openhexa-toolbox/issues/26)) ([c1f1ee6](https://github.com/BLSQ/openhexa-toolbox/commit/c1f1ee624ffdf273d9fb1bf972361c1dc93f5fc4))
+* **deps:** update dependency dev/black to ~=23.12.1 ([#29](https://github.com/BLSQ/openhexa-toolbox/issues/29)) ([786e7d8](https://github.com/BLSQ/openhexa-toolbox/commit/786e7d8f7c615fa868daa11aa80a099eeef2baa4))
+* **deps:** update dependency dev/pytest to ~=7.4.4 ([#30](https://github.com/BLSQ/openhexa-toolbox/issues/30)) ([8eed033](https://github.com/BLSQ/openhexa-toolbox/commit/8eed033fa6e92f4a298e906ffbbedd6ecade9b9b))
+
 ## [0.2.5](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.4...0.2.5) (2024-06-19)
 
 
