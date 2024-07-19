@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.7](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.6...0.2.7) (2024-07-19)
+
+
+### Bug Fixes
+
+* **IASOClient:** remove columns ([#43](https://github.com/BLSQ/openhexa-toolbox/issues/43)) ([8ce0a6d](https://github.com/BLSQ/openhexa-toolbox/commit/8ce0a6d4cd282c163f69cc08df0c3721c7b74eec))
+
+
+### Miscellaneous
+
+* **deps:** update actions/checkout action to v4 ([#34](https://github.com/BLSQ/openhexa-toolbox/issues/34)) ([9d328d7](https://github.com/BLSQ/openhexa-toolbox/commit/9d328d747e85d47965cd4ec44e270893429d755c))
+* **deps:** update dependency dev/black to v24 ([#37](https://github.com/BLSQ/openhexa-toolbox/issues/37)) ([503f3b3](https://github.com/BLSQ/openhexa-toolbox/commit/503f3b3fb656e26c597b91968d0a08f08b988b7b))
+* **deps:** update dependency dev/build to v1 ([#38](https://github.com/BLSQ/openhexa-toolbox/issues/38)) ([0227c6c](https://github.com/BLSQ/openhexa-toolbox/commit/0227c6c3d8e9902e07f6023c630aeaf324a7e93e))
+* **deps:** update dependency dev/pytest to v8 ([#39](https://github.com/BLSQ/openhexa-toolbox/issues/39)) ([fd5edeb](https://github.com/BLSQ/openhexa-toolbox/commit/fd5edebe4186762ff6ea05124c9ec18ceb4299ed))
+* **deps:** update dependency dev/pytest-cov to ~=4.1.0 ([#32](https://github.com/BLSQ/openhexa-toolbox/issues/32)) ([5807a2f](https://github.com/BLSQ/openhexa-toolbox/commit/5807a2fec97b0a83efe837eb271528de4ae911c4))
+* **deps:** update dependency dev/pytest-cov to v5 ([#40](https://github.com/BLSQ/openhexa-toolbox/issues/40)) ([822814b](https://github.com/BLSQ/openhexa-toolbox/commit/822814b966e2786968a2984873b514d298a25bc0))
+* **deps:** update dependency dev/ruff to ~=0.5.2 ([#33](https://github.com/BLSQ/openhexa-toolbox/issues/33)) ([609d63c](https://github.com/BLSQ/openhexa-toolbox/commit/609d63c9666ddb1db42f22dd53efcb7eb0718790))
+
 ## [0.2.6](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.5...0.2.6) (2024-07-18)
 
 
