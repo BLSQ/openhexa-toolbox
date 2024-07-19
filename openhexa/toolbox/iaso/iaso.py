@@ -65,7 +65,6 @@ class IASO:
         page: int = 1,
         limit: int = 10,
         as_dataframe: bool = False,
-        dataframe_columns: typing.List[str] = None,
         **kwargs,
     ) -> typing.Union[dict, pl.DataFrame]:
         """
@@ -77,14 +76,12 @@ class IASO:
             :param page: The page number of the form instance.
             :param limit: The maximum number of form instances.
             :param as_dataframe: If true, will return a DataFrame containing form instances.
-            :param dataframe_columns: The column names of the form instances.
             :param kwargs: additonal arguments passed to the /forms endpoint as URL parameters.
 
         Examples:
             >>> from openhexa.toolbox.iaso import IASO
             >>> iaso = IASO(url="http://iaso-staging.bluesquare.org", username="user", password="pass")
-            >>> form_dataframes = iaso.get_form_instances(page=1, limit=1, as_dataframe=True,
-            >>>                     dataframe_columns=["Date de création","Date de modification","Org unit"], ids=276)
+            >>> form_dataframes = iaso.get_form_instances(page=1, limit=1, as_dataframe=True, ids=276)
         """
 
         params = kwargs
@@ -92,7 +89,7 @@ class IASO:
         if as_dataframe:
             params.update({"csv": "true"})
             response = self.api_client.get("/api/instances", params=params)
-            forms = pl.read_csv(io.StringIO(response.content.decode("utf-8")))[dataframe_columns]
+            forms = pl.read_csv(io.StringIO(response.content.decode("utf-8")))
             return forms
         response = self.api_client.get("/api/instances/", params=kwargs)
         forms = response.json().get("instances")
