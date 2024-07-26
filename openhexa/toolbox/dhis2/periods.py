@@ -1,6 +1,6 @@
 import math
 from datetime import datetime
-from typing import Union
+from typing import List, Union
 
 from dateutil.relativedelta import relativedelta
 
@@ -223,3 +223,14 @@ def period_from_string(period: str) -> Period:
         return Day(period)
     else:
         raise ValueError("Unrecognized period format")
+
+
+def get_range(start: Union[str, Period], end: Union[str, Period]) -> List[Period]:
+    """Get a range of DHIS2 periods."""
+    if isinstance(start, str):
+        start = period_from_string(start)
+    if isinstance(end, str):
+        end = period_from_string(end)
+
+    prange = start.get_range(end)
+    return prange

@@ -1,10 +1,15 @@
+import json
 import logging
-from typing import Iterable, Sequence, Protocol
+import zlib
+from collections import OrderedDict
+from pathlib import Path
+from typing import Iterable, Optional, Protocol, Sequence, Union
+from urllib.parse import urlparse
 
 import requests
+from diskcache import DEFAULT_SETTINGS, Cache
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +25,7 @@ class DHIS2Connection(Protocol):
 
 
 class Api:
-    def __init__(self, connection: DHIS2Connection):
+    def __init__(self, connection: DHIS2Connection, cache_dir: Optional[Union[Path, str]] = None):
         self.url = self.parse_api_url(connection.url)
 
         self.session = requests.Session()
@@ -36,6 +41,19 @@ class Api:
         self.session.mount("http://", adapter)
 
         self.session = self.authenticate(connection.username, connection.password)
+
+        self.cache = None
+        if cache_dir:
+            self.cache = ApiCache(cache_dir, self.url)
+
+        self.PAGE_SIZE = 1000
+
+        self.DEFAULT_EXPIRE_TIME = 86400
+        self.EXPIRE_TIMES = {
+            "dataValueSets": 604800,
+            "analytics": 604800,
+            "system": 60,
+        }
 
     @staticmethod
     def parse_api_url(url: str) -> str:
@@ -57,7 +75,7 @@ class Api:
         # raise with requests if no error message provided
         response.raise_for_status()
 
-    def authenticate(self, username: str, password: str) -> requests.Session():
+    def authenticate(self, username: str, password: str) -> requests.Session:
         """Authentify using Basic Authentication."""
         s = requests.Session()
         s.auth = requests.auth.HTTPBasicAuth(username, password)
@@ -66,24 +84,44 @@ class Api:
         logger.info(f"Logged in to '{self.url}' as '{username}'")
         return s
 
-    def get(self, endpoint: str, params: dict = None) -> requests.Response:
+    def get(self, endpoint: str, params: dict = None, use_cache: bool = True) -> dict:
+        """Send GET request and return JSON response as a dict."""
+        r = requests.Request(method="GET", url=f"{self.url}/{endpoint}", params=params)
+        url = r.prepare().url
+        logger.debug(f"API request {url}")
+
+        use_cache = self.cache and use_cache
+
+        if use_cache:
+            r = self.cache.get(endpoint=endpoint, params=params)
+            if r:
+                return r
+
         r = self.session.get(f"{self.url}/{endpoint}", params=params)
         self.raise_if_error(r)
-        return r
 
-    def get_paged(self, endpoint: str, params: dict = None, page_size: 1000 = None) -> Iterable[requests.Response]:
-        """Iterate over all response pages."""
-        if params is None:
+        if use_cache:
+            self.cache.set(endpoint=endpoint, params=params, response=r.json())
+
+        return r.json()
+
+    def get_paged(self, endpoint: str, params: dict = None, use_cache: bool = True) -> Iterable[requests.Response]:
+        """Iterate over paged responses."""
+        use_cache = self.cache and use_cache
+
+        if not params:
             params = {}
-        params["pageSize"] = page_size
+        params["pageSize"] = self.PAGE_SIZE
 
-        r = self.session.get(f"{self.url}/{endpoint}", params=params)
-        self.raise_if_error(r)
+        # 1st page
+        r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
         yield r
 
-        if "pager" in r.json():
-            while "nextPage" in r.json()["pager"]:
-                r = self.session.get(r.json()["pager"]["nextPage"])
+        if "pager" in r:
+            params["page"] = r["pager"]["page"]
+            while "nextPage" in r["pager"]:
+                params["page"] += 1
+                r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
                 yield r
 
     @staticmethod
@@ -104,15 +142,72 @@ class Api:
             Merged response as a dict with merged lists
         """
         merged_response = {}
-        first_page = pages[0].json()
+        first_page = pages[0]
         for key in first_page.keys():
             if isinstance(first_page[key], list):
                 merged_response[key] = []
                 for page in pages:
-                    merged_response[key] += page.json()[key]
+                    merged_response[key] += page[key]
         return merged_response
 
     def post(self, endpoint: str, json: dict = None, params: dict = None) -> requests.Response:
         r = self.session.post(f"{self.url}/{endpoint}", json=json, params=params)
         self.raise_if_error(r)
         return r
+
+
+class ApiCache:
+    def __init__(self, cache_dir: Path, api_url: str):
+        """Cache API requests with diskcache."""
+        self.dir = cache_dir / urlparse(api_url).netloc
+        self.setup()
+        self.api_url = api_url
+
+        self.DEFAULT_EXPIRE_TIME = 86400
+        self.EXPIRE_TIMES = {"dataValueSets": 604800, "analytics": 604800, "system": 60}
+        self.SETTINGS = DEFAULT_SETTINGS
+        self.SETTINGS["size_limit"] = 10000000000
+
+    def setup(self):
+        """Setup cache directory.
+
+        Diskcache directory will be a subdir in the provided cache_dir,
+        named after the DHIS2 instance domain name.
+        """
+        self.dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Using cache directory {self.dir.absolute().as_posix()}")
+
+    def expire(self):
+        """Remove expired items from cache."""
+        with Cache(self.dir, **self.SETTINGS) as cache:
+            cache.expire()
+
+    def clear(self):
+        """Remove all items from cache."""
+        with Cache(self.dir, **self.SETTINGS) as cache:
+            cache.clear()
+
+    def get_key(self, endpoint: str, params: Optional[dict]) -> str:
+        """Generate cache key from API endpoint and query parameters."""
+        if params:
+            params = OrderedDict(sorted(params.items()))
+            return f"{self.api_url}/{endpoint}/{json.dumps(params)}"
+        else:
+            return f"{self.api_url}/{endpoint}"
+
+    def get(self, endpoint: str, params: Optional[dict]) -> Union[dict, None]:
+        """Get JSON query response from cache as a dict."""
+        key = self.get_key(endpoint=endpoint, params=params)
+        with Cache(self.dir, **self.SETTINGS) as cache:
+            content = cache.get(key)
+            if content:
+                logger.debug("Cache hit, returning decompressed response")
+                return json.loads(zlib.decompress(content).decode())
+        return None
+
+    def set(self, endpoint: str, response: dict, params: Optional[dict]):
+        """Cache JSON query response."""
+        key = self.get_key(endpoint=endpoint, params=params)
+        with Cache(self.dir, **self.SETTINGS) as cache:
+            value = zlib.compress(json.dumps(response).encode())
+            cache.set(key, value, expire=self.EXPIRE_TIMES.get("endpoint", self.DEFAULT_EXPIRE_TIME), retry=True)
