@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class DHIS2:
-    def __init__(self, connection: DHIS2Connection, cache_dir: str | Path = None):
+    def __init__(self, connection: DHIS2Connection, cache_dir: Union[str, Path] = None):
         """Initialize a new DHIS2 instance.
 
         Parameters
@@ -496,7 +496,7 @@ class DataValueSets:
         data_elements: List[str] = None,
         datasets: List[str] = None,
         data_element_groups: List[str] = None,
-        periods: List[str | Period] = None,
+        periods: List[Union[str, Period]] = None,
         start_date: str = None,
         end_date: str = None,
         org_units: List[str] = None,
