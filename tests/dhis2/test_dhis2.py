@@ -1,229 +1,229 @@
+from collections import namedtuple
+from pathlib import Path
+
+import polars as pl
 import pytest
 import responses
-import os
 
 from openhexa.toolbox.dhis2 import DHIS2
+from openhexa.toolbox.dhis2.api import DHIS2Error
+
+VERSIONS = ["2.36", "2.37", "2.38", "2.39", "2.40", "2.41"]
 
 
-class DHIS2Connection:
-    """dummy connection class"""
-
-    def __init__(self, url, username, password):
-        self.url = url
-        self.username = username
-        self.password = password
-
-
-URL = [
-    ("2.37", "https://play.dhis2.org/2.37.9.1"),
-    ("2.38", "https://play.dhis2.org/2.38.4.3"),
-    ("2.39", "https://play.dhis2.org/2.39.2.1"),
-    ("2.40", "https://play.dhis2.org/40.0.1"),
-]
-USERNAME = "admin"
-DISTRICT = "district"
+@pytest.fixture
+def con():
+    Connection = namedtuple("Connection", ["url", "username", "password"])
+    return Connection("http://localhost:8080", "admin", "district")
 
 
 @responses.activate
-@pytest.mark.parametrize("version,url", URL)
-def test_authenticate(version, url):
-    responses.patch(url)
-    responses._add_from_file(file_path=os.path.join("tests", "dhis2", "responses", version, "authenticate.yaml"))
-    con = DHIS2Connection(url, USERNAME, DISTRICT)
-    dhis2 = DHIS2(con)
-    assert dhis2.version.startswith(version)
+@pytest.mark.parametrize("version", VERSIONS)
+def test_data_elements(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "data_elements.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.data_elements()
+    df = pl.DataFrame(r)
+    assert len(df) > 1000
 
 
 @responses.activate
-@pytest.mark.parametrize("version,url", URL)
-def test_data_value_sets_get_start_end(version, url):
-    responses.patch(url)
-    responses._add_from_file(file_path=os.path.join("tests", "dhis2", "responses", version, "authenticate.yaml"))
-    responses._add_from_file(
-        file_path=os.path.join("tests", "dhis2", "responses", version, "data_value_sets", "get_start_end.yaml")
-    )
-
-    con = DHIS2Connection(url, USERNAME, DISTRICT)
-    playground = DHIS2(con)
-
-    playground.data_value_sets.MAX_DATA_ELEMENTS = 2
-    playground.data_value_sets.MAX_ORG_UNITS = 6
-    playground.data_value_sets.MAX_PERIODS = 1
-
-    data = playground.data_value_sets.get(
-        datasets=["QX4ZTUbOt3a"],
-        org_units=[
-            "JQr6TJx5KE3",
-            "KbO0JnhiMwl",
-            "f90eISKFm7P",
-            "HNv1aLPdMYb",
-            "hHKKi9WNoBG",
-            "kpDoH80fwdX",
-            "sFgNRYS5pBo",
-            "vELbGdEphPd",
-            "OTn9VMNEkdo",
-            "jKZ0U8Og5aV",
-        ],
-        start_date="2022-01-01",
-        end_date="2022-03-01",
-    )
-
-    assert len(data) == 607
+@pytest.mark.parametrize("version", VERSIONS)
+def test_datasets(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "datasets.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.datasets()
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
 
 
 @responses.activate
-@pytest.mark.parametrize("version,url", URL)
-def test_data_value_sets_get_period(version, url):
-    responses.patch(url)
-    responses._add_from_file(file_path=os.path.join("tests", "dhis2", "responses", version, "authenticate.yaml"))
-    responses._add_from_file(
-        file_path=os.path.join("tests", "dhis2", "responses", version, "data_value_sets", "get_period.yaml")
-    )
-
-    con = DHIS2Connection(url, USERNAME, DISTRICT)
-    playground = DHIS2(con)
-
-    playground.data_value_sets.MAX_DATA_ELEMENTS = 2
-    playground.data_value_sets.MAX_ORG_UNITS = 6
-    playground.data_value_sets.MAX_PERIODS = 1
-
-    data = playground.data_value_sets.get(
-        datasets=["QX4ZTUbOt3a"],
-        org_units=[
-            "JQr6TJx5KE3",
-            "KbO0JnhiMwl",
-            "f90eISKFm7P",
-            "HNv1aLPdMYb",
-            "hHKKi9WNoBG",
-            "kpDoH80fwdX",
-            "sFgNRYS5pBo",
-            "vELbGdEphPd",
-            "OTn9VMNEkdo",
-            "jKZ0U8Og5aV",
-        ],
-        periods=["202201", "202202"],
-    )
-
-    assert len(data) == 607
+@pytest.mark.parametrize("version", VERSIONS)
+def test_organisation_unit_levels(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "organisation_unit_levels.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.organisation_unit_levels()
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
 
 
 @responses.activate
-@pytest.mark.parametrize("version,url", URL)
-def test_analytics_data_elements(version, url):
-    responses.patch(url)
-    responses._add_from_file(file_path=os.path.join("tests", "dhis2", "responses", version, "authenticate.yaml"))
-    responses._add_from_file(
-        file_path=os.path.join("tests", "dhis2", "responses", version, "analytics", "get_data_elements.yaml")
-    )
-
-    con = DHIS2Connection(url, USERNAME, DISTRICT)
-    playground = DHIS2(con)
-
-    playground.analytics.MAX_DX = 2
-    playground.analytics.MAX_ORG_UNITS = 6
-    playground.analytics.MAX_PERIODS = 1
-
-    data = playground.analytics.get(
-        data_elements=["FJs8ZjlQE6f", "yJwdE6XJbrF", "JMKtVQ5HasH"],
-        periods=["202201", "202202"],
-        org_units=[
-            "JQr6TJx5KE3",
-            "KbO0JnhiMwl",
-            "f90eISKFm7P",
-            "HNv1aLPdMYb",
-            "hHKKi9WNoBG",
-            "kpDoH80fwdX",
-            "sFgNRYS5pBo",
-            "vELbGdEphPd",
-            "OTn9VMNEkdo",
-            "jKZ0U8Og5aV",
-        ],
-    )
-
-    assert len(data) == 14
+@pytest.mark.parametrize("version", VERSIONS)
+def test_organisation_units(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "organisation_units.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.organisation_units()
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
 
 
 @responses.activate
-@pytest.mark.parametrize("version,url", URL)
-def test_analytics_data_element_groups(version, url):
-    responses.patch(url)
-    responses._add_from_file(file_path=os.path.join("tests", "dhis2", "responses", version, "authenticate.yaml"))
-    responses._add_from_file(
-        file_path=os.path.join("tests", "dhis2", "responses", version, "analytics", "get_data_element_groups.yaml")
-    )
-
-    con = DHIS2Connection(url, USERNAME, DISTRICT)
-    playground = DHIS2(con)
-
-    playground.analytics.MAX_DX = 2
-    playground.analytics.MAX_ORG_UNITS = 6
-    playground.analytics.MAX_PERIODS = 1
-
-    data = playground.analytics.get(
-        data_element_groups=["IUZ0GidX0jh"],
-        periods=["202201", "202202"],
-        org_units=[
-            "JQr6TJx5KE3",
-            "KbO0JnhiMwl",
-            "f90eISKFm7P",
-            "HNv1aLPdMYb",
-            "hHKKi9WNoBG",
-            "kpDoH80fwdX",
-            "sFgNRYS5pBo",
-            "vELbGdEphPd",
-            "OTn9VMNEkdo",
-            "jKZ0U8Og5aV",
-        ],
-    )
-
-    assert len(data) == 14
+@pytest.mark.parametrize("version", VERSIONS)
+def test_indicators(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "indicators.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.indicators()
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
 
 
 @responses.activate
-@pytest.mark.parametrize("version,url", URL)
-def test_analytics_org_unit_groups(version, url):
-    responses.patch(url)
-    responses._add_from_file(file_path=os.path.join("tests", "dhis2", "responses", version, "authenticate.yaml"))
-    responses._add_from_file(
-        file_path=os.path.join("tests", "dhis2", "responses", version, "analytics", "get_org_unit_group.yaml")
-    )
-
-    con = DHIS2Connection(url, USERNAME, DISTRICT)
-    playground = DHIS2(con)
-
-    playground.analytics.MAX_DX = 2
-    playground.analytics.MAX_ORG_UNITS = 6
-    playground.analytics.MAX_PERIODS = 1
-
-    data = playground.analytics.get(
-        data_elements=["FJs8ZjlQE6f", "yJwdE6XJbrF", "JMKtVQ5HasH"],
-        periods=["202201", "202202"],
-        org_unit_groups=["b0EsAxm8Nge"],
-    )
-
-    assert len(data) == 57
+@pytest.mark.parametrize("version", VERSIONS)
+def test_organisation_unit_groups(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "organisation_unit_groups.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.organisation_unit_groups()
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
 
 
 @responses.activate
-@pytest.mark.parametrize("version,url", URL)
-def test_analytics_org_unit_level(version, url):
-    responses.patch(url)
-    responses._add_from_file(file_path=os.path.join("tests", "dhis2", "responses", version, "authenticate.yaml"))
-    responses._add_from_file(
-        file_path=os.path.join("tests", "dhis2", "responses", version, "analytics", "get_org_unit_level.yaml")
+@pytest.mark.parametrize("version", VERSIONS)
+def test_data_element_groups(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "data_element_groups.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.data_element_groups()
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_category_option_combos(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "category_option_combos.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.category_option_combos()
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_indicator_groups(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "indicator_groups.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.indicator_groups()
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_data_value_sets_get_data_elements(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "data_value_sets_get_data_elements.yaml"))
+    api = DHIS2(con, cache_dir=None)
+
+    if api.version < "2.39":
+        with pytest.raises(DHIS2Error):
+            r = api.data_value_sets.get(
+                data_elements=["fbfJHSPpUQD", "cYeuwXTCPkU"],
+                periods=["202306", "202307", "202308"],
+                org_units=["uNEhNuBUr0i"],
+            )
+
+    else:
+        r = api.data_value_sets.get(
+            data_elements=["fbfJHSPpUQD", "cYeuwXTCPkU"],
+            periods=["202306", "202307", "202308"],
+            org_units=["uNEhNuBUr0i"],
+        )
+        df = pl.DataFrame(r)
+        assert not df.is_empty()
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_data_value_sets_get_dataset(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "data_value_sets_get_dataset.yaml"))
+    api = DHIS2(con, cache_dir=None)
+
+    r = api.data_value_sets.get(
+        datasets=["BfMAe6Itzgt"], periods=["202306", "202307", "202308"], org_units=["uNEhNuBUr0i"]
     )
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
 
-    con = DHIS2Connection(url, USERNAME, DISTRICT)
-    playground = DHIS2(con)
 
-    playground.analytics.MAX_DX = 2
-    playground.analytics.MAX_ORG_UNITS = 6
-    playground.analytics.MAX_PERIODS = 1
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_data_value_sets_get_start_end(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "data_value_sets_get_start_end.yaml"))
+    api = DHIS2(con, cache_dir=None)
 
-    data = playground.analytics.get(
-        data_elements=["FJs8ZjlQE6f", "yJwdE6XJbrF", "JMKtVQ5HasH"],
-        periods=["202201", "202202"],
-        org_unit_levels=[1, 2],
+    r = api.data_value_sets.get(
+        datasets=["BfMAe6Itzgt"], start_date="2023-06-01", end_date="2023-09-01", org_units=["uNEhNuBUr0i"]
     )
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
 
-    assert len(data) == 252
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_analytics_get_data_elements(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "analytics_get_data_elements.yaml"))
+    api = DHIS2(con, cache_dir=None)
+
+    r = api.analytics.get(
+        data_elements=["fbfJHSPpUQD", "cYeuwXTCPkU"], periods=["202306", "202307", "202308"], org_units=["uNEhNuBUr0i"]
+    )
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_analytics_get_indicators(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "analytics_get_indicators.yaml"))
+    api = DHIS2(con, cache_dir=None)
+
+    r = api.analytics.get(
+        indicators=["Uvn6LCg7dVU", "OdiHJayrsKo"],
+        periods=["202306", "202307", "202308"],
+        org_units=["uNEhNuBUr0i"],
+        include_cocs=False,
+    )
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_analytics_get_org_unit_levels(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "analytics_get_org_unit_levels.yaml"))
+    api = DHIS2(con, cache_dir=None)
+
+    r = api.analytics.get(
+        data_elements=["fbfJHSPpUQD", "cYeuwXTCPkU"], periods=["202306", "202307", "202308"], org_unit_levels=[2]
+    )
+    df = pl.DataFrame(r)
+    assert not df.is_empty()
