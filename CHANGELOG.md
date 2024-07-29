@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.6...v1.0.0) (2024-07-26)
+
+### Features
+
+* **dhis2:** add caching for all GET requests ([#46](https://github.com/BLSQ/openhexa-toolbox/issues/46)) ([710fafb](https://github.com/BLSQ/openhexa-toolbox/commit/710fafb01a6adc641da40a83e2e8f294dd284607))
+
+
+### Bug Fixes
+
+* **IASOClient:** remove columns ([#43](https://github.com/BLSQ/openhexa-toolbox/issues/43)) ([8ce0a6d](https://github.com/BLSQ/openhexa-toolbox/commit/8ce0a6d4cd282c163f69cc08df0c3721c7b74eec))
+
 ## [0.2.7](https://github.com/BLSQ/openhexa-toolbox/compare/0.2.6...0.2.7) (2024-07-19)
 
 
