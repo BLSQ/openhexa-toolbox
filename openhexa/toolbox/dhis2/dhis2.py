@@ -573,8 +573,8 @@ class DataValueSets:
             "orgUnitGroup": org_unit_groups,
             "children": children,
             "attributeOptionCombo": attribute_option_combos,
-            "last_updated": last_updated,
-            "last_updated_duration": last_updated_duration,
+            "lastUpdated": last_updated,
+            "lastUpdatedDuration": last_updated_duration,
         }
 
         chunks = self.split_params(params)
