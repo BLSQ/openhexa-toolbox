@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.0.1...v1.0.2) (2024-08-13)
+
+
+### Bug Fixes
+
+* **dhis2:** fix lastUpdated and lastUpdatedDuration params ([883de3b](https://github.com/BLSQ/openhexa-toolbox/commit/883de3ba0b22905887e376e96747e7d3f760328d))
+
 ## [1.0.1](https://github.com/BLSQ/openhexa-toolbox/compare/1.0.0...v1.0.1) (2024-08-13)
 
 
