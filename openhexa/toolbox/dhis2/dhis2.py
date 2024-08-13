@@ -544,7 +544,7 @@ class DataValueSets:
         """
         what = data_elements or datasets or data_element_groups
         where = org_units or org_unit_groups
-        when = (start_date and end_date) or periods
+        when = (start_date and end_date) or periods or last_updated or last_updated_duration
         if not what:
             raise DHIS2Error("No data dimension provided")
         if not where:
