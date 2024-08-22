@@ -12,16 +12,16 @@ class OpenHEXA:
         token: typing.Optional[str] = None,
     ):
         """
-        Initializes the openHEXA client. If username and password are provided we will try to
-        authenticate via credentials. It support also the authentication via pipeline token
-        (note that two-factor authentication need to be disabled in this case, else it will not work).
+        Initializes the OpenHEXA client. If username and password are provided we will try to
+        authenticate via credentials. It support also the authentication via pipeline token.
+        Note that two-factor authentication needs to be disabled, otherwise the authentication will fail.
 
         Parameters
         ----------
-        server_url: openHEXA server URL
-        username: openHEXA instance username
-        password: openHEXA instance password
-        token: openHEXA pipeline token
+        server_url: OpenHEXA server URL
+        username: OpenHEXA instance username
+        password: OpenHEXA instance password
+        token: OpenHEXA pipeline token
 
         Raises
         ------
@@ -29,15 +29,15 @@ class OpenHEXA:
             when a login or authentication error
 
         Examples:
-            >>> from openhexa.toolbox.hexa import openHEXA
-            >>> hexa = openHEXA(server_url="http://iaso-staging.bluesquare.org",
+            >>> from openhexa.toolbox.hexa import OpenHEXA
+            >>> hexa = OpenHEXA(server_url="https://app.demo.openhexa.org",
             >>>             username="user",
             >>>             password="pass")
 
             or
 
-            >>> from openhexa.toolbox.hexa import openHEXA
-            >>> hexa = openHEXA(server_url="http://iaso-staging.bluesquare.org",token="token")
+            >>> from openhexa.toolbox.hexa import OpenHEXA
+            >>> hexa = OpenHEXA(server_url="https://app.demo.openhexa.org",token="token")
         """
 
         self.client = OpenHEXAClient(server_url)
@@ -67,7 +67,7 @@ class OpenHEXA:
         Returns:
         -------
         dict
-            The response from openHEXA server.
+            The query result from OpenHEXA server.
 
         Example Usage:
         --------------

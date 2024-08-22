@@ -14,6 +14,9 @@ Its primary goal is to simplify communication with OpenHEXA and streamline integ
 pip install openhexa.toolbox
 ```
 
+Important : make sure two-factor authentication is disabled as the SDK currently does not support 
+it during the authentication process.
+
 ## [Example](#)
 
 Import OpenHEXA module:
@@ -24,9 +27,8 @@ from openhexa.toolbox.hexa import OpenHEXA
 # We can authenticate using username / password
 hexa_client = OpenHEXA("https://app.demo.openhexa.org", username="username",  password="password")
 
-# You can also use the token provided by OpenHEXA on the pipelines but make two-factor authentication is disabled else it will not work
+# You can also use the token provided by OpenHEXA on the pipelines page.
 hexa_client = OpenHEXA("https://app.demo.openhexa.org", token="token")
-page=1,per_page=10
 
 # getting the list of workspaces
 result = hexa.query("""

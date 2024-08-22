@@ -44,20 +44,14 @@ class OpenHEXAClient:
             if data["login"]["success"]:
                 self.session.headers["Cookie"] = resp.headers["Set-Cookie"]
             else:
-                raise Exception("Login failed")
+                raise Exception("Login failed : verify if two-factor authentication is not enabled.")
         elif with_token:
             self.session.headers.update({"Authorization": f"Bearer {with_token}"})
         try:
             self.query("""query{me {user {id}}}""")
             return True
         except Exception:
-            message = (
-                "Authentication failed: login with token requires two-factor authentication to be disabled."
-                if with_token
-                else "Authentication failed."
-            )
-
-            raise Exception(message)
+            raise Exception("Authentication failed.")
 
     def _graphql_request(self, operation, variables=None):
         return self.session.post(f"{self.url}/graphql", json={"query": operation, "variables": variables})
