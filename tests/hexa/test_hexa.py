@@ -1,4 +1,5 @@
 import pytest
+
 from unittest import mock
 from uuid import uuid4
 
@@ -12,31 +13,46 @@ from .fixtures.openhexa_api_fixtures import (
 
 
 class TestOpenHEXAClient:
+    def _mock_response(self, data):
+        mock_response = mock.MagicMock()
+        mock_response.json.return_value = data
+        return mock_response
+
     def test_authenticate_with_creds_success(self):
         hexa = OpenHEXAClient("https://app.demo.openhexa.org")
-        mock_response = mock.MagicMock()
-        mock_response.status_code = 401
-        mock_response.json.return_value = {
-            "data": {
-                "login": {
-                    "success": True,
+        mock_response = self._mock_response(
+            {
+                "data": {
+                    "login": {
+                        "success": True,
+                    }
                 }
-            }
-        }
+            },
+        )
 
         with mock.patch.object(hexa, "_graphql_request", return_value=mock_response):
             assert hexa.authenticate(with_credentials=("username", "password")) is True
 
     def test_authenticate_with_creds_failed(self):
         hexa = OpenHEXAClient("https://app.demo.openhexa.org")
-        result = {
-            "login": {
-                "success": False,
-            }
-        }
-        with mock.patch.object(hexa, "_graphql_request", return_value=result):
-            with pytest.raises(Exception):
+        mock_response = self._mock_response(
+            {"data": {"login": {"success": False, "errors": ["INVALID_CREDENTIALS"]}}},
+        )
+
+        with mock.patch.object(hexa, "_graphql_request", return_value=mock_response):
+            with pytest.raises(Exception) as e:
                 hexa.authenticate(with_credentials=("username", "password"))
+                assert str(e) == "Login failed : ['INVALID_CREDENTIALSS']"
+
+    def test_authenticate_with_otq_enabled_failed(self):
+        hexa = OpenHEXAClient("https://app.demo.openhexa.org")
+        mock_response = self._mock_response(
+            {"data": {"login": {"success": False, "errors": ["OTP_REQUIRED"]}}},
+        )
+        with mock.patch.object(hexa, "_graphql_request", return_value=mock_response):
+            with pytest.raises(Exception) as e:
+                hexa.authenticate(with_credentials=("username", "password"))
+                assert str(e) == "Login failed : you need to disable two-factor authentication."
 
 
 @mock.patch("openhexa.toolbox.hexa.hexa.OpenHEXAClient")

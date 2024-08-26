@@ -29,6 +29,7 @@ class OpenHEXAClient:
                 mutation Login($input: LoginInput!) {
                     login(input: $input) {
                         success
+                        errors
                     }
                 }
             """,
@@ -41,10 +42,15 @@ class OpenHEXAClient:
             )
             resp.raise_for_status()
             data = resp.json()["data"]
-            if data["login"]["success"]:
-                self.session.headers["Cookie"] = resp.headers["Set-Cookie"]
+
+            if not data["login"]["success"]:
+                if "OTP_REQUIRED" in data["login"]["errors"]:
+                    raise Exception("Login failed : two-factor authentication needs to be disabled.")
+
+                raise Exception(f"Login failed : {data['login']['errors']}")
             else:
-                raise Exception("Login failed : verify if two-factor authentication is enabled.")
+                self.session.headers["Cookie"] = resp.headers["Set-Cookie"]
+
         elif with_token:
             self.session.headers.update({"Authorization": f"Bearer {with_token}"})
 
