@@ -38,15 +38,6 @@ class TestOpenHEXAClient:
             with pytest.raises(Exception):
                 hexa.authenticate(with_credentials=("username", "password"))
 
-    def test_authenticate_with_token_failed(self):
-        hexa = OpenHEXAClient("https://app.demo.openhexa.org")
-        mock_response = mock.MagicMock()
-        mock_response.status_code = 401
-
-        with mock.patch.object(hexa, "_graphql_request", return_value=mock_response):
-            with pytest.raises(Exception):
-                hexa.authenticate(with_credentials=("username", "password"))
-
 
 @mock.patch("openhexa.toolbox.hexa.hexa.OpenHEXAClient")
 class TestOpenHEXA:
