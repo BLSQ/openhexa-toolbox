@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.0.2...v1.1.0) (2024-08-27)
+
+
+### Features
+
+* **openHEXA:** add openHEXA client ([#49](https://github.com/BLSQ/openhexa-toolbox/issues/49)) ([5d23150](https://github.com/BLSQ/openhexa-toolbox/commit/5d23150ee7acdb51968c0191a2cf5ac5fa1d749d))
+
 ## [1.0.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.0.1...v1.0.2) (2024-08-13)
 
 
