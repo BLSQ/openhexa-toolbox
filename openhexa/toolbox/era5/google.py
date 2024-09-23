@@ -11,7 +11,7 @@ import json
 import logging
 import shutil
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cached_property
 from pathlib import Path
 
@@ -119,3 +119,41 @@ class Client:
             shutil.move(tmp.name, dst_file)
 
         log.debug("Downloaded %s", str(dst_file.absolute()))
+
+    def sync(self, variable: str, start_date: datetime, end_date: datetime, dst_dir: str | Path):
+        """Download all products for a given variable and date range.
+
+        If products are already present in the destination directory, they will be skipped.
+        Expects file names to be formatted as "YYYY-MM-DD_VARIABLE.nc".
+
+        Parameters
+        ----------
+        variable : str
+            Climate data store variable name (ex: "2m_temperature").
+        start_date : datetime
+            Start date (year, month, day).
+        end_date : datetime
+            End date (year, month, day).
+        dst_dir : str | Path
+            Output directory.
+        """
+        dst_dir = Path(dst_dir)
+        dst_dir.mkdir(parents=True, exist_ok=True)
+
+        date = start_date
+        if end_date > self.latest:
+            log.info("End date is in the future, setting it to the latest available date: %s", self.latest)
+            end_date = self.latest
+
+        while date <= end_date:
+            expected_filename = f"{date.strftime('%Y-%m-%d')}_{variable}.nc"
+            fpath = Path(dst_dir, expected_filename)
+            fpath_grib = Path(dst_dir, expected_filename.replace(".nc", ".grib"))
+            if fpath.exists() or fpath_grib.exists():
+                log.debug("%s already exists, skipping download", expected_filename)
+                continue
+            else:
+                self.download(variable, date, fpath, overwrite=False)
+                log.debug("Downloaded %s", expected_filename)
+
+            date += timedelta(days=1)
