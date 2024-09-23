@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.1.0...v1.1.1) (2024-09-23)
+
+
+### Bug Fixes
+
+* **dhis2:** do not raise authentication errors for old versions ([3e0eb93](https://github.com/BLSQ/openhexa-toolbox/commit/3e0eb93321dbab65c973847220298f0dad484424))
+
 ## [1.1.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.0.2...v1.1.0) (2024-08-27)
 
 
