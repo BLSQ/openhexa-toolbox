@@ -81,7 +81,7 @@ class Api:
         s.auth = requests.auth.HTTPBasicAuth(username, password)
         r = s.get(f"{self.url}/system/ping")
         # some old instances doesn't have a "system/ping" endpoint
-        # we don't want to raise an error in that case (error 406)
+        # we don't want to raise an error in that case
         if r.status_code in [200, 406]:
             logger.info(f"Logged in to '{self.url}' as '{username}'")
         else:
