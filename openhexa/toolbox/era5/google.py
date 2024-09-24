@@ -116,7 +116,7 @@ class Client:
                         if chunk:
                             f.write(chunk)
 
-            shutil.move(tmp.name, dst_file)
+            shutil.copy(tmp.name, dst_file)
 
         log.debug("Downloaded %s", str(dst_file.absolute()))
 

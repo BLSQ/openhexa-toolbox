@@ -137,6 +137,6 @@ class Client:
 
         with tempfile.NamedTemporaryFile() as tmp:
             self.client.retrieve(name=DATASET, request=request, target=tmp.name)
-            shutil.move(tmp.name, dst_file)
+            shutil.copy(tmp.name, dst_file)
 
         log.debug("Downloaded Era5 product to %s", str(dst_file.absolute()))
