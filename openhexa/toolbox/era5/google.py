@@ -151,9 +151,8 @@ class Client:
             fpath_grib = Path(dst_dir, expected_filename.replace(".nc", ".grib"))
             if fpath.exists() or fpath_grib.exists():
                 log.debug("%s already exists, skipping download", expected_filename)
-                continue
+                date += timedelta(days=1)
             else:
                 self.download(variable, date, fpath, overwrite=False)
                 log.debug("Downloaded %s", expected_filename)
-
-            date += timedelta(days=1)
+                date += timedelta(days=1)
