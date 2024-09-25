@@ -142,7 +142,7 @@ class Client:
 
         date = start_date
         if end_date > self.latest:
-            log.info("Setting `end_date` to the latest available date: %s", self.latest)
+            log.info("Setting `end_date` to the latest available date: %s" % self.latest)
             end_date = self.latest
 
         while date <= end_date:
@@ -150,9 +150,9 @@ class Client:
             fpath = Path(dst_dir, expected_filename)
             fpath_grib = Path(dst_dir, expected_filename.replace(".nc", ".grib"))
             if fpath.exists() or fpath_grib.exists():
-                log.debug("%s already exists, skipping download", expected_filename)
+                log.debug("%s already exists, skipping download" % expected_filename)
                 date += timedelta(days=1)
             else:
                 self.download(variable, date, fpath, overwrite=False)
-                log.debug("Downloaded %s", expected_filename)
+                log.debug("Downloaded %s" % expected_filename)
                 date += timedelta(days=1)
