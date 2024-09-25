@@ -140,21 +140,20 @@ class Client:
         dst_dir = Path(dst_dir)
         dst_dir.mkdir(parents=True, exist_ok=True)
 
+        if start_date > end_date:
+            raise ParameterError("`start_date` must be before `end_date`")
+
         date = start_date
         if end_date > self.latest:
-            log.info("Setting `end_date` to the latest available date: %s" % self.latest)
+            log.info("Setting `end_date` to the latest available date: %s" % date.strftime("%Y-%m-%d"))
             end_date = self.latest
 
         while date <= end_date:
             expected_filename = f"{date.strftime('%Y-%m-%d')}_{variable}.nc"
             fpath = Path(dst_dir, expected_filename)
             fpath_grib = Path(dst_dir, expected_filename.replace(".nc", ".grib"))
-
             if fpath.exists() or fpath_grib.exists():
                 log.debug("%s already exists, skipping download" % expected_filename)
-                date += timedelta(days=1)
-                continue
-
-            self.download(variable, date, fpath, overwrite=False)
-            log.debug("Downloaded %s" % expected_filename)
+            else:
+                self.download(variable=variable, date=date, dst_file=fpath, overwrite=False)
             date += timedelta(days=1)
