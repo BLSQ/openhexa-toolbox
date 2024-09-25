@@ -142,7 +142,7 @@ class Client:
 
         date = start_date
         if end_date > self.latest:
-            log.info("End date is in the future, setting it to the latest available date: %s", self.latest)
+            log.info("Setting `end_date` to the latest available date: %s", self.latest)
             end_date = self.latest
 
         while date <= end_date:
