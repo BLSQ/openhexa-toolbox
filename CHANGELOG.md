@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.4](https://github.com/BLSQ/openhexa-toolbox/compare/v1.1.3...v1.1.4) (2024-09-26)
+
+
+### Bug Fixes
+
+* **kobo:** do not try to cast null values ([74b49e1](https://github.com/BLSQ/openhexa-toolbox/commit/74b49e14d66a88da4264879f46f7a93d4353c112))
+* **kobo:** support string calculate fields ([49a6e63](https://github.com/BLSQ/openhexa-toolbox/commit/49a6e63703a59571d4507b218d479a70d63b53cc))
+
 ## [1.1.3](https://github.com/BLSQ/openhexa-toolbox/compare/v1.1.2...v1.1.3) (2024-09-26)
 
 
