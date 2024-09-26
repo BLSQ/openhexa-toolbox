@@ -14,6 +14,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 def cast_integer(value: str):
+    if value is None:
+        return None
     try:
         return int(value)
     except ValueError:
@@ -21,6 +23,8 @@ def cast_integer(value: str):
 
 
 def cast_decimal(value: str):
+    if value is None:
+        return None
     try:
         return float(value)
     except ValueError:
