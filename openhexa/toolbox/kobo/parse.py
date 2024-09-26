@@ -74,7 +74,7 @@ def cast_calculate(value: str) -> str:
     if value == "NaN":
         return None
     try:
-        return float(value)
+        return str(value)
     except ValueError:
         return value
 
@@ -137,7 +137,7 @@ def cast_values(df: pl.DataFrame, survey: Survey) -> pl.DataFrame:
 
         elif field.type == "calculate":
             df = df.with_columns(
-                pl.col(column).map_elements(lambda x: cast_calculate(x), return_dtype=pl.Utf8, skip_nulls=False)
+                pl.col(column).map_elements(lambda x: cast_calculate(x), return_dtype=pl.String, skip_nulls=False)
             )
 
         elif field.type == "date":
