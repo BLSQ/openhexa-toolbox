@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/BLSQ/openhexa-toolbox/compare/v1.1.2...v1.1.3) (2024-09-26)
+
+
+### Bug Fixes
+
+* compatibility with polars &gt; 0.20.30 ([738fe8d](https://github.com/BLSQ/openhexa-toolbox/commit/738fe8d4e9b08917bc3354718bd335afac8c12a0))
+
 ## [1.1.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.1.1...v1.1.2) (2024-09-23)
 
 
