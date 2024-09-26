@@ -101,22 +101,40 @@ def cast_values(df: pl.DataFrame, survey: Survey) -> pl.DataFrame:
         field = survey.get_field_from_name(column)
 
         if field.type == "integer":
-            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_integer(x)))
+            df = df.with_columns(
+                pl.col(column).map_elements(lambda x: cast_integer(x), return_dtype=pl.Int64, skip_nulls=False)
+            )
 
         elif field.type == "decimal":
-            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_decimal(x)))
+            df = df.with_columns(
+                pl.col(column).map_elements(lambda x: cast_decimal(x), return_dtype=pl.Float64, skip_nulls=False)
+            )
 
         elif field.type == "select_one":
-            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_select_one(x, field, survey)))
+            df = df.with_columns(
+                pl.col(column).map_elements(
+                    lambda x: cast_select_one(x, field, survey), return_dtype=pl.Utf8, skip_nulls=False
+                )
+            )
 
         elif field.type == "select_multiple":
-            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_select_multiple(x, field, survey)))
+            df = df.with_columns(
+                pl.col(column).map_elements(
+                    lambda x: cast_select_multiple(x, field, survey),
+                    return_dtype=pl.List(pl.Utf8),
+                    skip_nulls=False,
+                )
+            )
 
         elif field.type == "geopoint":
-            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_geopoint(x)))
+            df = df.with_columns(
+                pl.col(column).map_elements(lambda x: cast_geopoint(x), return_dtype=pl.Struct, skip_nulls=False)
+            )
 
         elif field.type == "calculate":
-            df = df.with_columns(pl.col(column).map_elements(lambda x: cast_calculate(x)))
+            df = df.with_columns(
+                pl.col(column).map_elements(lambda x: cast_calculate(x), return_dtype=pl.Utf8, skip_nulls=False)
+            )
 
         elif field.type == "date":
             df = df.with_columns(pl.col(column).str.strptime(dtype=pl.Date))
