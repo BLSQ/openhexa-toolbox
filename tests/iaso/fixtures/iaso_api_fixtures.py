@@ -43,7 +43,7 @@ iaso_mocked_projects = {
 }
 
 iaso_mocked_orgunits = {
-    "orgUnits": [
+    "orgunits": [
         {
             "name": "ACEH",
             "id": 1978297,
