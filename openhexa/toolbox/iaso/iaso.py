@@ -58,7 +58,12 @@ class IASO:
         params = kwargs
         params.update({"page": page, "limit": limit})
         response = self.api_client.get("/api/orgunits", params=params)
-        return response.json().get("orgunits")
+        json_response = response.json()
+        if "orgunits" in json_response:
+            return json_response.get("orgunits")
+        elif "orgUnits" in json_response:
+            return json_response.get("orgUnits")
+        return []
 
     def get_form_instances(
         self,
