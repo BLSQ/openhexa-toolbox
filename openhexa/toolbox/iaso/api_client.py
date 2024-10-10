@@ -71,7 +71,7 @@ class ApiClient(requests.Session):
 
     def authenticate(self) -> None:
         """
-        Authenticates with OpenHexa API with username and password.
+        Authenticates with IASO API with username and password.
         Calling the endpoints to fetch authorization and refresh token.
         Ensures that failures are handles with status management, both with or without SSL communication
         """
