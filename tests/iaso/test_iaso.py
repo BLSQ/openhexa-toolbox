@@ -9,7 +9,8 @@ from tests.iaso.fixtures.iaso_api_fixtures import (
     iaso_mocked_orgunits,
     iaso_mocked_refreshed_auth_token,
     iaso_mocked_projects,
-    iaso_mocked_instances, iaso_mocked_orgunits_with_params,
+    iaso_mocked_instances,
+    iaso_mocked_orgunits_with_params,
 )
 
 
@@ -50,16 +51,21 @@ class TestIasoAPI:
         iaso = IASO("https://iaso-staging.bluesquare.org", "username", "password")
         r = iaso.get_org_units()
         assert len(r) > 0
+
     def test_get_org_units_with_params(self, mock_responses):
         mock_responses.add(
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
         )
         mock_responses.add(
-            responses.GET, "https://iaso-staging.bluesquare.org/api/orgunits/", json=iaso_mocked_orgunits_with_params, status=200
+            responses.GET,
+            "https://iaso-staging.bluesquare.org/api/orgunits/",
+            json=iaso_mocked_orgunits_with_params,
+            status=200,
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "username", "password")
         r = iaso.get_org_units()
         assert len(r) > 0
+
     def test_get_forms(self, mock_responses):
         mock_responses.add(
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200

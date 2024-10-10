@@ -63,7 +63,7 @@ class IASO:
             return json_response.get("orgunits")
         elif "orgUnits" in json_response:
             return json_response.get("orgUnits")
-        return []
+        return {}
 
     def get_form_instances(
         self,
