@@ -6,11 +6,15 @@ import logging
 import shutil
 import tempfile
 from calendar import monthrange
-from datetime import datetime
+from datetime import datetime, timedelta
+from functools import cached_property
+from math import ceil
 from pathlib import Path
 
 import cads_api_client
 import cdsapi
+import geopandas as gpd
+from dateutil.relativedelta import relativedelta
 
 with importlib.resources.open_text("openhexa.toolbox.era5", "variables.json") as f:
     VARIABLES = json.load(f)
@@ -27,11 +31,36 @@ class ParameterError(ValueError):
     pass
 
 
+def bounds_from_file(fp: Path, buffer: float = 0.5) -> list[float]:
+    """Get bounds from file.
+
+    Parameters
+    ----------
+    fp : Path
+        File path.
+    buffer : float, optional
+        Buffer to add to the bounds (default=0.5).
+
+    Returns
+    -------
+    list[float]
+        Bounds (north, west, south, east).
+    """
+    boundaries = gpd.read_parquet(fp)
+    xmin, ymin, xmax, ymax = boundaries.total_bounds
+    xmin = ceil(xmin - 0.5)
+    ymin = ceil(ymin - 0.5)
+    xmax = ceil(xmax + 0.5)
+    ymax = ceil(ymax + 0.5)
+    return ymax, xmin, ymin, xmax
+
+
 class Client:
     def __init__(self, key: str):
         self.client = cdsapi.Client(url=URL, key=key, wait_until_complete=True, quiet=True, progress=False)
         self.cads_api_client = cads_api_client.ApiClient(key=key, url=URL)
 
+    @cached_property
     def latest(self) -> datetime:
         """Get date of latest available product."""
         collection = self.cads_api_client.collection(DATASET)
@@ -140,3 +169,80 @@ class Client:
             shutil.copy(tmp.name, dst_file)
 
         log.debug("Downloaded Era5 product to %s", str(dst_file.absolute()))
+
+    @staticmethod
+    def _period_chunks(start: datetime, end: datetime) -> list[dict]:
+        """Generate list of period chunks to prepare CDS API requests.
+
+        If we can, prepare requests for full months to optimize wait times. If we can't, prepare
+        daily requests.
+
+        Parameters
+        ----------
+        start : datetime
+            Start date.
+        end : datetime
+            End date.
+
+        Returns
+        -------
+        list[dict]
+            List of period chunks as dicts with `year`, `month` and `days` keys.
+        """
+        chunks = []
+        date = start
+        while date <= end:
+            last_day_in_month = datetime(date.year, date.month, monthrange(date.year, date.month)[1])
+            if last_day_in_month <= end:
+                chunks.append(
+                    {"year": date.year, "month": date.month, "days": [day for day in range(1, last_day_in_month.day)]}
+                )
+                date += relativedelta(months=1)
+            else:
+                chunks.append({"year": date.year, "month": date.month, "days": [date.day]})
+                date += timedelta(days=1)
+        return chunks
+
+    def download_between(
+        self,
+        variable: str,
+        start: datetime,
+        end: datetime,
+        dst_dir: str | Path,
+        area: list[float] = None,
+        overwrite: bool = False,
+    ):
+        """Download all ERA5 products between two dates.
+
+        Parameters
+        ----------
+        variable : str
+            Climate data store variable name (ex: "2m_temperature").
+        start : datetime
+            Start date.
+        end : datetime
+            End date.
+        dst_dir : Path
+            Output directory.
+        area : list[float], optional
+            Area of interest (north, west, south, east). Defaults to None (world).
+        overwrite : bool, optional
+            Overwrite existing files (default=False).
+        """
+        if end > self.latest:
+            end = self.latest
+            log.debug("End date is after latest available product, setting end date to %s", end)
+
+        chunks = self._period_chunks(start, end)
+
+        for chunk in chunks:
+            request = self.build_request(
+                variable=variable, year=chunk["year"], month=chunk["month"], days=chunk["days"], area=area
+            )
+
+            if len(chunk["days"]) == 1:
+                dst_file = Path(dst_dir) / f"{variable}_{chunk['year']}-{chunk['month']:02}-{chunk['days']:02}.grib"
+            else:
+                dst_file = Path(dst_dir) / f"{variable}_{chunk['year']}-{chunk['month']:02}.nc"
+
+            self.download(request=request, dst_file=dst_file, overwrite=overwrite)
