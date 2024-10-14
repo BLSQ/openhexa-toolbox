@@ -64,7 +64,10 @@ class Client:
     def latest(self) -> datetime:
         """Get date of latest available product."""
         collection = self.cads_api_client.get_collection(DATASET)
-        return collection.end_datetime
+        dt = collection.end_datetime
+        # make datetime unaware of timezone for comparability with other datetimes
+        dt = datetime(dt.year, dt.month, dt.day)
+        return dt
 
     @staticmethod
     def build_request(
