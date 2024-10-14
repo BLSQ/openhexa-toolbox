@@ -145,6 +145,15 @@ class Client:
 
         return payload
 
+    @staticmethod
+    def _filename(variable: str, year: int, month: int, day: int = None, data_format: str = "grib") -> str:
+        """Get filename from variable name and date."""
+        EXTENSION = {"grib": "grib", "netcdf": "nc"}
+        if day is not None:
+            return f"{variable}_{year}-{month:02}-{day:02}.{EXTENSION[data_format]}"
+        else:
+            return f"{variable}_{year}-{month:02}.{EXTENSION[data_format]}"
+
     def download(self, request: dict, dst_file: str | Path, overwrite: bool = False):
         """Download Era5 product.
 
@@ -163,6 +172,14 @@ class Client:
         if dst_file.exists() and not overwrite:
             log.debug("File %s already exists, skipping download", str(dst_file.absolute()))
             return
+
+        # if we request daily data while a monthly file is already present, also skip download
+        if len(request["day"]) == 1:
+            dst_file_monthly = Path(
+                dst_file.parent, self._filename(request["variable"], request["year"], request["month"])
+            )
+            if dst_file_monthly.exists() and not overwrite:
+                log.debug("Monthly file `{}` already exists, skipping download".format(dst_file_monthly.name))
 
         with tempfile.NamedTemporaryFile() as tmp:
             self.client.retrieve(name=DATASET, request=request, target=tmp.name)
@@ -241,8 +258,8 @@ class Client:
             )
 
             if len(chunk["days"]) == 1:
-                dst_file = Path(dst_dir) / f"{variable}_{chunk['year']}-{chunk['month']:02}-{chunk['days']:02}.grib"
+                dst_file = Path(dst_dir, self._filename(variable, chunk["year"], chunk["month"], chunk["days"][0]))
             else:
-                dst_file = Path(dst_dir) / f"{variable}_{chunk['year']}-{chunk['month']:02}.nc"
+                dst_file = Path(dst_dir, self._filename(variable, chunk["year"], chunk["month"]))
 
             self.download(request=request, dst_file=dst_file, overwrite=overwrite)
