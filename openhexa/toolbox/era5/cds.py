@@ -63,10 +63,8 @@ class Client:
     @cached_property
     def latest(self) -> datetime:
         """Get date of latest available product."""
-        collection = self.cads_api_client.collection(DATASET)
-        _, end = collection.json["extent"]["temporal"]["interval"][0]
-        end = datetime.strptime(end, "%Y-%m-%dT00:00:00Z")
-        return end
+        collection = self.cads_api_client.get_collection(DATASET)
+        return collection.end_datetime
 
     @staticmethod
     def build_request(
