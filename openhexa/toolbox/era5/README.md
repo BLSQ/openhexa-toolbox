@@ -6,6 +6,19 @@ a ~9 km spatial resolution. See [ERA5-Land: data
 documentation](https://confluence.ecmwf.int/display/CKB/ERA5-Land%3A+data+documentation) for more
 information.
 
+Available variables include:
+* 2 metre temperature
+* Wind components
+* Leaf area index
+* Volumetric soil water layer
+* Total precipitation
+
+See [ERA5-Land data
+documentation](https://confluence.ecmwf.int/display/CKB/ERA5-Land%3A+data+documentation#ERA5Land:datadocumentation-parameterlistingParameterlistings)
+for a full list of available parameters.
+
+In addition to download clients for the Copernicus [Climate Data Store](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land?tab=overview) and [Google Public Datasets](https://cloud.google.com/storage/docs/public-datasets/era5), the package includes an `aggregate` module to aggregate ERA5 measurements in space (geographic boundaries) and time (hourly to daily).
+
 ## Usage
 
 The package contains 3 modules:
@@ -34,7 +47,9 @@ cds.download(
 )
 ```
 
-The module also contains helper functions to use bounds from a geoparquet file as an area of interest.
+The module also contains helper functions to use bounds from a geoparquet file as an area of
+interest. Source bounds are buffered and rounded by default to make sure the required data is
+downloaded.
 
 ```python
 bounds = bounds_from_file(fp=Path("data/districts.parquet"), buffer=0.5)
@@ -75,6 +90,8 @@ cds.latest
 ```
 >>> datetime(2024, 10, 8)
 ```
+
+NB: End dates in product requests will be automatically replaced by latest available date if they are greater.
 
 ### Download from Google Cloud
 
