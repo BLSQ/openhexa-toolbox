@@ -33,7 +33,7 @@ hexa_client = OpenHEXA("https://app.demo.openhexa.org", token="token")
 # getting the list of workspaces
 result = hexa.query("""
     query {
-        workspaces (page: $page, perPage: $perPage) {
+        workspaces(page: $page, perPage: $perPage) {
             items {
                 slug
                 name
