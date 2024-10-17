@@ -32,3 +32,4 @@ pip install openhexa.toolbox
 [**openhexa.toolbox.dhis2**](docs/dhis2.md) - Acquire and process data from DHIS2 instances <br>
 [**openhexa.toolbox.iaso**](docs/iaso.md) - Acquire and process data from IASO instances <br>
 [**openhexa.toolbox.kobo**](docs/kobo.md) - Acquire and process submissions from KoboToolbox instances <br>
+[**openhexa.toolbox.hexa**](docs/hexa.md) - Interact with OpenHEXA API
