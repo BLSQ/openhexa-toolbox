@@ -159,6 +159,11 @@ class Api:
         self.raise_if_error(r)
         return r
 
+    def put(self, endpoint: str, json: dict = None, params: dict = None) -> requests.Response:
+        r = self.session.put(f"{self.url}/{endpoint}", json=json, params=params)
+        self.raise_if_error(r)
+        return r
+
 
 class ApiCache:
     def __init__(self, cache_dir: Path, api_url: str):
