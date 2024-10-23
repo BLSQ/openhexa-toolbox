@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.2.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.1.4...v1.2.0) (2024-10-23)
+
+
+### Features
+
+* add ERA5 download and aggregation ([#61](https://github.com/BLSQ/openhexa-toolbox/issues/61)) ([48cb5ce](https://github.com/BLSQ/openhexa-toolbox/commit/48cb5ce66fab7f4ddd740c1e3e8ccbb682b22a90))
+* **DHSI2:** add put method ([#63](https://github.com/BLSQ/openhexa-toolbox/issues/63)) ([c79aac3](https://github.com/BLSQ/openhexa-toolbox/commit/c79aac3e7b1b820e4e82282bb6e8d904770723b1))
+* support both urgUnits and orgunits from IASO ([a319874](https://github.com/BLSQ/openhexa-toolbox/commit/a31987475c8eec7b05de7aedecf514ae7884cc83))
+
+
+### Bug Fixes
+
+* changed default field for orgunits ([a281f2f](https://github.com/BLSQ/openhexa-toolbox/commit/a281f2f5e2bb56c5e0b8f481258a77758565a258))
+* tests for iaso orgunits ([042ffdf](https://github.com/BLSQ/openhexa-toolbox/commit/042ffdf4c02fbbe653a6e36aeb967ef4fa9a870b))
+
 ## [1.1.4](https://github.com/BLSQ/openhexa-toolbox/compare/v1.1.3...v1.1.4) (2024-09-26)
 
 
