@@ -7,6 +7,7 @@ import geopandas as gpd
 import numpy as np
 import polars as pl
 import rasterio
+import rasterio.features
 import rasterio.transform
 import xarray as xr
 from epiweeks import Week
