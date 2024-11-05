@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.3.0...v1.4.0) (2024-11-05)
+
+
+### Features
+
+* **era5:** support sum aggregation for accumulated variables ([f75aa3a](https://github.com/BLSQ/openhexa-toolbox/commit/f75aa3abfb0ddcc1030b28a3630baef203cc8d27))
+
 ## [1.3.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.2.0...v1.3.0) (2024-11-05)
 
 
