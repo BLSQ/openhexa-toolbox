@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.2.0...v1.3.0) (2024-11-05)
+
+
+### Features
+
+* **era5:** add weekly and monthly aggregation ([f1292a1](https://github.com/BLSQ/openhexa-toolbox/commit/f1292a12b5e6e14e6b98f3b674e68cd353f4db06))
+
 ## [1.2.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.1.4...v1.2.0) (2024-10-23)
 
 
