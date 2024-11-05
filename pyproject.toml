@@ -27,6 +27,10 @@ dependencies = [
     "pyjwt",
     "cdsapi >=0.7.3",
     "cads-api-client >=1.4.0",
+    "rasterio",
+    "cfgrib",
+    "xarray",
+    "epiweeks",
 ]
 
 [project.optional-dependencies]
