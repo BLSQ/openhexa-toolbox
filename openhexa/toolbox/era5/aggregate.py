@@ -7,10 +7,10 @@ import geopandas as gpd
 import numpy as np
 import polars as pl
 import rasterio
-import rasterio.features
-import rasterio.transform
 import xarray as xr
 from epiweeks import Week
+from rasterio.features import rasterize
+from rasterio.transform import Affine, from_bounds
 
 
 def clip_dataset(ds: xr.Dataset, xmin: float, ymin: float, xmax: float, ymax: float) -> xr.Dataset:
@@ -44,7 +44,7 @@ def clip_dataset(ds: xr.Dataset, xmin: float, ymin: float, xmax: float, ymax: fl
     return ds
 
 
-def get_transform(ds: xr.Dataset) -> rasterio.transform.Affine:
+def get_transform(ds: xr.Dataset) -> Affine:
     """Get rasterio affine transform from xarray dataset.
 
     Parameters
@@ -54,10 +54,10 @@ def get_transform(ds: xr.Dataset) -> rasterio.transform.Affine:
 
     Returns
     -------
-    rasterio.transform.Affine
+    Affine
         Rasterio affine transform.
     """
-    transform = rasterio.transform.from_bounds(
+    transform = from_bounds(
         ds.longitude.values.min(),
         ds.latitude.values.min(),
         ds.longitude.values.max(),
@@ -95,7 +95,7 @@ def build_masks(
     """
     masks = np.ndarray(shape=(len(boundaries), height, width), dtype=np.bool_)
     for i, geom in enumerate(boundaries.geometry):
-        mask = rasterio.features.rasterize(
+        mask = rasterize(
             shapes=[geom.__geo_interface__],
             out_shape=(height, width),
             fill=0,
