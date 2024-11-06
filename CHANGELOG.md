@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.4.1...v1.4.2) (2024-11-05)
+
+
+### Bug Fixes
+
+* **era5:** rasterio submodules import ([2a48b76](https://github.com/BLSQ/openhexa-toolbox/commit/2a48b7643d7eaaa0c1528fc2e53c5abdccab0834))
+
 ## [1.4.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.4.0...v1.4.1) (2024-11-05)
 
 
