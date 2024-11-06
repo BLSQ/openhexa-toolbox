@@ -10,9 +10,10 @@ from datetime import datetime, timedelta
 from functools import cached_property
 from math import ceil
 from pathlib import Path
+from typing import Optional, Union
 
 import geopandas as gpd
-from cads_api_client import ApiClient, Remote
+from cads_api_client import ApiClient, Remote, Results
 from dateutil.relativedelta import relativedelta
 
 with importlib.resources.open_text("openhexa.toolbox.era5", "variables.json") as f:
@@ -77,10 +78,51 @@ class Client:
         """Get remote object from request uid."""
         return self.client.get_remote(request_id)
 
+    def get_remote_from_request(self, request: dict, max_age: int = 1) -> Optional[Remote]:
+        """Look for a remote object that matches the provided request payload.
+
+        Parameters
+        ----------
+        request : dict
+            Request payload.
+        max_age : int, optional
+            Maximum age of the remote object in days (default=1).
+
+        Returns
+        -------
+        Optional[Remote]
+            Remote object if found, None otherwise.
+        """
+        jobs = self.get_jobs()
+        if not jobs:
+            return None
+        for job in jobs:
+            remote = self.get_remote(job["jobID"])
+            if remote.request == request:
+                age = datetime.now() - remote.creation_datetime
+                if age.days <= max_age:
+                    return remote
+        return None
+
     def submit(self, request: dict) -> str:
         """Submit an async data request to the CDS API."""
         r = self.client.submit(DATASET, **request)
+        log.debug("Submitted data request %s", r.request_uid)
         return r.request_uid
+
+    def submit_and_wait(self, request: dict) -> Results:
+        """Submit a data request and wait for completion."""
+        result = self.client.submit_and_wait_on_results(DATASET, **request)
+        return result
+
+    def download(self, request: dict, dst_file: Union[str, Path]):
+        """Submit a data request and wait for completion before download."""
+        if isinstance(dst_file, str):
+            dst_file = Path(dst_file)
+        dst_file.parent.mkdir(parents=True, exist_ok=True)
+        result = self.submit_and_wait(request)
+        result.download(dst_file.as_posix())
+        log.debug("Downloaded %s", dst_file.name)
 
     @staticmethod
     def build_request(
