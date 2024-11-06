@@ -104,8 +104,8 @@ class Client:
             Month of interest.
         days : list[int]
             Days of interest. Defauls to None (all days).
-        time : list[str]
-            Hours of interest (ex: ["01:00", "06:00", "18:00"]). Defaults to None (all hours).
+        time : list[int]
+            Hours of interest (ex: [1, 6, 18]). Defaults to None (all hours).
         data_format : str
             Output data format ("grib" or "netcdf"). Defaults to "grib".
         area : list[float]
@@ -139,7 +139,8 @@ class Client:
             days = [day for day in range(1, dmax + 1)]
 
         if not time:
-            time = [f"{hour:02}:00" for hour in range(0, 24)]
+            time = [hour for hour in range(0, 24)]
+        time = [f"{hour:02}:00" for hour in time]
 
         year = str(year)
         month = f"{month:02}"
