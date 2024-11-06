@@ -11,9 +11,8 @@ from functools import cached_property
 from math import ceil
 from pathlib import Path
 
-import cads_api_client
-import cdsapi
 import geopandas as gpd
+from cads_api_client import ApiClient, Remote
 from dateutil.relativedelta import relativedelta
 
 with importlib.resources.open_text("openhexa.toolbox.era5", "variables.json") as f:
@@ -57,17 +56,31 @@ def bounds_from_file(fp: Path, buffer: float = 0.5) -> list[float]:
 
 class Client:
     def __init__(self, key: str):
-        self.client = cdsapi.Client(url=URL, key=key, wait_until_complete=True, quiet=True, progress=False)
-        self.cads_api_client = cads_api_client.ApiClient(key=key, url=URL)
+        self.client = ApiClient(key=key, url=URL)
+        self.check_authentication()
 
     @cached_property
     def latest(self) -> datetime:
         """Get date of latest available product."""
-        collection = self.cads_api_client.get_collection(DATASET)
+        collection = self.client.get_collection(DATASET)
         dt = collection.end_datetime
         # make datetime unaware of timezone for comparability with other datetimes
         dt = datetime(dt.year, dt.month, dt.day)
         return dt
+
+    def get_jobs(self) -> list[dict]:
+        """Get list of current jobs for the account in the CDS."""
+        r = self.client.get_jobs()
+        return "jobs" in r.json.get("jobs")
+
+    def get_remote(self, request_id: str) -> Remote:
+        """Get remote object from request uid."""
+        return self.client.get_remote(request_id)
+
+    def submit(self, request: dict) -> str:
+        """Submit an async data request to the CDS API."""
+        r = self.client.submit(DATASET, **request)
+        return r.request_uid
 
     @staticmethod
     def build_request(
@@ -75,7 +88,7 @@ class Client:
         year: int,
         month: int,
         days: list[int] = None,
-        time: list[str] = None,
+        time: list[int] = None,
         data_format: str = "grib",
         area: list[float] = None,
     ) -> dict:
