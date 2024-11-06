@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.3](https://github.com/BLSQ/openhexa-toolbox/compare/v1.4.2...v1.4.3) (2024-11-06)
+
+
+### Bug Fixes
+
+* **era5:** invalid short name for 2m temperature variable ([1678a5f](https://github.com/BLSQ/openhexa-toolbox/commit/1678a5fef6512c3d4969e2fc47dd6498e6ddd272))
+* **era5:** remove __init__.py content ([56f330b](https://github.com/BLSQ/openhexa-toolbox/commit/56f330b1d3ade2fbcad58d25bb66918c32720b63))
+
 ## [1.4.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.4.1...v1.4.2) (2024-11-05)
 
 
