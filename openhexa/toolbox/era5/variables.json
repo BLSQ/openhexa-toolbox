@@ -155,7 +155,7 @@
     },
     "2m_temperature": {
         "name": "2 metre temperature",
-        "shortname": "2t",
+        "shortname": "t2m",
         "units": "K",
         "grib1": true,
         "grib2": false
