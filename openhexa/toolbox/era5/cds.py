@@ -190,7 +190,7 @@ def date_range(start: date, end: date) -> list[date]:
 class Client:
     def __init__(self, key: str):
         self.client = ApiClient(key=key, url=URL)
-        self.check_authentication()
+        self.client.check_authentication()
 
     @cached_property
     def latest(self) -> datetime:
@@ -298,7 +298,7 @@ class Client:
             remote = self.get_remote_from_request(request)
             if remote:
                 remotes.append(remote)
-                log.debug(f"Found existing request for date {request["year"]}-{request["month"]}")
+                log.debug(f"Found existing request for date {request['year']}-{request['month']}")
                 continue
 
             requests.append(self.submit(request))
