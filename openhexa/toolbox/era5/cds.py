@@ -3,18 +3,18 @@ from __future__ import annotations
 import importlib.resources
 import json
 import logging
-import shutil
-import tempfile
 from calendar import monthrange
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from functools import cached_property
 from math import ceil
 from pathlib import Path
+from time import sleep
 from typing import Optional, Union
 
 import geopandas as gpd
+import numpy as np
+import xarray as xr
 from cads_api_client import ApiClient, Remote, Results
-from dateutil.relativedelta import relativedelta
 
 with importlib.resources.open_text("openhexa.toolbox.era5", "variables.json") as f:
     VARIABLES = json.load(f)
@@ -53,6 +53,138 @@ def bounds_from_file(fp: Path, buffer: float = 0.5) -> list[float]:
     xmax = ceil(xmax + 0.5)
     ymax = ceil(ymax + 0.5)
     return ymax, xmin, ymin, xmax
+
+
+def get_period_chunk(dtimes: list[datetime]) -> dict:
+    """Get the period chunk for a list of datetimes.
+
+    The period chunk is a dictionary with the "year", "month", "day" and "time" keys as expected by
+    the CDS API. A period chunk cannot contain more than 1 year and 1 month. However, it can
+    contain any number of days and times.
+
+    Parameters
+    ----------
+    dtimes : list[datetime]
+        A list of datetimes for which we want data
+
+    Returns
+    -------
+    dict
+        The period chunk, in other words the temporal part of the request payload
+
+    Raises
+    ------
+    ValueError
+        If the list of datetimes contains more than 1 year or more than 1 month
+    """
+    years = list(set([dtime.year for dtime in dtimes]))
+    if len(set(years)) > 1:
+        raise ValueError("Cannot create a period chunk for multiple years")
+    months = list(set([dtime.month for dtime in dtimes]))
+    if len(months) > 1:
+        raise ValueError("Cannot create a period chunk for multiple months")
+
+    year = years[0]
+    month = months[0]
+    days = []
+
+    for dtime in sorted(dtimes):
+        if dtime.day not in days:
+            days.append(dtime.day)
+
+    return {
+        "year": year,
+        "month": month,
+        "day": days,
+        "time": [h for h in range(0, 24)],
+    }
+
+
+def get_period_chunks(dtimes: list[datetime]) -> list[dict]:
+    """Get the period chunks for a list of datetimes.
+
+    The period chunks are a list of dictionaries with the "year", "month", "day" and "time" keys as
+    expected by the CDS API. A period chunk cannot contain more than 1 year and 1 month. However,
+    it can contain any number of days and times.
+
+    The function tries its best to generate the minimum amount of chunks to minize the amount of requests.
+
+    Parameters
+    ----------
+    dtimes : list[datetime]
+        A list of datetimes for which we want data
+
+    Returns
+    -------
+    list[dict]
+        The period chunks (one per month max)
+    """
+    chunks = []
+    for year in range(min(dtimes).year, max(dtimes).year + 1):
+        for month in range(1, 13):
+            dtimes_month = [dtime for dtime in dtimes if dtime.year == year and dtime.month == month]
+            if dtimes_month:
+                chunk = get_period_chunk(dtimes_month)
+                chunks.append(chunk)
+    return chunks
+
+
+def _np_to_datetime(dt64: np.datetime64) -> datetime:
+    epoch = np.datetime64(0, "s")
+    one_second = np.timedelta64(1, "s")
+    seconds_since_epoch = (dt64 - epoch) / one_second
+    return datetime.fromtimestamp(seconds_since_epoch)
+
+
+def available_datetimes(data_dir: Path) -> list[date]:
+    """Get available datetimes from a directory of ERA5 data files.
+
+    Dates are considered as available if data for all 24 hours of the day are found in the file.
+
+    Parameters
+    ----------
+    data_dir : Path
+        Directory containing the ERA5 data files.
+
+    Returns
+    -------
+    list[date]
+        List of available dates.
+    """
+    dtimes = []
+
+    for f in data_dir.glob("*.grib"):
+        ds = xr.open_dataset(f, engine="cfgrib")
+        var = [v for v in ds.data_vars][0]
+
+        for time in ds.time:
+            dtime = _np_to_datetime(time.values).date()
+            if dtime in dtimes:
+                continue
+
+            is_complete = True
+            for hour in range(1, 25):
+                step = timedelta(hours=hour)
+                if not ds.sel(time=time, step=step).get(var).notnull().any().values.item():
+                    is_complete = False
+                    break
+
+            if is_complete:
+                dtimes.append(dtime)
+
+    log.debug(f"Scanned {data_dir.as_posix()}, found {len(dtimes)} available dates")
+
+    return dtimes
+
+
+def date_range(start: date, end: date) -> list[date]:
+    """Get a range of dates with a 1-day step."""
+    drange = []
+    dt = start
+    while dt <= end:
+        drange.append(dt)
+        dt += timedelta(days=1)
+    return drange
 
 
 class Client:
@@ -123,6 +255,68 @@ class Client:
         result = self.submit_and_wait(request)
         result.download(dst_file.as_posix())
         log.debug("Downloaded %s", dst_file.name)
+
+    def download_between(self, start: date, end: date, variable: str, area: list[float], dst_dir: Union[str, Path]):
+        """Download all ERA5 data files needed to cover the period.
+
+        Data requests are sent asynchronously (max one per month) to the CDS API and fetched when
+        they are completed.
+
+        Parameters
+        ----------
+        start : date
+            Start date.
+        end : date
+            End date.
+        variable : str
+            Climate data store variable name (ex: "2m_temperature").
+        area : list[float]
+            Area of interest (north, west, south, east).
+        dst_dir : Path
+            Output directory.
+        """
+        if isinstance(dst_dir, str):
+            dst_dir = Path(dst_dir)
+        dst_dir.mkdir(parents=True, exist_ok=True)
+
+        if end > self.latest:
+            end = self.latest.date()
+            log.debug(f"End date is after latest available product, setting end date to {end.strftime('%Y-%m-%d')}")
+
+        drange = date_range(start, end)
+        available = available_datetimes(dst_dir)
+        dates = [d for d in drange if d not in available]
+
+        chunks = get_period_chunks(dates)
+        requests = []
+        remotes = []
+
+        for chunk in chunks:
+            request = self.build_request(variable=variable, data_format="grib", area=area, **chunk)
+
+            # has a similar request been submitted recently? if yes, use it
+            remote = self.get_remote_from_request(request)
+            if remote:
+                remotes.append(remote)
+                log.debug(f"Found existing request for date {request["year"]}-{request["month"]}")
+                continue
+
+            requests.append(self.submit(request))
+            sleep(3)
+
+        remotes = [self.get_remote(request) for request in requests]
+        done = []
+
+        while not all([remote.request_uid in done for remote in remotes]):
+            for remote in remotes:
+                if remote.results_ready:
+                    fname = f"{date.year}{date.month:02}_{remote.request_uid}.grib"
+                    dst_file = Path(dst_dir, fname)
+                    remote.download(dst_file.as_posix())
+                    log.debug(f"Downloaded {dst_file.name}")
+                    done.append(remote.request_uid)
+                    remote.delete()
+            sleep(60)
 
     @staticmethod
     def build_request(
@@ -201,122 +395,3 @@ class Client:
             payload["area"] = area
 
         return payload
-
-    @staticmethod
-    def _filename(variable: str, year: int, month: int, day: int = None, data_format: str = "grib") -> str:
-        """Get filename from variable name and date."""
-        EXTENSION = {"grib": "grib", "netcdf": "nc"}
-        if day is not None:
-            return f"{variable}_{year}-{month:02}-{day:02}.{EXTENSION[data_format]}"
-        else:
-            return f"{variable}_{year}-{month:02}.{EXTENSION[data_format]}"
-
-    def download(self, request: dict, dst_file: str | Path, overwrite: bool = False):
-        """Download Era5 product.
-
-        Parameters
-        ----------
-        request : dict
-            Request payload as returned by the build_request() method.
-        dst_file : Path
-            Output file path.
-        overwrite : bool, optional
-            Overwrite existing file (default=False).
-        """
-        dst_file = Path(dst_file)
-        dst_file.parent.mkdir(parents=True, exist_ok=True)
-
-        if dst_file.exists() and not overwrite:
-            log.debug("File %s already exists, skipping download", str(dst_file.absolute()))
-            return
-
-        # if we request daily data while a monthly file is already present, also skip download
-        if len(request["day"]) == 1:
-            dst_file_monthly = Path(
-                dst_file.parent, self._filename(request["variable"], request["year"], request["month"])
-            )
-            if dst_file_monthly.exists() and not overwrite:
-                log.debug("Monthly file `{}` already exists, skipping download".format(dst_file_monthly.name))
-
-        with tempfile.NamedTemporaryFile() as tmp:
-            self.client.retrieve(name=DATASET, request=request, target=tmp.name)
-            shutil.copy(tmp.name, dst_file)
-
-        log.debug("Downloaded Era5 product to %s", str(dst_file.absolute()))
-
-    @staticmethod
-    def _period_chunks(start: datetime, end: datetime) -> list[dict]:
-        """Generate list of period chunks to prepare CDS API requests.
-
-        If we can, prepare requests for full months to optimize wait times. If we can't, prepare
-        daily requests.
-
-        Parameters
-        ----------
-        start : datetime
-            Start date.
-        end : datetime
-            End date.
-
-        Returns
-        -------
-        list[dict]
-            List of period chunks as dicts with `year`, `month` and `days` keys.
-        """
-        chunks = []
-        date = start
-        while date <= end:
-            last_day_in_month = datetime(date.year, date.month, monthrange(date.year, date.month)[1])
-            if last_day_in_month <= end:
-                chunks.append(
-                    {"year": date.year, "month": date.month, "days": [day for day in range(1, last_day_in_month.day)]}
-                )
-                date += relativedelta(months=1)
-            else:
-                chunks.append({"year": date.year, "month": date.month, "days": [date.day]})
-                date += timedelta(days=1)
-        return chunks
-
-    def download_between(
-        self,
-        variable: str,
-        start: datetime,
-        end: datetime,
-        dst_dir: str | Path,
-        area: list[float] = None,
-        overwrite: bool = False,
-    ):
-        """Download all ERA5 products between two dates.
-
-        Parameters
-        ----------
-        variable : str
-            Climate data store variable name (ex: "2m_temperature").
-        start : datetime
-            Start date.
-        end : datetime
-            End date.
-        dst_dir : Path
-            Output directory.
-        area : list[float], optional
-            Area of interest (north, west, south, east). Defaults to None (world).
-        overwrite : bool, optional
-            Overwrite existing files (default=False).
-        """
-        if end > self.latest:
-            end = self.latest
-            log.debug("End date is after latest available product, setting end date to %s", end)
-
-        chunks = self._period_chunks(start, end)
-
-        for chunk in chunks:
-            request = self.build_request(
-                variable=variable, year=chunk["year"], month=chunk["month"], days=chunk["days"], area=area
-            )
-
-            if len(chunk["days"]) == 1:
-                dst_file = Path(dst_dir, self._filename(variable, chunk["year"], chunk["month"], chunk["days"][0]))
-            else:
-                dst_file = Path(dst_dir, self._filename(variable, chunk["year"], chunk["month"]))
-
-            self.download(request=request, dst_file=dst_file, overwrite=overwrite)
