@@ -310,7 +310,7 @@ class Client:
         while not all([remote.request_uid in done for remote in remotes]):
             for remote in remotes:
                 if remote.results_ready:
-                    fname = f"{date.year}{date.month:02}_{remote.request_uid}.grib"
+                    fname = f"{request["year"]}{request["month"]}_{remote.request_uid}.grib"
                     dst_file = Path(dst_dir, fname)
                     remote.download(dst_file.as_posix())
                     log.debug(f"Downloaded {dst_file.name}")
