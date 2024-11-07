@@ -201,10 +201,10 @@ class Client:
         dt = datetime(dt.year, dt.month, dt.day)
         return dt
 
-    def get_jobs(self) -> list[dict]:
+    def get_jobs(self, **kwargs) -> Optional[list[dict]]:
         """Get list of current jobs for the account in the CDS."""
-        r = self.client.get_jobs()
-        return "jobs" in r.json.get("jobs")
+        r = self.client.get_jobs(limit=100, **kwargs)
+        return r.json.get("jobs")
 
     def get_remote(self, request_id: str) -> Remote:
         """Get remote object from request uid."""
@@ -228,6 +228,9 @@ class Client:
         jobs = self.get_jobs()
         if not jobs:
             return None
+
+        jobs = sorted(jobs, key=lambda job: job["status"], reverse=True)
+
         for job in jobs:
             remote = self.get_remote(job["jobID"])
             if remote.request == request:
@@ -299,18 +302,18 @@ class Client:
             if remote:
                 remotes.append(remote)
                 log.debug(f"Found existing request for date {request['year']}-{request['month']}")
-                continue
-
-            requests.append(self.submit(request))
+            else:
+                requests.append(self.submit(request))
             sleep(3)
 
-        remotes = [self.get_remote(request) for request in requests]
+        for request in requests:
+            remotes.append(self.get_remote(request))
         done = []
 
         while not all([remote.request_uid in done for remote in remotes]):
             for remote in remotes:
                 if remote.results_ready:
-                    fname = f"{request["year"]}{request["month"]}_{remote.request_uid}.grib"
+                    fname = f"{request['year']}{request['month']}_{remote.request_uid}.grib"
                     dst_file = Path(dst_dir, fname)
                     remote.download(dst_file.as_posix())
                     log.debug(f"Downloaded {dst_file.name}")
