@@ -279,7 +279,7 @@ class Client:
             dst_dir = Path(dst_dir)
         dst_dir.mkdir(parents=True, exist_ok=True)
 
-        if end > self.latest:
+        if end > self.latest.date():
             end = self.latest.date()
             log.debug(f"End date is after latest available product, setting end date to {end.strftime('%Y-%m-%d')}")
 
