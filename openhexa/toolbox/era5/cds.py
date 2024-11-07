@@ -95,7 +95,7 @@ def get_period_chunk(dtimes: list[datetime]) -> dict:
     return {
         "year": year,
         "month": month,
-        "day": days,
+        "days": days,
         "time": [h for h in range(0, 24)],
     }
 
