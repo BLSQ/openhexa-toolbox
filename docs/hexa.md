@@ -25,10 +25,10 @@ Import OpenHEXA module:
 import json
 from openhexa.toolbox.hexa import OpenHEXA
 # We can authenticate using username / password
-hexa_client = OpenHEXA("https://app.demo.openhexa.org", username="username",  password="password")
+hexa = OpenHEXA("https://app.demo.openhexa.org", username="username",  password="password")
 
 # You can also use the token provided by OpenHEXA on the pipelines page.
-hexa_client = OpenHEXA("https://app.demo.openhexa.org", token="token")
+hexa = OpenHEXA("https://app.demo.openhexa.org", token="token")
 
 # getting the list of workspaces
 result = hexa.query("""
