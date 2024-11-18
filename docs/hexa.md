@@ -32,7 +32,7 @@ hexa = OpenHEXA("https://app.demo.openhexa.org", token="token")
 
 # getting the list of workspaces
 result = hexa.query("""
-    query {
+    query workspaces($page:Int,$perPage:Int) {
         workspaces(page: $page, perPage: $perPage) {
             items {
                 slug
