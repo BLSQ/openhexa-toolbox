@@ -31,6 +31,8 @@ dependencies = [
     "cfgrib",
     "xarray",
     "epiweeks",
+    "datapi >=0.1.1",
+    "multiurl >=0.3.2"
 ]
 
 [project.optional-dependencies]

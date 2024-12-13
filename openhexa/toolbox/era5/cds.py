@@ -4,31 +4,40 @@ import importlib.resources
 import json
 import logging
 from calendar import monthrange
-from datetime import date, datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from math import ceil
 from pathlib import Path
 from time import sleep
-from typing import Optional, Union
+from typing import Iterator
 
 import geopandas as gpd
-import numpy as np
 import xarray as xr
-from cads_api_client import ApiClient, Remote, Results
+from datapi import ApiClient, Remote
+from requests.exceptions import HTTPError
 
 with importlib.resources.open_text("openhexa.toolbox.era5", "variables.json") as f:
     VARIABLES = json.load(f)
 
 DATASET = "reanalysis-era5-land"
 
-logging.basicConfig(level=logging.DEBUG, format="%(name)s %(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
 URL = "https://cds-beta.climate.copernicus.eu/api"
 
 
-class ParameterError(ValueError):
-    pass
+@dataclass
+class DataRequest:
+    """CDS data request as expected by the API."""
+
+    variable: list[str]
+    year: str
+    month: str
+    day: list[str]
+    time: list[str]
+    data_format: str = "grib"
+    area: list[float] | None = None
 
 
 def bounds_from_file(fp: Path, buffer: float = 0.5) -> list[float]:
@@ -48,10 +57,10 @@ def bounds_from_file(fp: Path, buffer: float = 0.5) -> list[float]:
     """
     boundaries = gpd.read_parquet(fp)
     xmin, ymin, xmax, ymax = boundaries.total_bounds
-    xmin = ceil(xmin - 0.5)
-    ymin = ceil(ymin - 0.5)
-    xmax = ceil(xmax + 0.5)
-    ymax = ceil(ymax + 0.5)
+    xmin = ceil(xmin - buffer)
+    ymin = ceil(ymin - buffer)
+    xmax = ceil(xmax + buffer)
+    ymax = ceil(ymax + buffer)
     return ymax, xmin, ymin, xmax
 
 
@@ -61,6 +70,8 @@ def get_period_chunk(dtimes: list[datetime]) -> dict:
     The period chunk is a dictionary with the "year", "month", "day" and "time" keys as expected by
     the CDS API. A period chunk cannot contain more than 1 year and 1 month. However, it can
     contain any number of days and times.
+
+    This is the temporal part of a CDS data request.
 
     Parameters
     ----------
@@ -77,15 +88,17 @@ def get_period_chunk(dtimes: list[datetime]) -> dict:
     ValueError
         If the list of datetimes contains more than 1 year or more than 1 month
     """
-    years = list(set([dtime.year for dtime in dtimes]))
-    if len(set(years)) > 1:
-        raise ValueError("Cannot create a period chunk for multiple years")
-    months = list(set([dtime.month for dtime in dtimes]))
+    years = {dtime.year for dtime in dtimes}
+    if len(years) > 1:
+        msg = "Cannot create a period chunk for multiple years"
+        raise ValueError(msg)
+    months = {dtime.month for dtime in dtimes}
     if len(months) > 1:
-        raise ValueError("Cannot create a period chunk for multiple months")
+        msg = "Cannot create a period chunk for multiple months"
+        raise ValueError(msg)
 
-    year = years[0]
-    month = months[0]
+    year = next(iter(years))
+    month = next(iter(months))
     days = []
 
     for dtime in sorted(dtimes):
@@ -93,21 +106,21 @@ def get_period_chunk(dtimes: list[datetime]) -> dict:
             days.append(dtime.day)
 
     return {
-        "year": year,
-        "month": month,
-        "days": days,
-        "time": [h for h in range(0, 24)],
+        "year": str(year),
+        "month": f"{month:02}",
+        "day": [f"{day:02}" for day in days],
+        "time": [f"{hour:02}:00" for hour in range(24)],
     }
 
 
-def get_period_chunks(dtimes: list[datetime]) -> list[dict]:
+def iter_chunks(dtimes: list[datetime]) -> Iterator[dict]:
     """Get the period chunks for a list of datetimes.
 
     The period chunks are a list of dictionaries with the "year", "month", "day" and "time" keys as
     expected by the CDS API. A period chunk cannot contain more than 1 year and 1 month. However,
     it can contain any number of days and times.
 
-    The function tries its best to generate the minimum amount of chunks to minize the amount of requests.
+    The function tries its best to generate the minimum amount of chunks to minimize the amount of requests.
 
     Parameters
     ----------
@@ -116,30 +129,21 @@ def get_period_chunks(dtimes: list[datetime]) -> list[dict]:
 
     Returns
     -------
-    list[dict]
+    Iterator[dict]
         The period chunks (one per month max)
     """
-    chunks = []
     for year in range(min(dtimes).year, max(dtimes).year + 1):
-        for month in range(1, 13):
-            dtimes_month = [dtime for dtime in dtimes if dtime.year == year and dtime.month == month]
+        for month in range(12):
+            dtimes_month = [dtime for dtime in dtimes if dtime.year == year and dtime.month == month + 1]
             if dtimes_month:
-                chunk = get_period_chunk(dtimes_month)
-                chunks.append(chunk)
-    return chunks
+                yield get_period_chunk(dtimes_month)
 
 
-def _np_to_datetime(dt64: np.datetime64) -> datetime:
-    epoch = np.datetime64(0, "s")
-    one_second = np.timedelta64(1, "s")
-    seconds_since_epoch = (dt64 - epoch) / one_second
-    return datetime.fromtimestamp(seconds_since_epoch)
-
-
-def available_datetimes(data_dir: Path) -> list[date]:
+def available_datetimes(data_dir: Path) -> list[datetime]:
     """Get available datetimes from a directory of ERA5 data files.
 
-    Dates are considered as available if data for all 24 hours of the day are found in the file.
+    Dates are considered as available if non-null values are present for the day for more than 1 step.
+    Assumes data files are stored as .grib files.
 
     Parameters
     ----------
@@ -148,36 +152,32 @@ def available_datetimes(data_dir: Path) -> list[date]:
 
     Returns
     -------
-    list[date]
+    list[datetime]
         List of available dates.
     """
     dtimes = []
 
     for f in data_dir.glob("*.grib"):
         ds = xr.open_dataset(f, engine="cfgrib")
-        var = [v for v in ds.data_vars][0]
+        data_vars = list(ds.data_vars)
+        var = data_vars[0]
 
-        for time in ds.time:
-            dtime = _np_to_datetime(time.values).date()
+        for time in ds.time.values:
+            dtime = datetime.fromtimestamp(time.astype(int) / 1e9, tz=timezone.utc)
             if dtime in dtimes:
                 continue
-
-            is_complete = True
-            for hour in range(1, 25):
-                step = timedelta(hours=hour)
-                if not ds.sel(time=time, step=step).get(var).notnull().any().values.item():
-                    is_complete = False
-                    break
-
-            if is_complete:
+            non_null = ds.sel(time=time)[var].notnull().sum().values.item()
+            non_null /= len(ds.latitude) * len(ds.longitude)
+            if non_null > 1:
                 dtimes.append(dtime)
 
-    log.debug(f"Scanned {data_dir.as_posix()}, found {len(dtimes)} available dates")
+    msg = f"Scanned {data_dir.as_posix()}, found data for {len(dtimes)} dates"
+    log.info(msg)
 
     return dtimes
 
 
-def date_range(start: date, end: date) -> list[date]:
+def date_range(start: datetime, end: datetime) -> list[datetime]:
     """Get a range of dates with a 1-day step."""
     drange = []
     dt = start
@@ -187,79 +187,71 @@ def date_range(start: date, end: date) -> list[date]:
     return drange
 
 
-class Client:
-    def __init__(self, key: str):
+class CDS:
+    """Climate data store API client based on datapi."""
+
+    def __init__(self, key: str) -> None:
+        """Initialize CDS client."""
         self.client = ApiClient(key=key, url=URL)
         self.client.check_authentication()
+        msg = f"Sucessfully authenticated to {URL}"
+        log.info(msg)
 
     @cached_property
     def latest(self) -> datetime:
         """Get date of latest available product."""
         collection = self.client.get_collection(DATASET)
-        dt = collection.end_datetime
-        # make datetime unaware of timezone for comparability with other datetimes
-        dt = datetime(dt.year, dt.month, dt.day)
-        return dt
+        return collection.end_datetime
 
-    def get_jobs(self, **kwargs) -> Optional[list[dict]]:
-        """Get list of current jobs for the account in the CDS."""
-        r = self.client.get_jobs(limit=100, **kwargs)
-        return r.json.get("jobs")
+    def get_remote_requests(self) -> list[dict]:
+        """Fetch list of the last 100 data requests in the CDS account."""
+        requests = []
+        jobs = self.client.get_jobs(limit=100)
+        for request_id in jobs.request_uids:
+            try:
+                remote = self.client.get_remote(request_id)
+                if remote.status in ["failed", "dismissed", "deleted"]:
+                    continue
+                requests.append({"request_id": request_id, "request": remote.request})
+            except HTTPError:
+                continue
+        return requests
 
-    def get_remote(self, request_id: str) -> Remote:
-        """Get remote object from request uid."""
-        return self.client.get_remote(request_id)
-
-    def get_remote_from_request(self, request: dict, max_age: int = 1) -> Optional[Remote]:
+    def get_remote_from_request(self, request: DataRequest, existing_requests: list[dict]) -> Remote | None:
         """Look for a remote object that matches the provided request payload.
 
         Parameters
         ----------
-        request : dict
-            Request payload.
-        max_age : int, optional
-            Maximum age of the remote object in days (default=1).
+        request : DataRequest
+            Data request payload to look for.
+        existing_requests : list[dict]
+            List of existing data requests (as returned by self.get_remote_requests()).
 
         Returns
         -------
-        Optional[Remote]
+        Remote | None
             Remote object if found, None otherwise.
         """
-        jobs = self.get_jobs()
-        if not jobs:
+        if not existing_requests:
             return None
 
-        jobs = sorted(jobs, key=lambda job: job["status"], reverse=True)
+        for remote_request in existing_requests:
+            if remote_request["request"] == request.__dict__:
+                return self.client.get_remote(remote_request["request_id"])
 
-        for job in jobs:
-            remote = self.get_remote(job["jobID"])
-            if remote.request == request:
-                age = datetime.now() - remote.creation_datetime
-                if age.days <= max_age:
-                    return remote
         return None
 
-    def submit(self, request: dict) -> str:
-        """Submit an async data request to the CDS API."""
-        r = self.client.submit(DATASET, **request)
-        log.debug("Submitted data request %s", r.request_uid)
-        return r.request_uid
+    def submit(self, request: DataRequest) -> Remote:
+        """Submit an async data request to the CDS API.
 
-    def submit_and_wait(self, request: dict) -> Results:
-        """Submit a data request and wait for completion."""
-        result = self.client.submit_and_wait_on_results(DATASET, **request)
-        return result
+        If an identical data request has already been submitted, the Remote object corresponding to
+        the existing data request is returned instead of submitting a new one.
+        """
+        return self.client.submit(DATASET, **request.__dict__)
 
-    def download(self, request: dict, dst_file: Union[str, Path]):
-        """Submit a data request and wait for completion before download."""
-        if isinstance(dst_file, str):
-            dst_file = Path(dst_file)
-        dst_file.parent.mkdir(parents=True, exist_ok=True)
-        result = self.submit_and_wait(request)
-        result.download(dst_file.as_posix())
-        log.debug("Downloaded %s", dst_file.name)
-
-    def download_between(self, start: date, end: date, variable: str, area: list[float], dst_dir: Union[str, Path]):
+    def download_between(
+        self, start: datetime, end: datetime, variable: str, area: list[float], dst_dir: str | Path
+    ) -> None:
         """Download all ERA5 data files needed to cover the period.
 
         Data requests are sent asynchronously (max one per month) to the CDS API and fetched when
@@ -267,71 +259,83 @@ class Client:
 
         Parameters
         ----------
-        start : date
+        start : datetime
             Start date.
-        end : date
+        end : datetime
             End date.
         variable : str
             Climate data store variable name (ex: "2m_temperature").
         area : list[float]
             Area of interest (north, west, south, east).
-        dst_dir : Path
+        dst_dir : str | Path
             Output directory.
         """
-        if isinstance(dst_dir, str):
-            dst_dir = Path(dst_dir)
+        dst_dir = Path(dst_dir)
         dst_dir.mkdir(parents=True, exist_ok=True)
 
-        if end > self.latest.date():
-            end = self.latest.date()
-            log.debug(f"End date is after latest available product, setting end date to {end.strftime('%Y-%m-%d')}")
+        if not start.tzinfo:
+            start = start.astimezone(tz=timezone.utc)
+        if not end.tzinfo:
+            end = end.astimezone(tz=timezone.utc)
 
+        if end > self.latest:
+            end = self.latest
+            msg = "End date is after latest available product, setting end date to {}".format(end.strftime("%Y-%m-%d"))
+            log.info(msg)
+
+        # get the list of dates for which we will want to download data, which is the difference
+        # between the available (already downloaded) and the requested dates
         drange = date_range(start, end)
-        available = available_datetimes(dst_dir)
-        dates = [d for d in drange if d not in available]
+        available = [dtime.date() for dtime in available_datetimes(dst_dir)]
+        dates = [d for d in drange if d.date() not in available]
+        msg = f"Will request data for {len(dates)} dates"
+        log.info(msg)
 
-        chunks = get_period_chunks(dates)
-        requests = []
-        remotes = []
+        existing_requests = self.get_remote_requests()
+        remotes: list[Remote] = []
 
-        for chunk in chunks:
+        for chunk in iter_chunks(dates):
             request = self.build_request(variable=variable, data_format="grib", area=area, **chunk)
 
-            # has a similar request been submitted recently? if yes, use it
-            remote = self.get_remote_from_request(request)
+            # has a similar request been submitted recently? if yes, use it instead of submitting
+            # a new one
+            remote = self.get_remote_from_request(request, existing_requests)
             if remote:
                 remotes.append(remote)
-                log.debug(f"Found existing request for date {request['year']}-{request['month']}")
+                msg = f"Found existing request for date {request.year}-{request.month}"
+                log.info(msg)
             else:
-                requests.append(self.submit(request))
-            sleep(3)
+                remote = self.submit(request)
+                remotes.append(remote)
+                msg = f"Submitted new data request {remote.request_uid} for {request.year}-{request.month}"
 
-        for request in requests:
-            remotes.append(self.get_remote(request))
-        done = []
-
-        while not all([remote.request_uid in done for remote in remotes]):
+        while remotes:
             for remote in remotes:
                 if remote.results_ready:
                     request = remote.request
                     fname = f"{request['year']}{request['month']}_{remote.request_uid}.grib"
                     dst_file = Path(dst_dir, fname)
                     remote.download(dst_file.as_posix())
-                    log.debug(f"Downloaded {dst_file.name}")
-                    done.append(remote.request_uid)
+                    msg = f"Downloaded {dst_file.name}"
+                    log.info(msg)
+                    remotes.remove(remote)
                     remote.delete()
-            sleep(60)
+
+            if remotes:
+                msg = f"Still {len(remotes)} files to download. Waiting 30s before retrying..."
+                log.info(msg)
+                sleep(30)
 
     @staticmethod
     def build_request(
         variable: str,
         year: int,
         month: int,
-        days: list[int] = None,
-        time: list[int] = None,
+        day: list[int] | list[str] | None = None,
+        time: list[int] | list[str] | None = None,
         data_format: str = "grib",
-        area: list[float] = None,
-    ) -> dict:
+        area: list[float] | None = None,
+    ) -> DataRequest:
         """Build request payload.
 
         Parameters
@@ -342,60 +346,69 @@ class Client:
             Year of interest.
         month : int
             Month of interest.
-        days : list[int]
+        day : list[int] | list[str] | None, optional
             Days of interest. Defauls to None (all days).
-        time : list[int]
+        time : list[int] | list[str] | None, optional
             Hours of interest (ex: [1, 6, 18]). Defaults to None (all hours).
-        data_format : str
+        data_format : str, optional
             Output data format ("grib" or "netcdf"). Defaults to "grib".
-        area : list[float]
+        area : list[float] | None, optional
             Area of interest (north, west, south, east). Defaults to None (world).
 
         Returns
         -------
-        dict
-            Request payload.
+        DataRequest
+            CDS data equest payload.
 
         Raises
         ------
-        ParameterError
+        ValueError
             Request parameters are not valid.
         """
         if variable not in VARIABLES:
-            raise ParameterError("Variable %s not supported", variable)
+            msg = f"Variable {variable} not supported"
+            raise ValueError(msg)
 
         if data_format not in ["grib", "netcdf"]:
-            raise ParameterError("Data format %s not supported", data_format)
+            msg = f"Data format {data_format} not supported"
+            raise ValueError(msg)
 
+        # in the CDS data request, area is an array of float or int in the following order:
+        # [north, west, south, east]
         if area:
             n, w, s, e = area
-            if ((abs(n) > 90) or (abs(s) > 90)) or ((abs(w) > 180) or (abs(e) > 180)):
-                raise ParameterError("Invalid area of interest")
+            msg = "Invalid area of interest"
+            max_lat = 90
+            max_lon = 180
+            if ((abs(n) > max_lat) or (abs(s) > max_lat)) or ((abs(w) > max_lon) or (abs(e) > max_lon)):
+                raise ValueError(msg)
             if (n < s) or (e < w):
-                raise ParameterError("Invalid area of interest")
+                raise ValueError(msg)
 
-        if not days:
+        # in the CDS data request, days must be an array of strings (one string per day)
+        # ex: ["01", "02", "03"]
+        if not day:
             dmax = monthrange(year, month)[1]
-            days = [day for day in range(1, dmax + 1)]
+            day = list(range(1, dmax + 1))
 
+        if isinstance(day[0], int):
+            day = [f"{d:02}" for d in day]
+
+        # in the CDS data request, time must be an array of strings (one string per hour)
+        # only hours between 00:00 and 23:00 are valid
+        # ex: ["00:00", "03:00", "06:00"]
         if not time:
-            time = [hour for hour in range(0, 24)]
-        time = [f"{hour:02}:00" for hour in time]
+            time = range(24)
 
-        year = str(year)
-        month = f"{month:02}"
-        days = [f"{day:02}" for day in days]
+        if isinstance(time[0], int):
+            time = [f"{hour:02}:00" for hour in time]
 
-        payload = {
-            "variable": [variable],
-            "year": year,
-            "month": month,
-            "day": days,
-            "time": time,
-            "data_format": data_format,
-        }
-
-        if area:
-            payload["area"] = area
-
-        return payload
+        return DataRequest(
+            variable=[variable],
+            year=str(year),
+            month=f"{month:02}",
+            day=day,
+            time=time,
+            data_format="grib",
+            area=list(area) if area else None,
+        )
