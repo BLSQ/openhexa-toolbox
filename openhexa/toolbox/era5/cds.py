@@ -192,6 +192,93 @@ def date_range(start: datetime, end: datetime) -> list[datetime]:
     return drange
 
 
+def build_request(
+    variable: str,
+    year: int,
+    month: int,
+    day: list[int] | list[str] | None = None,
+    time: list[int] | list[str] | None = None,
+    data_format: str = "grib",
+    area: list[float] | None = None,
+) -> DataRequest:
+    """Build request payload.
+
+    Parameters
+    ----------
+    variable : str
+        Climate data store variable name (ex: "2m_temperature").
+    year : int
+        Year of interest.
+    month : int
+        Month of interest.
+    day : list[int] | list[str] | None, optional
+        Days of interest. Defauls to None (all days).
+    time : list[int] | list[str] | None, optional
+        Hours of interest (ex: [1, 6, 18]). Defaults to None (all hours).
+    data_format : str, optional
+        Output data format ("grib" or "netcdf"). Defaults to "grib".
+    area : list[float] | None, optional
+        Area of interest (north, west, south, east). Defaults to None (world).
+
+    Returns
+    -------
+    DataRequest
+        CDS data equest payload.
+
+    Raises
+    ------
+    ValueError
+        Request parameters are not valid.
+    """
+    if variable not in VARIABLES:
+        msg = f"Variable {variable} not supported"
+        raise ValueError(msg)
+
+    if data_format not in ["grib", "netcdf"]:
+        msg = f"Data format {data_format} not supported"
+        raise ValueError(msg)
+
+    # in the CDS data request, area is an array of float or int in the following order:
+    # [north, west, south, east]
+    if area:
+        n, w, s, e = area
+        msg = "Invalid area of interest"
+        max_lat = 90
+        max_lon = 180
+        if ((abs(n) > max_lat) or (abs(s) > max_lat)) or ((abs(w) > max_lon) or (abs(e) > max_lon)):
+            raise ValueError(msg)
+        if (n < s) or (e < w):
+            raise ValueError(msg)
+
+    # in the CDS data request, days must be an array of strings (one string per day)
+    # ex: ["01", "02", "03"]
+    if not day:
+        dmax = monthrange(year, month)[1]
+        day = list(range(1, dmax + 1))
+
+    if isinstance(day[0], int):
+        day = [f"{d:02}" for d in day]
+
+    # in the CDS data request, time must be an array of strings (one string per hour)
+    # only hours between 00:00 and 23:00 are valid
+    # ex: ["00:00", "03:00", "06:00"]
+    if not time:
+        time = range(24)
+
+    if isinstance(time[0], int):
+        time = [f"{hour:02}:00" for hour in time]
+
+    return DataRequest(
+        variable=[variable],
+        year=str(year),
+        month=f"{month:02}",
+        day=day,
+        time=time,
+        data_format="grib",
+        area=list(area) if area else None,
+    )
+
+
 class CDS:
     """Climate data store API client based on datapi."""
 
@@ -300,7 +387,7 @@ class CDS:
         remotes: list[Remote] = []
 
         for chunk in iter_chunks(dates):
-            request = self.build_request(variable=variable, data_format="grib", area=area, **chunk)
+            request = build_request(variable=variable, data_format="grib", area=area, **chunk)
 
             # has a similar request been submitted recently? if yes, use it instead of submitting
             # a new one
@@ -330,90 +417,3 @@ class CDS:
                 msg = f"Still {len(remotes)} files to download. Waiting 30s before retrying..."
                 log.info(msg)
                 sleep(30)
-
-    @staticmethod
-    def build_request(
-        variable: str,
-        year: int,
-        month: int,
-        day: list[int] | list[str] | None = None,
-        time: list[int] | list[str] | None = None,
-        data_format: str = "grib",
-        area: list[float] | None = None,
-    ) -> DataRequest:
-        """Build request payload.
-
-        Parameters
-        ----------
-        variable : str
-            Climate data store variable name (ex: "2m_temperature").
-        year : int
-            Year of interest.
-        month : int
-            Month of interest.
-        day : list[int] | list[str] | None, optional
-            Days of interest. Defauls to None (all days).
-        time : list[int] | list[str] | None, optional
-            Hours of interest (ex: [1, 6, 18]). Defaults to None (all hours).
-        data_format : str, optional
-            Output data format ("grib" or "netcdf"). Defaults to "grib".
-        area : list[float] | None, optional
-            Area of interest (north, west, south, east). Defaults to None (world).
-
-        Returns
-        -------
-        DataRequest
-            CDS data equest payload.
-
-        Raises
-        ------
-        ValueError
-            Request parameters are not valid.
-        """
-        if variable not in VARIABLES:
-            msg = f"Variable {variable} not supported"
-            raise ValueError(msg)
-
-        if data_format not in ["grib", "netcdf"]:
-            msg = f"Data format {data_format} not supported"
-            raise ValueError(msg)
-
-        # in the CDS data request, area is an array of float or int in the following order:
-        # [north, west, south, east]
-        if area:
-            n, w, s, e = area
-            msg = "Invalid area of interest"
-            max_lat = 90
-            max_lon = 180
-            if ((abs(n) > max_lat) or (abs(s) > max_lat)) or ((abs(w) > max_lon) or (abs(e) > max_lon)):
-                raise ValueError(msg)
-            if (n < s) or (e < w):
-                raise ValueError(msg)
-
-        # in the CDS data request, days must be an array of strings (one string per day)
-        # ex: ["01", "02", "03"]
-        if not day:
-            dmax = monthrange(year, month)[1]
-            day = list(range(1, dmax + 1))
-
-        if isinstance(day[0], int):
-            day = [f"{d:02}" for d in day]
-
-        # in the CDS data request, time must be an array of strings (one string per hour)
-        # only hours between 00:00 and 23:00 are valid
-        # ex: ["00:00", "03:00", "06:00"]
-        if not time:
-            time = range(24)
-
-        if isinstance(time[0], int):
-            time = [f"{hour:02}:00" for hour in time]
-
-        return DataRequest(
-            variable=[variable],
-            year=str(year),
-            month=f"{month:02}",
-            day=day,
-            time=time,
-            data_format="grib",
-            area=list(area) if area else None,
-        )
