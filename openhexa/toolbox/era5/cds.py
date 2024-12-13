@@ -1,3 +1,8 @@
+"""Client to download ERA5-Land data products from the climate data store.
+
+See <https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land?tab=overview>.
+"""
+
 from __future__ import annotations
 
 import importlib.resources
