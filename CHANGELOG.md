@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.4.3...v1.5.0) (2024-12-13)
+
+
+### Features
+
+* **era5:** upgrade to datapi client ([#71](https://github.com/BLSQ/openhexa-toolbox/issues/71)) ([733cbf1](https://github.com/BLSQ/openhexa-toolbox/commit/733cbf167b4c8d9f4991602b21f31a8fb503b46d))
+
 ## [1.4.3](https://github.com/BLSQ/openhexa-toolbox/compare/v1.4.2...v1.4.3) (2024-11-06)
 
 
