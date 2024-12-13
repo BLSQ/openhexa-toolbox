@@ -31,19 +31,21 @@ The package contains 3 modules:
 To download products from the Climate Data Store, you will need to create an account and generate an API key in ECMWF (see [CDS](https://cds.climate.copernicus.eu/)).
 
 ```python
-from openhexa.toolbox.era5.cds import Client
+from openhexa.toolbox.era5.cds import CDS, build_request, bounds_from_file
 
-cds = Client(key="<cds_api_key>")
+cds = CDS(key="<cds_api_key>")
 
-request = cds.build_request(
+request = build_request(
     variable="2m_temperature",
     year=2024,
-    month=4
+    month=4,
+    day=[1, 2, 3],
+    time=[1, 6, 12, 18]
 )
 
-cds.download(
+cds.retrieve(
     request=request,
-    dst_file="data/product.grib"
+    dst_file="data/t2m.grib"
 )
 ```
 
@@ -54,7 +56,7 @@ downloaded.
 ```python
 bounds = bounds_from_file(fp=Path("data/districts.parquet"), buffer=0.5)
 
-request = cds.build_request(
+request = build_request(
     variable="total_precipitation",
     year=2023,
     month=10,
@@ -62,7 +64,7 @@ request = cds.build_request(
     area=bounds
 )
 
-cds.download(
+cds.retrieve(
     request=request,
     dst_file="data/product.grib"
 )
@@ -73,8 +75,8 @@ To download multiple products for a given period, use `Client.download_between()
 ```python
 cds.download_between(
     variable="2m_temperature",
-    start=datetime(2020, 1, 1),
-    end=datetime(2021, 6, 1),
+    start=datetime(2020, 1, 1, tzinfo=timezone.utc),
+    end=datetime(2021, 6, 1, tzinfo=timezone.utc),
     dst_dir="data/raw/2m_temperature",
     area=bounds
 )
@@ -83,7 +85,7 @@ cds.download_between(
 Checking latest available date in the ERA5-Land dataset:
 
 ```python
-cds = Client("<api_key>")
+cds = CDS("<api_key>")
 
 cds.latest
 ```
