@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import tempfile
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from datetime import datetime
+from unittest.mock import Mock, patch
 
 import datapi
 import pytest
@@ -14,10 +11,6 @@ import pytest
 from openhexa.toolbox.era5.cds import (
     CDS,
     DataRequest,
-    bounds_from_file,
-    date_range,
-    get_period_chunk,
-    iter_chunks,
 )
 
 
