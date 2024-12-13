@@ -29,8 +29,6 @@ DATASET = "reanalysis-era5-land"
 
 log = logging.getLogger(__name__)
 
-URL = "https://cds-beta.climate.copernicus.eu/api"
-
 
 @dataclass
 class DataRequest:
@@ -144,37 +142,38 @@ def iter_chunks(dtimes: list[datetime]) -> Iterator[dict]:
                 yield get_period_chunk(dtimes_month)
 
 
-def available_datetimes(data_dir: Path) -> list[datetime]:
-    """Get available datetimes from a directory of ERA5 data files.
+def list_datetimes_in_dataset(ds: xr.Dataset) -> list[datetime]:
+    """List datetimes in input dataset for which data is available.
 
-    Dates are considered as available if non-null values are present for the day for more than 1 step.
-    Assumes data files are stored as .grib files.
-
-    Parameters
-    ----------
-    data_dir : Path
-        Directory containing the ERA5 data files.
-
-    Returns
-    -------
-    list[datetime]
-        List of available dates.
+    It is assumed that the dataset has a `time` dimension, in addition to `latitude` and `longitude`
+    dimensions. We consider that a datetime is available in a dataset if non-null data values are
+    present for more than 1 step.
     """
+    dtimes = []
+    data_vars = list(ds.data_vars)
+    var = data_vars[0]
+
+    for time in ds.time.values:
+        dtime = datetime.fromtimestamp(time.astype(int) / 1e9, tz=timezone.utc)
+        if dtime in dtimes:
+            continue
+        non_null = ds.sel(time=time)[var].notnull().sum().values.item()
+        non_null /= len(ds.latitude) * len(ds.longitude)
+        if non_null >= len(ds.step):
+            dtimes.append(dtime)
+
+    return dtimes
+
+
+def list_datetimes_in_dir(data_dir: Path) -> list[datetime]:
+    """List datetimes in datasets that can be found in an input directory."""
     dtimes = []
 
     for f in data_dir.glob("*.grib"):
         ds = xr.open_dataset(f, engine="cfgrib")
-        data_vars = list(ds.data_vars)
-        var = data_vars[0]
+        dtimes += list_datetimes_in_dataset(ds)
 
-        for time in ds.time.values:
-            dtime = datetime.fromtimestamp(time.astype(int) / 1e9, tz=timezone.utc)
-            if dtime in dtimes:
-                continue
-            non_null = ds.sel(time=time)[var].notnull().sum().values.item()
-            non_null /= len(ds.latitude) * len(ds.longitude)
-            if non_null > 1:
-                dtimes.append(dtime)
+    dtimes = sorted(set(dtimes))
 
     msg = f"Scanned {data_dir.as_posix()}, found data for {len(dtimes)} dates"
     log.info(msg)
@@ -282,11 +281,11 @@ def build_request(
 class CDS:
     """Climate data store API client based on datapi."""
 
-    def __init__(self, key: str) -> None:
+    def __init__(self, key: str, url: str = "https://cds-beta.climate.copernicus.eu/api") -> None:
         """Initialize CDS client."""
-        self.client = ApiClient(key=key, url=URL)
+        self.client = ApiClient(key=key, url=url)
         self.client.check_authentication()
-        msg = f"Sucessfully authenticated to {URL}"
+        msg = f"Sucessfully authenticated to {url}"
         log.info(msg)
 
     @cached_property
@@ -378,7 +377,7 @@ class CDS:
         # get the list of dates for which we will want to download data, which is the difference
         # between the available (already downloaded) and the requested dates
         drange = date_range(start, end)
-        available = [dtime.date() for dtime in available_datetimes(dst_dir)]
+        available = [dtime.date() for dtime in list_datetimes_in_dir(dst_dir)]
         dates = [d for d in drange if d.date() not in available]
         msg = f"Will request data for {len(dates)} dates"
         log.info(msg)
