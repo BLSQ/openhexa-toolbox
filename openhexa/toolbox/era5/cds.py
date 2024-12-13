@@ -340,6 +340,12 @@ class CDS:
         """
         return self.client.submit(DATASET, **request.__dict__)
 
+    def retrieve(self, request: DataRequest, dst_file: Path | str) -> None:
+        """Submit and download a data request to the CDS API."""
+        dst_file = Path(dst_file)
+        dst_file.parent.mkdir(parents=True, exist_ok=True)
+        self.client.retrieve(collection_id=DATASET, target=dst_file, **request.__dict__)
+
     def download_between(
         self, start: datetime, end: datetime, variable: str, area: list[float], dst_dir: str | Path
     ) -> None:
