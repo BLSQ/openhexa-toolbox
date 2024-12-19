@@ -112,7 +112,6 @@ def get_period_chunk(dtimes: list[datetime]) -> dict:
         "year": str(year),
         "month": f"{month:02}",
         "day": [f"{day:02}" for day in days],
-        "time": [f"{hour:02}:00" for hour in range(24)],
     }
 
 
@@ -347,7 +346,13 @@ class CDS:
         self.client.retrieve(collection_id=DATASET, target=dst_file, **request.__dict__)
 
     def download_between(
-        self, start: datetime, end: datetime, variable: str, area: list[float], dst_dir: str | Path
+        self,
+        start: datetime,
+        end: datetime,
+        variable: str,
+        area: list[float],
+        dst_dir: str | Path,
+        time: list[int] | None = None,
     ) -> None:
         """Download all ERA5 data files needed to cover the period.
 
@@ -366,6 +371,8 @@ class CDS:
             Area of interest (north, west, south, east).
         dst_dir : str | Path
             Output directory.
+        time : list[int] | None, optional
+            Hours of interest (ex: [1, 6, 18]). Defaults to None (all hours).
         """
         dst_dir = Path(dst_dir)
         dst_dir.mkdir(parents=True, exist_ok=True)
@@ -392,7 +399,7 @@ class CDS:
         remotes: list[Remote] = []
 
         for chunk in iter_chunks(dates):
-            request = build_request(variable=variable, data_format="grib", area=area, **chunk)
+            request = build_request(variable=variable, data_format="grib", area=area, time=time, **chunk)
 
             # has a similar request been submitted recently? if yes, use it instead of submitting
             # a new one
