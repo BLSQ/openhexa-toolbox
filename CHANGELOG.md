@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.5.0...v1.6.0) (2024-12-19)
+
+
+### Features
+
+* **era5:** support hours as download parameter ([#73](https://github.com/BLSQ/openhexa-toolbox/issues/73)) ([7695222](https://github.com/BLSQ/openhexa-toolbox/commit/7695222b742187aeb5dce66e1d60980169e54b6c))
+
 ## [1.5.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.4.3...v1.5.0) (2024-12-13)
 
 
