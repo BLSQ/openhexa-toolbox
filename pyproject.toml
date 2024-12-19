@@ -51,6 +51,13 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = [
+    "openhexa.toolbox.dhis2",
+    "openhexa.toolbox.era5",
+    "openhexa.toolbox.hexa",
+    "openhexa.toolbox.iaso",
+    "openhexa.toolbox.kobo"
+]
 namespaces = true
 
 [tool.setuptools.package-data]
