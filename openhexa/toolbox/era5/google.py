@@ -21,7 +21,6 @@ from google.cloud import storage
 with importlib.resources.open_text("openhexa.toolbox.era5", "variables.json") as f:
     VARIABLES = json.load(f)
 
-logging.basicConfig(level=logging.DEBUG, format="%(name)s %(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
 
