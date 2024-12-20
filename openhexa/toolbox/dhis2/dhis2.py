@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class DHIS2:
-    def __init__(self, connection: DHIS2Connection, cache_dir: Union[str, Path] = None):
+    def __init__(self, connection: DHIS2Connection = None, cache_dir: Union[str, Path] = None, **kwargs):
         """Initialize a new DHIS2 instance.
 
         Parameters
@@ -27,7 +27,7 @@ class DHIS2:
         """
         if isinstance(cache_dir, str):
             cache_dir = Path(cache_dir)
-        self.api = Api(connection, cache_dir)
+        self.api = Api(connection, cache_dir, **kwargs)
         self.meta = Metadata(self)
         self.version = self.meta.system_info().get("version")
         self.data_value_sets = DataValueSets(self)
@@ -69,11 +69,13 @@ class Metadata:
             )
         return levels
 
-    def organisation_units(self, filter: str = None) -> List[dict]:
+    def organisation_units(self, fields:str = "id,name,level,path,geometry", filter: str = None) -> List[dict]:
         """Get organisation units metadata.
 
         Parameters
         ----------
+        fields: str, optional
+            DHIS2 fields to include in the response
         filter: str, optional
             DHIS2 query filter
 
@@ -82,7 +84,7 @@ class Metadata:
         list of dict
             Id, name, level, path and geometry of all org units.
         """
-        params = {"fields": "id,name,level,path,geometry"}
+        params = {"fields": fields}
         if filter:
             params["filter"] = filter
         org_units = []
@@ -93,16 +95,13 @@ class Metadata:
             for ou in page["organisationUnits"]:
                 org_units.append(
                     {
-                        "id": ou.get("id"),
-                        "name": ou.get("name"),
-                        "level": ou.get("level"),
-                        "path": ou.get("path"),
-                        "geometry": json.dumps(ou.get("geometry")) if ou.get("geometry") else None,
+                        key: ou.get(key) if key != "geometry" else json.dumps(ou.get("geometry")) if ou.get("geometry") else None
+                        for key in fields.split(",")
                     }
                 )
         return org_units
 
-    def organisation_unit_groups(self) -> List[dict]:
+    def organisation_unit_groups(self, fields:str = "id,name,organisationUnits") -> List[dict]:
         """Get organisation unit groups metadata.
 
         Return
@@ -113,21 +112,20 @@ class Metadata:
         org_unit_groups = []
         for page in self.client.api.get_paged(
             "organisationUnitGroups",
-            params={"fields": "id,name,organisationUnits"},
+            params={"fields": fields},
         ):
             groups = []
             for group in page.get("organisationUnitGroups"):
                 groups.append(
                     {
-                        "id": group.get("id"),
-                        "name": group.get("name"),
-                        "organisation_units": [ou.get("id") for ou in group["organisationUnits"]],
+                        key : group.get(key) if key != "organisationUnits" else [ou.get("id") for ou in group["organisationUnits"]]
+                        for key in fields.split(",")
                     }
                 )
             org_unit_groups += groups
         return groups
 
-    def datasets(self) -> List[dict]:
+    def datasets(self, fields:str ="id,name,dataSetElements,indicators,organisationUnits") -> List[dict]:
         """Get datasets metadata.
 
         Return
@@ -139,15 +137,23 @@ class Metadata:
         for page in self.client.api.get_paged(
             "dataSets",
             params={
-                "fields": "id,name,dataSetElements,indicators,organisationUnits",
+                "fields": fields,
                 "pageSize": 10,
             },
         ):
+            fields = fields.split(",")
             for ds in page["dataSets"]:
-                row = {"id": ds.get("id"), "name": ds.get("name")}
-                row["data_elements"] = [dx["dataElement"]["id"] for dx in ds["dataSetElements"]]
-                row["indicators"] = [indicator["id"] for indicator in ds["indicators"]]
-                row["organisation_units"] = [ou["id"] for ou in ds["organisationUnits"]]
+                row = {}
+                if "data_elements" in fields:
+                    row["data_elements"] = [dx["dataElement"]["id"] for dx in ds["dataSetElements"]]
+                    fields.remove("data_elements")
+                if "indicators" in fields:
+                    row["indicators"] = [indicator["id"] for indicator in ds["indicators"]]
+                    fields.remove("indicators")
+                if "organisation_units" in fields:
+                    row["organisation_units"] = [ou["id"] for ou in ds["organisationUnits"]]
+                    fields.remove("organisation_units")
+                row.update({key: ds.get(key) for key in fields})
                 datasets.append(row)
         return datasets
 
