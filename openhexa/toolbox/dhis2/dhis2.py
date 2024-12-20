@@ -75,7 +75,7 @@ class Metadata:
         Parameters
         ----------
         fields: str, optional
-            DHIS2 fields to include in the response
+            DHIS2 fields to include in the response, where default value is "id,name,level,path,geometry"
         filter: str, optional
             DHIS2 query filter
 
@@ -103,7 +103,10 @@ class Metadata:
 
     def organisation_unit_groups(self, fields:str = "id,name,organisationUnits") -> List[dict]:
         """Get organisation unit groups metadata.
-
+        Parameters
+        ----------
+        fields: str, optional
+            DHIS2 fields to include in the response, where default value is "id,name,organisationUnits"
         Return
         ------
         list of dict
@@ -128,6 +131,10 @@ class Metadata:
     def datasets(self, fields:str ="id,name,dataSetElements,indicators,organisationUnits") -> List[dict]:
         """Get datasets metadata.
 
+        Parameters
+        ----------
+        fields: str, optional
+            DHIS2 fields to include in the response, where default value is "id,name,dataSetElements,indicators,organisationUnits"
         Return
         ------
         list of dict
@@ -141,27 +148,29 @@ class Metadata:
                 "pageSize": 10,
             },
         ):
-            fields = fields.split(",")
+            fields_list = fields.split(",")
             for ds in page["dataSets"]:
                 row = {}
-                if "data_elements" in fields:
+                if "data_elements" in fields_list:
                     row["data_elements"] = [dx["dataElement"]["id"] for dx in ds["dataSetElements"]]
-                    fields.remove("data_elements")
-                if "indicators" in fields:
+                    fields_list.remove("data_elements")
+                if "indicators" in fields_list:
                     row["indicators"] = [indicator["id"] for indicator in ds["indicators"]]
-                    fields.remove("indicators")
-                if "organisation_units" in fields:
+                    fields_list.remove("indicators")
+                if "organisation_units" in fields_list:
                     row["organisation_units"] = [ou["id"] for ou in ds["organisationUnits"]]
-                    fields.remove("organisation_units")
-                row.update({key: ds.get(key) for key in fields})
+                    fields_list.remove("organisation_units")
+                row.update({key: ds.get(key) for key in fields_list})
                 datasets.append(row)
         return datasets
 
-    def data_elements(self, filter: str = None) -> List[dict]:
+    def data_elements(self, fields:str = "id,name,aggregationType,zeroIsSignificant" ,filter: str = None) -> List[dict]:
         """Get data elements metadata.
 
         Parameters
         ----------
+        fields: str, optional
+            DHIS2 fields to include in the response, where default value is "id,name,aggregationType,zeroIsSignificant"
         filter: str, optional
             DHIS2 query filter
 
@@ -170,20 +179,24 @@ class Metadata:
         list of dict
             Id, name, and aggregation type of all data elements.
         """
-        params = {"fields": "id,name,aggregationType,zeroIsSignificant"}
+        params = {"fields": fields}
         if filter:
             params["filter"] = filter
         elements = []
         for page in self.client.api.get_paged(
-            "dataElements",
-            params=params,
+                "dataElements",
+                params=params,
         ):
-            elements += page["dataElements"]
+            for element in page["dataElements"]:
+                elements.append({key: element.get(key) for key in params["fields"].split(",")})
         return elements
 
-    def data_element_groups(self) -> List[dict]:
+    def data_element_groups(self, fields:str = "id,name,dataElements") -> List[dict]:
         """Get data element groups metadata.
-
+        Parameters
+        ----------
+        fields: str, optional
+            DHIS2 fields to include in the response, where default value is "id,name,dataElements"
         Return
         ------
         list of dict
@@ -192,15 +205,14 @@ class Metadata:
         de_groups = []
         for page in self.client.api.get_paged(
             "dataElementGroups",
-            params={"fields": "id,name,dataElements"},
+            params={"fields": fields},
         ):
             groups = []
             for group in page.get("dataElementGroups"):
                 groups.append(
                     {
-                        "id": group.get("id"),
-                        "name": group.get("name"),
-                        "data_elements": [ou.get("id") for ou in group["dataElements"]],
+                        key: group.get(key) if key != "dataElements" else [de.get("id") for de in group["dataElements"]]
+                        for key in fields.split(",")
                     }
                 )
             de_groups += groups
@@ -219,7 +231,7 @@ class Metadata:
             combos += page.get("categoryOptionCombos")
         return combos
 
-    def indicators(self, filter: str = None) -> List[dict]:
+    def indicators(self, fields:str="id,name,numerator,denominator", filter: str = None) -> List[dict]:
         """Get indicators metadata.
 
         Parameters
@@ -232,7 +244,7 @@ class Metadata:
         list of dict
             Id, name, numerator and denominator of all indicators.
         """
-        params = {"fields": "id,name,numerator,denominator"}
+        params = {"fields": fields}
         if filter:
             params["filter"] = filter
         indicators = []
@@ -240,10 +252,12 @@ class Metadata:
             "indicators",
             params=params,
         ):
+            for indicator in page["indicators"]:
+                indicators.append({key: indicator.get(key) for key in fields.split(",")})
             indicators += page["indicators"]
         return indicators
 
-    def indicator_groups(self) -> List[dict]:
+    def indicator_groups(self, fields:str=None) -> List[dict]:
         """Get indicator groups metadata.
 
         Return
@@ -254,15 +268,14 @@ class Metadata:
         ind_groups = []
         for page in self.client.api.get_paged(
             "indicatorGroups",
-            params={"fields": "id,name,indicators"},
+            params={"fields": fields},
         ):
             groups = []
             for group in page.get("indicatorGroups"):
                 groups.append(
                     {
-                        "id": group.get("id"),
-                        "name": group.get("name"),
-                        "indicators": [ou.get("id") for ou in group["indicators"]],
+                        key: group.get(key) if key != "indicators" else [indicator.get("id") for indicator in group["indicators"]]
+                        for key in fields.split(",")
                     }
                 )
             ind_groups += groups
