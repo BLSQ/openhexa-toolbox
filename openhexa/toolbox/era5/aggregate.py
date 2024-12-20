@@ -126,11 +126,12 @@ def merge(data_dir: Path | str) -> xr.Dataset:
     if isinstance(data_dir, str):
         data_dir = Path(data_dir)
 
-    datasets = []
-    for fp in data_dir.glob("*.grib"):
-        datasets.append(xr.open_dataset(fp, engine="cfgrib"))
+    files = data_dir.glob("*.grib")
+    ds = xr.open_dataset(next(files), engine="cfgrib")
 
-    ds = xr.concat(datasets, dim="tmp_dim").max(dim="tmp_dim")
+    for f in files:
+        ds = xr.concat([ds, xr.open_dataset(f, engine="cfgrib")], dim="tmp_dim").max(dim="tmp_dim")
+
     return ds
 
 
