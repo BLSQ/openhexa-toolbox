@@ -25,8 +25,7 @@ class DHIS2Connection(Protocol):
 
 
 class Api:
-    def __init__(self, connection: DHIS2Connection, cache_dir: Optional[Union[Path, str]] = None):
-        self.url = self.parse_api_url(connection.url)
+    def __init__(self, connection: DHIS2Connection = None, cache_dir: Optional[Union[Path, str]] = None, **kwargs):
 
         self.session = requests.Session()
         adapter = HTTPAdapter(
@@ -40,7 +39,8 @@ class Api:
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
-        self.session = self.authenticate(connection.username, connection.password)
+        self.url = self.parse_api_url(kwargs.get("url", connection.url))
+        self.session = self.authenticate(kwargs.get("username", connection.username), kwargs.get("password", connection.password))
 
         self.cache = None
         if cache_dir:
