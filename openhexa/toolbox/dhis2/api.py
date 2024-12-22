@@ -26,7 +26,6 @@ class DHIS2Connection(Protocol):
 
 class Api:
     def __init__(self, connection: DHIS2Connection = None, cache_dir: Optional[Union[Path, str]] = None, **kwargs):
-
         self.session = requests.Session()
         adapter = HTTPAdapter(
             max_retries=Retry(
@@ -39,8 +38,13 @@ class Api:
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
+        if connection is None and ("url" not in kwargs and "username" not in kwargs and "password" not in kwargs):
+            raise DHIS2Error("Connection or url, username and password must be provided")
+
         self.url = self.parse_api_url(kwargs.get("url", connection.url))
-        self.session = self.authenticate(kwargs.get("username", connection.username), kwargs.get("password", connection.password))
+        self.session = self.authenticate(
+            kwargs.get("username", connection.username), kwargs.get("password", connection.password)
+        )
 
         self.cache = None
         if cache_dir:

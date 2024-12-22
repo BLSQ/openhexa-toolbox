@@ -19,8 +19,10 @@ class DHIS2:
 
         Parameters
         ----------
-        connection : openhexa DHIS2Connection
+        connection : openhexa DHIS2Connection, optional
             An initialized openhexa dhis2 connection
+        kwargs:
+            Additional arguments to pass to initialize openhexa dhis2 connection, such as `url`, `username`, `password`
         cache_dir : str, optional
             Cache directory. Actual cache data will be stored under a sub-directory
             named after the DHIS2 instance domain.
@@ -69,7 +71,7 @@ class Metadata:
             )
         return levels
 
-    def organisation_units(self, fields:str = "id,name,level,path,geometry", filter: str = None) -> List[dict]:
+    def organisation_units(self, fields: str = "id,name,level,path,geometry", filter: str = None) -> List[dict]:
         """Get organisation units metadata.
 
         Parameters
@@ -95,13 +97,17 @@ class Metadata:
             for ou in page["organisationUnits"]:
                 org_units.append(
                     {
-                        key: ou.get(key) if key != "geometry" else json.dumps(ou.get("geometry")) if ou.get("geometry") else None
+                        key: ou.get(key)
+                        if key != "geometry"
+                        else json.dumps(ou.get("geometry"))
+                        if ou.get("geometry")
+                        else None
                         for key in fields.split(",")
                     }
                 )
         return org_units
 
-    def organisation_unit_groups(self, fields:str = "id,name,organisationUnits") -> List[dict]:
+    def organisation_unit_groups(self, fields: str = "id,name,organisationUnits") -> List[dict]:
         """Get organisation unit groups metadata.
         Parameters
         ----------
@@ -121,20 +127,23 @@ class Metadata:
             for group in page.get("organisationUnitGroups"):
                 groups.append(
                     {
-                        key : group.get(key) if key != "organisationUnits" else [ou.get("id") for ou in group["organisationUnits"]]
+                        key: group.get(key)
+                        if key != "organisationUnits"
+                        else [ou.get("id") for ou in group["organisationUnits"]]
                         for key in fields.split(",")
                     }
                 )
             org_unit_groups += groups
         return groups
 
-    def datasets(self, fields:str ="id,name,dataSetElements,indicators,organisationUnits") -> List[dict]:
+    def datasets(self, fields: str = "id,name,dataSetElements,indicators,organisationUnits") -> List[dict]:
         """Get datasets metadata.
 
         Parameters
         ----------
         fields: str, optional
-            DHIS2 fields to include in the response, where default value is "id,name,dataSetElements,indicators,organisationUnits"
+            DHIS2 fields to include in the response, where default value is
+            "id,name,dataSetElements,indicators,organisationUnits"
         Return
         ------
         list of dict
@@ -164,7 +173,9 @@ class Metadata:
                 datasets.append(row)
         return datasets
 
-    def data_elements(self, fields:str = "id,name,aggregationType,zeroIsSignificant" ,filter: str = None) -> List[dict]:
+    def data_elements(
+        self, fields: str = "id,name,aggregationType,zeroIsSignificant", filter: str = None
+    ) -> List[dict]:
         """Get data elements metadata.
 
         Parameters
@@ -184,14 +195,14 @@ class Metadata:
             params["filter"] = filter
         elements = []
         for page in self.client.api.get_paged(
-                "dataElements",
-                params=params,
+            "dataElements",
+            params=params,
         ):
             for element in page["dataElements"]:
                 elements.append({key: element.get(key) for key in params["fields"].split(",")})
         return elements
 
-    def data_element_groups(self, fields:str = "id,name,dataElements") -> List[dict]:
+    def data_element_groups(self, fields: str = "id,name,dataElements") -> List[dict]:
         """Get data element groups metadata.
         Parameters
         ----------
@@ -231,7 +242,7 @@ class Metadata:
             combos += page.get("categoryOptionCombos")
         return combos
 
-    def indicators(self, fields:str="id,name,numerator,denominator", filter: str = None) -> List[dict]:
+    def indicators(self, fields: str = "id,name,numerator,denominator", filter: str = None) -> List[dict]:
         """Get indicators metadata.
 
         Parameters
@@ -257,7 +268,7 @@ class Metadata:
             indicators += page["indicators"]
         return indicators
 
-    def indicator_groups(self, fields:str=None) -> List[dict]:
+    def indicator_groups(self, fields: str = "id,name,indicators") -> List[dict]:
         """Get indicator groups metadata.
 
         Return
@@ -274,7 +285,9 @@ class Metadata:
             for group in page.get("indicatorGroups"):
                 groups.append(
                     {
-                        key: group.get(key) if key != "indicators" else [indicator.get("id") for indicator in group["indicators"]]
+                        key: group.get(key)
+                        if key != "indicators"
+                        else [indicator.get("id") for indicator in group["indicators"]]
                         for key in fields.split(",")
                     }
                 )
