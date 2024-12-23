@@ -157,8 +157,8 @@ class Metadata:
                 "pageSize": 10,
             },
         ):
-            fields_list = fields.split(",")
             for ds in page["dataSets"]:
+                fields_list = fields.split(",")
                 row = {}
                 if "data_elements" in fields_list:
                     row["data_elements"] = [dx["dataElement"]["id"] for dx in ds["dataSetElements"]]

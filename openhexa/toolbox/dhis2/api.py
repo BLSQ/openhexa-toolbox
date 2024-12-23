@@ -38,13 +38,15 @@ class Api:
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
-        if connection is None and ("url" not in kwargs and "username" not in kwargs and "password" not in kwargs):
+        if connection is None and ("url" not in kwargs or "username" not in kwargs or "password" not in kwargs):
             raise DHIS2Error("Connection or url, username and password must be provided")
 
-        self.url = self.parse_api_url(kwargs.get("url", connection.url))
-        self.session = self.authenticate(
-            kwargs.get("username", connection.username), kwargs.get("password", connection.password)
-        )
+        if connection:
+            self.url = self.parse_api_url(connection.url)
+            self.session = self.authenticate(connection.username, connection.password)
+        else:
+            self.url = self.parse_api_url(kwargs["url"])
+            self.session = self.authenticate(kwargs["username"], kwargs["password"])
 
         self.cache = None
         if cache_dir:
