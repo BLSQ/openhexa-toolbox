@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.6.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.5.0...v1.6.0) (2024-12-26)
+
+
+### Features
+
+* **era5:** support hours as download parameter ([#73](https://github.com/BLSQ/openhexa-toolbox/issues/73)) ([7695222](https://github.com/BLSQ/openhexa-toolbox/commit/7695222b742187aeb5dce66e1d60980169e54b6c))
+
+
+### Bug Fixes
+
+* **era5_aggregate:** support single step data vars ([bfecd4e](https://github.com/BLSQ/openhexa-toolbox/commit/bfecd4e42f79b437f34b8dbd370d6a43b86f41cc))
+* **era5_extract:** fix available datetimes checks for 1-step data vars ([e7f8584](https://github.com/BLSQ/openhexa-toolbox/commit/e7f85847af4c4e8078da4206bac0e8981cb83f2f))
+* **era5:** remove debug log level ([eb22fef](https://github.com/BLSQ/openhexa-toolbox/commit/eb22fef2020238684a840e0e70e5479a12b09daa))
+* **era5:** use less memory at the cost of performance ([cf6b793](https://github.com/BLSQ/openhexa-toolbox/commit/cf6b793828a3e985b29f40d4214368452b66814c))
+
 ## [1.5.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.4.3...v1.5.0) (2024-12-13)
 
 
