@@ -19,6 +19,33 @@ def con():
 
 @responses.activate
 @pytest.mark.parametrize("version", VERSIONS)
+def test_connection_from_object(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    assert api is not None
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_connection_from_kwargs(version):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    api = DHIS2(url="http://localhost:8080", username="admin", password="district", cache_dir=None)
+    assert api is not None
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
+def test_connection_from_kwargs_fails(version):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    with pytest.raises(DHIS2Error):
+        DHIS2(url="http://localhost:8080", cache_dir=None)
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
 def test_data_elements(version, con):
     responses_dir = Path("tests", "dhis2", "responses", version)
     responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
