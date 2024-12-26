@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.6.0...v1.6.1) (2024-12-26)
+
+
+### Bug Fixes
+
+* **deps:** update dependency pytest-cov to v6 ([#64](https://github.com/BLSQ/openhexa-toolbox/issues/64)) ([0923d55](https://github.com/BLSQ/openhexa-toolbox/commit/0923d5562e9c3155a7b2b37c9d62dc1b0d0a3485))
+* **deps:** update dependency ruff to ~=0.8.4 ([#70](https://github.com/BLSQ/openhexa-toolbox/issues/70)) ([3e4d246](https://github.com/BLSQ/openhexa-toolbox/commit/3e4d246bb501c17a12161b524fb11d2b92288630))
+
 ## [1.6.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.5.0...v1.6.0) (2024-12-26)
 
 
