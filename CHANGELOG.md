@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.6.1...v1.6.2) (2024-12-31)
+
+
+### Bug Fixes
+
+* adds fields to levels of organisation units ([#77](https://github.com/BLSQ/openhexa-toolbox/issues/77)) ([7173506](https://github.com/BLSQ/openhexa-toolbox/commit/7173506ce87806b656ed17e4eeed2645bcb2860f))
+
 ## [1.6.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.6.0...v1.6.1) (2024-12-26)
 
 
