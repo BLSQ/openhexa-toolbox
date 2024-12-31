@@ -51,24 +51,24 @@ class Metadata:
         r = self.client.api.get(f"identifiableObjects/{uid}")
         return r
 
-    def organisation_unit_levels(self) -> List[dict]:
+    def organisation_unit_levels(self, fields: str = "id,name,level") -> List[dict]:
         """Get names of all organisation unit levels.
 
+        Parameters
+        ----------
+        fields: str, optional
+            DHIS2 fields to include in the response, where default value is "id,name,level"
         Return
         ------
         list of dict
             Id, number and name of each org unit level.
         """
-        r = self.client.api.get("filledOrganisationUnitLevels")
+        params = {"fields": fields}
+        r = self.client.api.get("filledOrganisationUnitLevels", params=params)
         levels = []
+        fields_list = fields.split(",")
         for level in r:
-            levels.append(
-                {
-                    "id": level.get("id"),
-                    "level": level.get("level"),
-                    "name": level.get("name"),
-                }
-            )
+            levels.append({k: v for k, v in level.items() if k in fields_list})
         return levels
 
     def organisation_units(self, fields: str = "id,name,level,path,geometry", filter: str = None) -> List[dict]:
