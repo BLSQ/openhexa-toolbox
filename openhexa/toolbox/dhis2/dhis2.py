@@ -66,8 +66,9 @@ class Metadata:
         params = {"fields": fields}
         r = self.client.api.get("filledOrganisationUnitLevels", params=params)
         levels = []
+        fields_list = fields.split(",")
         for level in r:
-            levels.append({k: v for k, v in level.items() if k in fields.split(",")})
+            levels.append({k: v for k, v in level.items() if k in fields_list})
         return levels
 
     def organisation_units(self, fields: str = "id,name,level,path,geometry", filter: str = None) -> List[dict]:
