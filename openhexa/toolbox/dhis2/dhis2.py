@@ -263,9 +263,9 @@ class Metadata:
             "indicators",
             params=params,
         ):
+            fields_list = fields.split(",")
             for indicator in page["indicators"]:
-                indicators.append({key: indicator.get(key) for key in fields.split(",")})
-            indicators += page["indicators"]
+                indicators.append({key: indicator.get(key) for key in fields_list})
         return indicators
 
     def indicator_groups(self, fields: str = "id,name,indicators") -> List[dict]:
