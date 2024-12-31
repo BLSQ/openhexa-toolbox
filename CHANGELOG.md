@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.3](https://github.com/BLSQ/openhexa-toolbox/compare/v1.6.2...v1.6.3) (2024-12-31)
+
+
+### Bug Fixes
+
+* fixes double append of indicators ([#79](https://github.com/BLSQ/openhexa-toolbox/issues/79)) ([4fae1e0](https://github.com/BLSQ/openhexa-toolbox/commit/4fae1e0d9360d02d94fdb52ddcd15263fbc2d7b6))
+
 ## [1.6.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.6.1...v1.6.2) (2024-12-31)
 
 
