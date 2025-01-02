@@ -147,13 +147,13 @@ def _has_missing_data(da: xr.DataArray) -> bool:
     missing = False
 
     # if da.step.size == 1, da.step is just an int so we cannot iterate over it
-    if da.step.size == 1 and da.isnull().all():
-        return True
-
     # if da.step size > 1, da.step is an array of int (one per step)
-    for step in da.step:
-        if da.sel(step=step).isnull().all():
-            missing = True
+    if da.step.size > 1:
+        for step in da.step:
+            if da.sel(step=step).isnull().all():
+                missing = True
+    else:
+        missing = da.isnull().all()
 
     return missing
 
