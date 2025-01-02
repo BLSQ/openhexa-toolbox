@@ -208,9 +208,16 @@ def aggregate(ds: xr.Dataset, var: str, masks: np.ndarray, boundaries_id: list[s
         if _has_missing_data(da):
             continue
 
-        da_mean = da.mean(dim="step").values
-        da_min = da.min(dim="step").values
-        da_max = da.max(dim="step").values
+        # if there is a step dimension (= hourly measurements), aggregate to daily
+        # if not, data is already daily
+        if "step" in da.dims:
+            da_mean = da.mean(dim="step").values
+            da_min = da.min(dim="step").values
+            da_max = da.max(dim="step").values
+        else:
+            da_mean = da.values
+            da_min = da.values
+            da_max = da.values
 
         for i, uid in enumerate(boundaries_id):
             v_mean = da_mean[masks[i, :, :]].mean()
