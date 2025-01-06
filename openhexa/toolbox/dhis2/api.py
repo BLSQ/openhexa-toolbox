@@ -31,8 +31,8 @@ class Api:
             max_retries=Retry(
                 total=3,
                 backoff_factor=5,
-                allowed_methods=["HEAD", "GET"],
-                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "POST"],
+                status_forcelist=[409, 429, 500, 502, 503, 504],
             )
         )
         self.session.mount("https://", adapter)
