@@ -281,7 +281,7 @@ def build_request(
 class CDS:
     """Climate data store API client based on datapi."""
 
-    def __init__(self, key: str, url: str = "https://cds-beta.climate.copernicus.eu/api") -> None:
+    def __init__(self, key: str, url: str = "https://cds.climate.copernicus.eu/api") -> None:
         """Initialize CDS client."""
         self.client = ApiClient(key=key, url=url)
         self.client.check_authentication()
