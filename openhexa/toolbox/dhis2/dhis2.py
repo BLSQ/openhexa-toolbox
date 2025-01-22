@@ -160,15 +160,15 @@ class Metadata:
             for ds in page["dataSets"]:
                 fields_list = fields.split(",")
                 row = {}
-                if "data_elements" in fields_list:
+                if "dataSetElements" in fields_list:
                     row["data_elements"] = [dx["dataElement"]["id"] for dx in ds["dataSetElements"]]
-                    fields_list.remove("data_elements")
+                    fields_list.remove("dataSetElements")
                 if "indicators" in fields_list:
                     row["indicators"] = [indicator["id"] for indicator in ds["indicators"]]
                     fields_list.remove("indicators")
-                if "organisation_units" in fields_list:
+                if "organisationUnits" in fields_list:
                     row["organisation_units"] = [ou["id"] for ou in ds["organisationUnits"]]
-                    fields_list.remove("organisation_units")
+                    fields_list.remove("organisationUnits")
                 row.update({key: ds.get(key) for key in fields_list})
                 datasets.append(row)
         return datasets
