@@ -104,7 +104,8 @@ class Week(Period):
 
     @staticmethod
     def to_string(dt: datetime) -> str:
-        return dt.strftime("%YW%-W")
+        iso = dt.isocalendar()
+        return f"{iso.year}W{iso.week}"
 
 
 class Month(Period):
