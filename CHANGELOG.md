@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.7.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.6.3...v1.7.0) (2025-01-28)
+
+
+### Features
+
+* **dhis2:** retry failed POST requests ([#84](https://github.com/BLSQ/openhexa-toolbox/issues/84)) ([95dc14a](https://github.com/BLSQ/openhexa-toolbox/commit/95dc14aa5e242ae33c767f876ccf45dfc60a4fa1))
+
+
+### Bug Fixes
+
+* **dhis2:** fix dataset metadata output ([#87](https://github.com/BLSQ/openhexa-toolbox/issues/87)) ([8fcfa40](https://github.com/BLSQ/openhexa-toolbox/commit/8fcfa4088e9641aeefd879f996b57f291254010f))
+* **dhis2:** week numbers do not use calendar weeks ([#89](https://github.com/BLSQ/openhexa-toolbox/issues/89)) ([e9cbc94](https://github.com/BLSQ/openhexa-toolbox/commit/e9cbc944c4a3615cfcdc5c7c2fe394826b92c1e0))
+* **era5_aggregate:** fix missing data check ([#81](https://github.com/BLSQ/openhexa-toolbox/issues/81)) ([2a3c6cf](https://github.com/BLSQ/openhexa-toolbox/commit/2a3c6cf6198de4be91aeb77a5711e74d60dd8641))
+* **era5:** fix aggregate for non-hourly variables ([#83](https://github.com/BLSQ/openhexa-toolbox/issues/83)) ([d13ef21](https://github.com/BLSQ/openhexa-toolbox/commit/d13ef21f7ad0ecf40de2b47b3e20fcab03ccb1ad))
+* **era5:** new CDS API url ([#85](https://github.com/BLSQ/openhexa-toolbox/issues/85)) ([3def4a6](https://github.com/BLSQ/openhexa-toolbox/commit/3def4a634cf4f3f5a0190c16fb18ae5cfa23bb70))
+
 ## [1.6.3](https://github.com/BLSQ/openhexa-toolbox/compare/v1.6.2...v1.6.3) (2024-12-31)
 
 
