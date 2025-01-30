@@ -173,16 +173,16 @@ def list_datetimes_in_dir(data_dir: Path) -> list[datetime]:
 
     for f in data_dir.glob("*.grib"):
         # sometimes gribs are actually zip files
-        if zipfile.is_zipfile(f):
-            with tempfile.NamedTemporaryFile(mode="wb") as tmp:
+        with tempfile.NamedTemporaryFile(mode="wb") as tmp:
+            if zipfile.is_zipfile(f):
                 with zipfile.ZipFile(f, "r") as zip:
                     tmp.write(zip.read("data.grib"))
                 ds = xr.open_dataset(tmp.name, engine="cfgrib")
 
-        else:
-            ds = xr.open_dataset(f, engine="cfgrib")
+            else:
+                ds = xr.open_dataset(f, engine="cfgrib")
 
-        dtimes += list_datetimes_in_dataset(ds)
+            dtimes += list_datetimes_in_dataset(ds)
 
     dtimes = sorted(set(dtimes))
 
