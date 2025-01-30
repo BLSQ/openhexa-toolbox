@@ -220,9 +220,9 @@ def aggregate(ds: xr.Dataset, var: str, masks: np.ndarray, boundaries_id: list[s
             da_max = da.values
 
         for i, uid in enumerate(boundaries_id):
-            v_mean = da_mean[masks[i, :, :]].mean()
-            v_min = da_min[masks[i, :, :]].mean()
-            v_max = da_max[masks[i, :, :]].mean()
+            v_mean = np.nanmean(da_mean[masks[i, :, :]])
+            v_min = np.nanmin(da_min[masks[i, :, :]])
+            v_max = np.nanmax(da_max[masks[i, :, :]])
 
             rows.append(
                 {
@@ -255,7 +255,10 @@ def aggregate(ds: xr.Dataset, var: str, masks: np.ndarray, boundaries_id: list[s
 
 
 def aggregate_per_week(
-    daily: pl.DataFrame, column_uid: str, use_epidemiological_weeks: bool = False, sum_aggregation: bool = False
+    daily: pl.DataFrame,
+    column_uid: str,
+    use_epidemiological_weeks: bool = False,
+    sum_aggregation: bool = False,
 ) -> pl.DataFrame:
     """Aggregate daily data per week.
 
