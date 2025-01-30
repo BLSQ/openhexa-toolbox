@@ -8,6 +8,8 @@ from __future__ import annotations
 import importlib.resources
 import json
 import logging
+import tempfile
+import zipfile
 from calendar import monthrange
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -170,7 +172,16 @@ def list_datetimes_in_dir(data_dir: Path) -> list[datetime]:
     dtimes = []
 
     for f in data_dir.glob("*.grib"):
-        ds = xr.open_dataset(f, engine="cfgrib")
+        # sometimes gribs are actually zip files
+        if zipfile.is_zipfile(f):
+            with tempfile.NamedTemporaryFile(mode="wb") as tmp:
+                with zipfile.ZipFile(f, "r") as zip:
+                    tmp.write(zip.read("data.grib"))
+                ds = xr.open_dataset(tmp.name, engine="cfgrib")
+
+        else:
+            ds = xr.open_dataset(f, engine="cfgrib")
+
         dtimes += list_datetimes_in_dataset(ds)
 
     dtimes = sorted(set(dtimes))
