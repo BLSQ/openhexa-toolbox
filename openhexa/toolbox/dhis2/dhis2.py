@@ -426,31 +426,65 @@ class Metadata:
         return indicators
 
     def indicator_groups(
-        self, fields: str = "id,name,indicators", page: int = None, pageSize: int = None, filters: [str] = None
-    ) -> List[dict]:
-        """Get indicator groups metadata.
+        self,
+        fields: str = "id,name,indicators",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get indicator groups metadata from DHIS2.
 
-        Return
-        ------
-        list of dict
-            Id, name and indicators of all indicator groups.
+        Parameters
+        ----------
+        fields: str, optional
+            Comma-separated DHIS2 fields to include in the response.
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
+
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of indicator groups.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `indicatorGroups` and `pager` for pagination.
         """
-        ind_groups = []
-        for page in self.client.api.get_paged(
-            "indicatorGroups",
-            params={"fields": fields},
-        ):
-            groups = []
-            for group in page.get("indicatorGroups"):
-                groups.append(
-                    {
-                        key: group.get(key)
-                        if key != "indicators"
-                        else [indicator.get("id") for indicator in group["indicators"]]
-                        for key in fields.split(",")
-                    }
-                )
-            ind_groups += groups
+
+        def format_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            """Helper function to format an indicator group."""
+            return {
+                key: group.get(key)
+                if key != "indicators"
+                else [indicator.get("id") for indicator in group.get("indicators", [])]
+                for key in fields.split(",")
+            }
+
+        params = {"fields": fields}
+
+        if filters:
+            params["filter"] = filters  # Handle filters correctly
+
+        # Paginated request (return dict with indicator groups & pager)
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("indicatorGroups", params=params)
+
+            ind_groups = [format_group(group, fields) for group in response.get("indicatorGroups", [])]
+
+            return {
+                "indicatorGroups": ind_groups,
+                "pager": response.get("pager", {}),  # Pager info for iteration
+            }
+
+        ind_groups = [
+            format_group(group, fields)
+            for page in self.client.api.get_paged("indicatorGroups", params=params)
+            for group in page.get("indicatorGroups", [])
+        ]
+
         return ind_groups
 
     @staticmethod

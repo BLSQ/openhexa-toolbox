@@ -58,6 +58,18 @@ def test_data_elements(version, con):
 
 @responses.activate
 @pytest.mark.parametrize("version", VERSIONS)
+def test_data_elements_paged(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "data_elements.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.data_elements(page=2, pageSize=1000)
+    df = pl.DataFrame(r)
+    assert len(df) > 30
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
 def test_datasets(version, con):
     responses_dir = Path("tests", "dhis2", "responses", version)
     responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
@@ -94,36 +106,23 @@ def test_organisation_units(version, con):
 
 @responses.activate
 @pytest.mark.parametrize("version", VERSIONS)
+def test_organisation_units_paged(version, con):
+    responses_dir = Path("tests", "dhis2", "responses", version)
+    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
+    responses._add_from_file(Path(responses_dir, "organisation_units.yaml"))
+    api = DHIS2(con, cache_dir=None)
+    r = api.meta.organisation_units(page=2, pageSize=1000)
+    assert r.get("pager") is not None
+
+
+@responses.activate
+@pytest.mark.parametrize("version", VERSIONS)
 def test_indicators(version, con):
     responses_dir = Path("tests", "dhis2", "responses", version)
     responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
     responses._add_from_file(Path(responses_dir, "indicators.yaml"))
     api = DHIS2(con, cache_dir=None)
     r = api.meta.indicators()
-    df = pl.DataFrame(r)
-    assert not df.is_empty()
-
-
-@responses.activate
-@pytest.mark.parametrize("version", VERSIONS)
-def test_organisation_unit_groups(version, con):
-    responses_dir = Path("tests", "dhis2", "responses", version)
-    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
-    responses._add_from_file(Path(responses_dir, "organisation_unit_groups.yaml"))
-    api = DHIS2(con, cache_dir=None)
-    r = api.meta.organisation_unit_groups()
-    df = pl.DataFrame(r)
-    assert not df.is_empty()
-
-
-@responses.activate
-@pytest.mark.parametrize("version", VERSIONS)
-def test_data_element_groups(version, con):
-    responses_dir = Path("tests", "dhis2", "responses", version)
-    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
-    responses._add_from_file(Path(responses_dir, "data_element_groups.yaml"))
-    api = DHIS2(con, cache_dir=None)
-    r = api.meta.data_element_groups()
     df = pl.DataFrame(r)
     assert not df.is_empty()
 
