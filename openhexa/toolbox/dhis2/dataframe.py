@@ -327,7 +327,7 @@ def extract_data_element_group(
     include_children: bool = False,
     last_updated: datetime | None = None,
 ) -> pl.DataFrame:
-    """Extract dataset data values.
+    """Extract data element group data values.
 
     Parameters
     ----------
