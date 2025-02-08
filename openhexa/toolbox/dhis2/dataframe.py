@@ -1,14 +1,26 @@
 """A set of opinionated functions to extract DHIS2 metadata & data values into dataframes."""
 
+import logging
 from datetime import datetime
+from typing import Literal
 
 import polars as pl
 
 from openhexa.toolbox.dhis2 import DHIS2
 
+logger = logging.getLogger(__name__)
+
 
 class MissingParameter(Exception):
     """Exception raised when a required parameter is missing."""
+
+
+class MissingColumn(Exception):
+    """Exception raised when a required column is missing."""
+
+
+class InvalidDataType(Exception):
+    """Exception raised when a column has an invalid data type."""
 
 
 class InvalidParameter(Exception):
@@ -551,19 +563,145 @@ def extract_analytics(
     )
 
 
+def _validate_data_values(df: pl.DataFrame) -> None:
+    """Validate data values dataframe for import into DHIS2.
+
+    Parameters
+    ----------
+    df : pl.DataFrame
+        Dataframe containing data values.
+
+    Raises
+    ------
+    MissingColumn
+        If a required column is missing.
+    InvalidDataType
+        If a column has an invalid data type.
+    """
+    if "data_element_id" not in df.columns:
+        raise MissingColumn("Missing data_element_id column")
+    if "organisation_unit_id" not in df.columns:
+        raise MissingColumn("Missing organisation_unit_id column")
+    if "period" not in df.columns:
+        raise MissingColumn("Missing period column")
+    if "category_option_combo_id" not in df.columns:
+        raise MissingColumn("Missing category_option_combo_id column")
+    if "attribute_option_combo_id" not in df.columns:
+        raise MissingColumn("Missing attribute_option_combo_id column")
+    if "value" not in df.columns:
+        raise MissingColumn("Missing value column")
+    if df["data_element_id"].dtype != pl.String:
+        raise InvalidDataType("data_element_id must be of type String")
+    if df["organisation_unit_id"].dtype != pl.String:
+        raise InvalidDataType("organisation_unit_id must be of type String")
+    if df["period"].dtype != pl.String:
+        raise InvalidDataType("period must be of type String")
+    if df["category_option_combo_id"].dtype != pl.String:
+        raise InvalidDataType("category_option_combo_id must be of type String")
+    if df["attribute_option_combo_id"].dtype != pl.String:
+        raise InvalidDataType("attribute_option_combo_id must be of type String")
+    if df["value"].dtype != pl.String:
+        raise InvalidDataType("value must be of type String")
+
+
+def _map_uids(df: pl.DataFrame, **mappings) -> pl.DataFrame:
+    """Replace UIDs in a dataframe based on mappings.
+
+    Replacements are strict, which means that if a uid is not found in the mapping,
+    it will be assigned to None.
+
+    Parameters
+    ----------
+    df : pl.DataFrame
+        Dataframe containing data values.
+    mappings : dict
+        Mappings to replace UIDs, with column name as key and dict mapping as value.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe with UIDs replaced based on mappings.
+    """
+    for col, mapping in mappings.items():
+        if mapping:
+            if col not in df.columns:
+                msg = f"Missing {col} column"
+                raise MissingColumn(msg)
+            df = df.with_columns(pl.col(col).replace_strict(mapping, default=None))
+    return df
+
+
 def import_data_values(
     dhis2: DHIS2,
     data: pl.DataFrame,
-    org_units_mapping: dict,
-    data_elements_mapping: dict,
-    category_option_combos_mapping: dict | None,
-    attribute_option_combos_mapping: dict | None,
-    import_strategy: str = "CREATE",
-):
+    org_units_mapping: dict | None = None,
+    data_elements_mapping: dict | None = None,
+    category_option_combos_mapping: dict | None = None,
+    attribute_option_combos_mapping: dict | None = None,
+    import_strategy: Literal["CREATE", "UPDATE", "CREATE_AND_UPDATE", "DELETE"] = "CREATE",
+    dry_run: bool = True,
+) -> dict:
     """Import data values to a DHIS2 instance.
 
     Parameters
     ----------
     dhis2 : DHIS2
         DHIS2 instance.
+    data : pl.DataFrame
+        Dataframe containing data values with the following columns: data_element_id, period,
+        organisation_unit_id, category_option_combo_id, attribute_option_combo_id, value.
+    org_units_mapping : dict, optional
+        Organisation units mapping with old UID as key and new UID as value.
+    data_elements_mapping : dict, optional
+        Data elements mapping with old UID as key and new UID as value.
+    category_option_combos_mapping : dict, optional
+        Category option combos mapping with old UID as key and new UID as value.
+    attribute_option_combos_mapping : dict, optional
+        Attribute option combos mapping with old UID as key and new UID as value.
+    import_strategy : str, optional
+        Import strategy. One of "CREATE", "UPDATE", "CREATE_AND_UPDATE", "DELETE". Default is "CREATE".
+    dry_run : bool, optional
+        Perform a dry run. Default is True.
+
+    Returns
+    -------
+    dict
+        Import report.
+
+    Raises
+    ------
+    MissingColumn
+        If a required column is missing.
+    InvalidDataType
+        If a column has an invalid data type.
     """
+    data = _map_uids(
+        df=data,
+        organisation_unit_id=org_units_mapping,
+        data_element_id=data_elements_mapping,
+        category_option_combo_id=category_option_combos_mapping,
+        attribute_option_combo_id=attribute_option_combos_mapping,
+    )
+
+    # ignore rows with null values
+    nrows = len(data)
+    data = data.drop_nulls()
+    nrows_dropped = nrows - len(data)
+    logger.debug(f"Dropped {nrows_dropped} rows with null values")
+
+    _validate_data_values(df=data)
+
+    data_values = data.select(
+        pl.col("data_element_id").alias("dataElement"),
+        pl.col("period"),
+        pl.col("organisation_unit_id").alias("orgUnit"),
+        pl.col("category_option_combo_id").alias("categoryOptionCombo"),
+        pl.col("attribute_option_combo_id").alias("attributeOptionCombo"),
+        pl.col("value"),
+    ).to_dicts()
+
+    report = dhis2.data_value_sets.post(
+        data_values=data_values, import_strategy=import_strategy, dry_run=dry_run, skip_validation=True
+    )
+
+    return report
