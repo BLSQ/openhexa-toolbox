@@ -52,8 +52,7 @@ class Metadata:
         return r
 
     def organisation_unit_levels(
-        self,
-        fields: str = "id,name,level",
+        self, fields: str = "id,name,level", filter=None, page=None, pageSize=None
     ) -> List[dict]:
         """Get names of all organisation unit levels.
 
@@ -61,6 +60,10 @@ class Metadata:
         ----------
         fields: str, optional
             DHIS2 fields to include in the response, where default value is "id,name,level"
+        filter: Not implemented
+        page: Not implemented
+        pageSize: Not implemented
+
         Return
         ------
         list of dict
@@ -98,7 +101,8 @@ class Metadata:
         -------
         Union[List[Dict[str, Any]], Dict[str, Any]]
             - If `page` and `pageSize` are **not** provided: Returns a **list** of organisation units.
-            - If `page` and `pageSize` **are** provided: Returns a **dict** with `organisationUnits` and `pager` for pagination.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `organisationUnits` and `pager`
+            for pagination.
         """
 
         def format_unit(ou: Dict[str, Any], fields: str) -> Dict[str, Any]:
@@ -113,7 +117,6 @@ class Metadata:
             params["filter"] = filters
 
         if page and pageSize:
-            print(f"Page and pageSize : {page} {pageSize}")
             params["page"] = page
             params["pageSize"] = pageSize
             response = self.client.api.get("organisationUnits", params=params)
@@ -154,7 +157,8 @@ class Metadata:
         -------
         Union[List[Dict[str, Any]], Dict[str, Any]]
             - If `page` and `pageSize` are **not** provided: Returns a **list** of organisation unit groups.
-            - If `page` and `pageSize` **are** provided: Returns a **dict** with `organisationUnitGroups` and `pager` for pagination.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `organisationUnitGroups` and `pager`
+            for pagination.
         """
 
         def format_unit_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
@@ -277,7 +281,8 @@ class Metadata:
         -------
         Union[List[Dict[str, Any]], Dict[str, Any]]
             - If `page` and `pageSize` are **not** provided: Returns a **list** of data elements.
-            - If `page` and `pageSize` **are** provided: Returns a **dict** with `dataElements` and `pager` for pagination.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `dataElements` and `pager`
+            for pagination.
         """
 
         def format_element(element: Dict[str, Any], fields: str) -> Dict[str, Any]:
@@ -329,7 +334,8 @@ class Metadata:
         -------
         Union[List[Dict[str, Any]], Dict[str, Any]]
             - If `page` and `pageSize` are **not** provided: Returns a **list** of data element groups.
-            - If `page` and `pageSize` **are** provided: Returns a **dict** with `dataElementGroups` and `pager` for pagination.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `dataElementGroups` and `pager`
+            for pagination.
         """
 
         def format_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
@@ -397,7 +403,8 @@ class Metadata:
         -------
         Union[List[Dict[str, Any]], Dict[str, Any]]
             - If `page` and `pageSize` are **not** provided: Returns a **list** of indicators.
-            - If `page` and `pageSize` **are** provided: Returns a **dict** with `indicators` and `pager` for pagination.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `indicators` and `pager`
+            for pagination.
         """
 
         def format_indicator(indicator: Dict[str, Any], fields: str) -> Dict[str, Any]:
@@ -449,7 +456,8 @@ class Metadata:
         -------
         Union[List[Dict[str, Any]], Dict[str, Any]]
             - If `page` and `pageSize` are **not** provided: Returns a **list** of indicator groups.
-            - If `page` and `pageSize` **are** provided: Returns a **dict** with `indicatorGroups` and `pager` for pagination.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `indicatorGroups` and `pager`
+            for pagination.
         """
 
         def format_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
