@@ -30,15 +30,15 @@ class InvalidParameter(Exception):
 DHIS2_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%3f%z"
 
 
-def get_datasets(dhis2: DHIS2, filter: str | None = None) -> pl.DataFrame:
+def get_datasets(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
     """Extract datasets metadata.
 
     Parameters
     ----------
     dhis2 : DHIS2
         DHIS2 instance.
-    filter : str, optional
-        DHIS2 query filter expression.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
 
     Returns
     -------
@@ -47,7 +47,7 @@ def get_datasets(dhis2: DHIS2, filter: str | None = None) -> pl.DataFrame:
         organisation_units, data_elements, indicators, period_type.
     """
     meta = dhis2.meta.datasets(
-        fields="id,name,organisationUnits,dataSetElements,indicators,periodType,lastUpdated", filter=filter
+        fields="id,name,organisationUnits,dataSetElements,indicators,periodType,lastUpdated", filters=filters
     )
 
     schema = {
@@ -71,36 +71,36 @@ def get_datasets(dhis2: DHIS2, filter: str | None = None) -> pl.DataFrame:
     return df.sort(by="name")
 
 
-def get_data_elements(dhis2: DHIS2, filter: str | None = None) -> pl.DataFrame:
+def get_data_elements(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
     """Extract data elements metadata.
 
     Parameters
     ----------
     dhis2 : DHIS2
         DHIS2 instance.
-    filter : str, optional
-        DHIS2 query filter expression.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
 
     Returns
     -------
     pl.DataFrame
         Dataframe containing data elements metadata with the following columns: id, name, value_type.
     """
-    meta = dhis2.meta.data_elements(fields="id,name,valueType", filter=filter)
+    meta = dhis2.meta.data_elements(fields="id,name,valueType", filters=filters)
     schema = {"id": str, "name": str, "valueType": str}
     df = pl.DataFrame(meta, schema=schema)
     return df.select("id", "name", pl.col("valueType").alias("value_type"))
 
 
-def get_data_element_groups(dhis2: DHIS2, filter: str | None = None) -> pl.DataFrame:
+def get_data_element_groups(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
     """Extract data element groups metadata.
 
     Parameters
     ----------
     dhis2 : DHIS2
         DHIS2 instance.
-    filter : str, optional
-        DHIS2 query filter expression.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
 
     Returns
     -------
@@ -108,7 +108,7 @@ def get_data_element_groups(dhis2: DHIS2, filter: str | None = None) -> pl.DataF
         Dataframe containing data element groups metadata with the following columns: id, name,
         data_elements.
     """
-    meta = dhis2.meta.data_element_groups(fields="id,name,dataElements", filter=filter)
+    meta = dhis2.meta.data_element_groups(fields="id,name,dataElements", filters=filters)
     schema = {"id": str, "name": str, "dataElements": list[str]}
     df = pl.DataFrame(meta, schema=schema)
     df = df.select("id", "name", pl.col("dataElements").alias("data_elements"))
@@ -134,7 +134,9 @@ def get_organisation_unit_levels(dhis2: DHIS2) -> pl.DataFrame:
     return pl.DataFrame(data=meta, schema=schema)
 
 
-def get_organisation_units(dhis2: DHIS2, max_level: int | None = None, filter: str | None = None) -> pl.DataFrame:
+def get_organisation_units(
+    dhis2: DHIS2, max_level: int | None = None, filters: list[str] | None = None
+) -> pl.DataFrame:
     """Extract organisation units metadata.
 
     Parameters
@@ -143,8 +145,8 @@ def get_organisation_units(dhis2: DHIS2, max_level: int | None = None, filter: s
         DHIS2 instance.
     max_level : int, optional
         Maximum level of organisation units to extract. If None, all levels are extracted.
-    filter : str, optional
-        DHIS2 query filter expression.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
 
     Returns
     -------
@@ -158,21 +160,16 @@ def get_organisation_units(dhis2: DHIS2, max_level: int | None = None, filter: s
         If max_level is greater than the maximum level of the organisation units.
     """
     levels = get_organisation_unit_levels(dhis2)
-
-    # max_level and filter parameters both uses the filter query expression
-    # multiple filter expressions can be combined using a semicolon as a separator
     if max_level:
         if max_level > levels["level"].max():
             raise InvalidParameter(f"max_level cannot be greater than {levels['level'].max()}")
         level_filter = f"level:le:{max_level}"
-        if filter:
-            filter = f"{level_filter};{filter}"
+        if filters:
+            filters = [*filters, max_level]
         else:
-            filter = level_filter
-    else:
-        filter = filter
+            filters = [level_filter]
 
-    meta = dhis2.meta.organisation_units(fields="id,name,level,path,geometry", filter=filter)
+    meta = dhis2.meta.organisation_units(fields="id,name,level,path,geometry", filters=filters)
 
     schema = {"id": str, "name": str, "level": int, "path": str, "geometry": str}
     df = pl.DataFrame(data=meta, schema=schema)
@@ -199,15 +196,15 @@ def get_organisation_units(dhis2: DHIS2, max_level: int | None = None, filter: s
     return df.sort(by=["level", "name"], descending=False)
 
 
-def get_organisation_unit_groups(dhis2: DHIS2, filter: str | None = None) -> pl.DataFrame:
+def get_organisation_unit_groups(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
     """Extract organisation unit groups metadata.
 
     Parameters
     ----------
     dhis2 : DHIS2
         DHIS2 instance.
-    filter : str, optional
-        DHIS2 query filter expression.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
 
     Returns
     -------
@@ -215,21 +212,21 @@ def get_organisation_unit_groups(dhis2: DHIS2, filter: str | None = None) -> pl.
         Dataframe containing organisation unit groups metadata with the following columns: id, name,
         organisation_units.
     """
-    meta = dhis2.meta.organisation_unit_groups(fields="id,name,organisationUnits", filter=filter)
+    meta = dhis2.meta.organisation_unit_groups(fields="id,name,organisationUnits", filters=filters)
     schema = {"id": str, "name": str, "organisationUnits": list[str]}
     df = pl.DataFrame(meta, schema=schema)
     df = df.select("id", "name", pl.col("organisationUnits").alias("organisation_units"))
     return df.sort(by="name")
 
 
-def get_category_option_combos(dhis2: DHIS2, filter: str | None = None) -> pl.DataFrame:
+def get_category_option_combos(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
     """Extract category option combos metadata.
 
     Parameters
     ----------
     dhis2 : DHIS2
         DHIS2 instance.
-    filter : str, optional
+    filters : str, optional
         DHIS2 query filter expression.
 
     Returns
@@ -237,7 +234,7 @@ def get_category_option_combos(dhis2: DHIS2, filter: str | None = None) -> pl.Da
     pl.DataFrame
         Dataframe containing category option combos metadata with the following columns: id, name.
     """
-    meta = dhis2.meta.category_option_combos(filter=filter)
+    meta = dhis2.meta.category_option_combos(filters=filters)
     schema = {"id": str, "name": str}
     df = pl.DataFrame(meta, schema=schema)
     return df.sort(by="name")
