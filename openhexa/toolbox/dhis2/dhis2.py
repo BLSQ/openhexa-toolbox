@@ -2,7 +2,7 @@ import itertools
 import json
 import logging
 from pathlib import Path
-from typing import Iterator, List, Tuple, Union
+from typing import Iterator, List, Tuple, Union, Optional, Any, Dict
 
 import pandas as pd
 import polars as pl
@@ -51,13 +51,19 @@ class Metadata:
         r = self.client.api.get(f"identifiableObjects/{uid}")
         return r
 
-    def organisation_unit_levels(self, fields: str = "id,name,level") -> List[dict]:
+    def organisation_unit_levels(
+        self, fields: str = "id,name,level", filter=None, page=None, pageSize=None
+    ) -> List[dict]:
         """Get names of all organisation unit levels.
 
         Parameters
         ----------
         fields: str, optional
             DHIS2 fields to include in the response, where default value is "id,name,level"
+        filter: Not implemented
+        page: Not implemented
+        pageSize: Not implemented
+
         Return
         ------
         list of dict
@@ -71,162 +77,293 @@ class Metadata:
             levels.append({k: v for k, v in level.items() if k in fields_list})
         return levels
 
-    def organisation_units(self, fields: str = "id,name,level,path,geometry", filter: str = None) -> List[dict]:
-        """Get organisation units metadata.
+    def organisation_units(
+        self,
+        fields: str = "id,name,level,path,geometry",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get organisation units metadata from DHIS2.
 
         Parameters
         ----------
         fields: str, optional
-            DHIS2 fields to include in the response, where default value is "id,name,level,path,geometry"
-        filter: str, optional
-            DHIS2 query filter
+            Comma-separated DHIS2 fields to include in the response.
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
 
-        Return
-        ------
-        list of dict
-            Id, name, level, path and geometry of all org units.
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of organisation units.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `organisationUnits` and `pager`
+            for pagination.
         """
+
+        def format_unit(ou: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            return {
+                key: json.dumps(ou[key]) if key == "geometry" and ou.get(key) else ou.get(key)
+                for key in fields.split(",")
+            }
+
         params = {"fields": fields}
-        if filter:
-            params["filter"] = filter
-        org_units = []
-        for page in self.client.api.get_paged(
-            "organisationUnits",
-            params=params,
-        ):
-            for ou in page["organisationUnits"]:
-                org_units.append(
-                    {
-                        key: ou.get(key)
-                        if key != "geometry"
-                        else json.dumps(ou.get("geometry"))
-                        if ou.get("geometry")
-                        else None
-                        for key in fields.split(",")
-                    }
-                )
+
+        if filters:
+            params["filter"] = filters
+
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("organisationUnits", params=params)
+
+            org_units = [format_unit(ou, fields) for ou in response.get("organisationUnits", [])]
+
+            return {"organisationUnits": org_units, "pager": response.get("pager", {})}
+
+        org_units = [
+            format_unit(ou, fields)
+            for page in self.client.api.get_paged("organisationUnits", params=params)
+            for ou in page.get("organisationUnits", [])
+        ]
+
         return org_units
 
-    def organisation_unit_groups(self, fields: str = "id,name,organisationUnits") -> List[dict]:
-        """Get organisation unit groups metadata.
-        Parameters
-        ----------
-        fields: str, optional
-            DHIS2 fields to include in the response, where default value is "id,name,organisationUnits"
-        Return
-        ------
-        list of dict
-            Id, name, and org units of all org unit groups.
-        """
-        org_unit_groups = []
-        for page in self.client.api.get_paged(
-            "organisationUnitGroups",
-            params={"fields": fields},
-        ):
-            groups = []
-            for group in page.get("organisationUnitGroups"):
-                groups.append(
-                    {
-                        key: group.get(key)
-                        if key != "organisationUnits"
-                        else [ou.get("id") for ou in group["organisationUnits"]]
-                        for key in fields.split(",")
-                    }
-                )
-            org_unit_groups += groups
-        return groups
-
-    def datasets(self, fields: str = "id,name,dataSetElements,indicators,organisationUnits") -> List[dict]:
-        """Get datasets metadata.
+    def organisation_unit_groups(
+        self,
+        fields: str = "id,name,organisationUnits",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get organisation unit groups metadata from DHIS2.
 
         Parameters
         ----------
         fields: str, optional
-            DHIS2 fields to include in the response, where default value is
-            "id,name,dataSetElements,indicators,organisationUnits"
-        Return
-        ------
-        list of dict
-            Id, name, data elements, indicators and org units of all datasets.
+            Comma-separated DHIS2 fields to include in the response (default: "id,name,organisationUnits").
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
+
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of organisation unit groups.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `organisationUnitGroups` and `pager`
+            for pagination.
         """
-        datasets = []
-        for page in self.client.api.get_paged(
-            "dataSets",
-            params={
-                "fields": fields,
-                "pageSize": 10,
-            },
-        ):
-            for ds in page["dataSets"]:
-                fields_list = fields.split(",")
-                row = {}
-                if "dataSetElements" in fields_list:
-                    row["data_elements"] = [dx["dataElement"]["id"] for dx in ds["dataSetElements"]]
-                    fields_list.remove("dataSetElements")
-                if "indicators" in fields_list:
-                    row["indicators"] = [indicator["id"] for indicator in ds["indicators"]]
-                    fields_list.remove("indicators")
-                if "organisationUnits" in fields_list:
-                    row["organisation_units"] = [ou["id"] for ou in ds["organisationUnits"]]
-                    fields_list.remove("organisationUnits")
-                row.update({key: ds.get(key) for key in fields_list})
-                datasets.append(row)
+
+        def format_unit_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            return {
+                key: group.get(key)
+                if key != "organisationUnits"
+                else [ou.get("id") for ou in group.get("organisationUnits", [])]
+                for key in fields.split(",")
+            }
+
+        params = {"fields": fields}
+
+        if filters:
+            params["filter"] = filters
+
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("organisationUnitGroups", params=params)
+
+            org_unit_groups = [format_unit_group(group, fields) for group in response.get("organisationUnitGroups", [])]
+
+            return {"organisationUnitGroups": org_unit_groups, "pager": response.get("pager", {})}
+
+        org_unit_groups = [
+            format_unit_group(group, fields)
+            for page in self.client.api.get_paged("organisationUnitGroups", params=params)
+            for group in page.get("organisationUnitGroups", [])
+        ]
+
+        return org_unit_groups
+
+    def datasets(
+        self,
+        fields: str = "id,name,dataSetElements,indicators,organisationUnits",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get datasets metadata from DHIS2.
+
+        Parameters
+        ----------
+        fields: str, optional
+            Comma-separated DHIS2 fields to include in the response.
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
+
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of datasets.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `dataSets` and `pager` for pagination.
+        """
+
+        def format_dataset(ds: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            fields_list = fields.split(",")
+            formatted_ds = {}
+
+            if "dataSetElements" in fields_list:
+                formatted_ds["data_elements"] = [dx["dataElement"]["id"] for dx in ds.get("dataSetElements", [])]
+                fields_list.remove("dataSetElements")
+            if "indicators" in fields_list:
+                formatted_ds["indicators"] = [indicator["id"] for indicator in ds.get("indicators", [])]
+                fields_list.remove("indicators")
+            if "organisationUnits" in fields_list:
+                formatted_ds["organisation_units"] = [ou["id"] for ou in ds.get("organisationUnits", [])]
+                fields_list.remove("organisationUnits")
+
+            formatted_ds.update({key: ds.get(key) for key in fields_list})
+            return formatted_ds
+
+        params = {"fields": fields}
+
+        if filters:
+            params["filter"] = filters
+
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("dataSets", params=params)
+
+            datasets = [format_dataset(ds, fields) for ds in response.get("dataSets", [])]
+
+            return {"dataSets": datasets, "pager": response.get("pager", {})}
+
+        datasets = [
+            format_dataset(ds, fields)
+            for page in self.client.api.get_paged("dataSets", params=params)
+            for ds in page.get("dataSets", [])
+        ]
+
         return datasets
 
     def data_elements(
-        self, fields: str = "id,name,aggregationType,zeroIsSignificant", filter: str = None
-    ) -> List[dict]:
-        """Get data elements metadata.
+        self,
+        fields: str = "id,name,aggregationType,zeroIsSignificant",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get data elements metadata from DHIS2.
 
         Parameters
         ----------
         fields: str, optional
-            DHIS2 fields to include in the response, where default value is "id,name,aggregationType,zeroIsSignificant"
-        filter: str, optional
-            DHIS2 query filter
+            Comma-separated DHIS2 fields to include in the response.
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
 
-        Return
-        ------
-        list of dict
-            Id, name, and aggregation type of all data elements.
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of data elements.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `dataElements` and `pager`
+            for pagination.
         """
+
+        def format_element(element: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            return {key: element.get(key) for key in fields.split(",")}
+
         params = {"fields": fields}
-        if filter:
-            params["filter"] = filter
-        elements = []
-        for page in self.client.api.get_paged(
-            "dataElements",
-            params=params,
-        ):
-            for element in page["dataElements"]:
-                elements.append({key: element.get(key) for key in params["fields"].split(",")})
+
+        if filters:
+            params["filter"] = filters
+
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("dataElements", params=params)
+
+            elements = [format_element(element, fields) for element in response.get("dataElements", [])]
+
+            return {"dataElements": elements, "pager": response.get("pager", {})}
+
+        elements = [
+            format_element(element, fields)
+            for page in self.client.api.get_paged("dataElements", params=params)
+            for element in page.get("dataElements", [])
+        ]
+
         return elements
 
-    def data_element_groups(self, fields: str = "id,name,dataElements") -> List[dict]:
-        """Get data element groups metadata.
+    def data_element_groups(
+        self,
+        fields: str = "id,name,dataElements",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get data element groups metadata from DHIS2.
+
         Parameters
         ----------
         fields: str, optional
-            DHIS2 fields to include in the response, where default value is "id,name,dataElements"
-        Return
-        ------
-        list of dict
-            Id, name and data elements of all data element groups.
+            Comma-separated DHIS2 fields to include in the response.
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
+
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of data element groups.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `dataElementGroups` and `pager`
+            for pagination.
         """
-        de_groups = []
-        for page in self.client.api.get_paged(
-            "dataElementGroups",
-            params={"fields": fields},
-        ):
-            groups = []
-            for group in page.get("dataElementGroups"):
-                groups.append(
-                    {
-                        key: group.get(key) if key != "dataElements" else [de.get("id") for de in group["dataElements"]]
-                        for key in fields.split(",")
-                    }
-                )
-            de_groups += groups
+
+        def format_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            return {
+                key: group.get(key) if key != "dataElements" else [de.get("id") for de in group.get("dataElements", [])]
+                for key in fields.split(",")
+            }
+
+        params = {"fields": fields}
+
+        if filters:
+            params["filter"] = filters
+
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("dataElementGroups", params=params)
+
+            de_groups = [format_group(group, fields) for group in response.get("dataElementGroups", [])]
+
+            return {"dataElementGroups": de_groups, "pager": response.get("pager", {})}
+
+        de_groups = [
+            format_group(group, fields)
+            for page in self.client.api.get_paged("dataElementGroups", params=params)
+            for group in page.get("dataElementGroups", [])
+        ]
+
         return de_groups
 
     def category_option_combos(self) -> List[dict]:
@@ -242,56 +379,120 @@ class Metadata:
             combos += page.get("categoryOptionCombos")
         return combos
 
-    def indicators(self, fields: str = "id,name,numerator,denominator", filter: str = None) -> List[dict]:
-        """Get indicators metadata.
+    def indicators(
+        self,
+        fields: str = "id,name,numerator,denominator",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get indicators metadata from DHIS2.
 
         Parameters
         ----------
-        filter: str, optional
-            DHIS2 query filter
+        fields: str, optional
+            Comma-separated DHIS2 fields to include in the response.
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
 
-        Return
-        ------
-        list of dict
-            Id, name, numerator and denominator of all indicators.
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of indicators.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `indicators` and `pager`
+            for pagination.
         """
+
+        def format_indicator(indicator: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            return {key: indicator.get(key) for key in fields.split(",")}
+
         params = {"fields": fields}
-        if filter:
-            params["filter"] = filter
-        indicators = []
-        for page in self.client.api.get_paged(
-            "indicators",
-            params=params,
-        ):
-            fields_list = fields.split(",")
-            for indicator in page["indicators"]:
-                indicators.append({key: indicator.get(key) for key in fields_list})
+
+        if filters:
+            params["filter"] = filters
+
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("indicators", params=params)
+
+            indicators = [format_indicator(indicator, fields) for indicator in response.get("indicators", [])]
+
+            return {"indicators": indicators, "pager": response.get("pager", {})}
+
+        indicators = [
+            format_indicator(indicator, fields)
+            for page in self.client.api.get_paged("indicators", params=params)
+            for indicator in page.get("indicators", [])
+        ]
+
         return indicators
 
-    def indicator_groups(self, fields: str = "id,name,indicators") -> List[dict]:
-        """Get indicator groups metadata.
+    def indicator_groups(
+        self,
+        fields: str = "id,name,indicators",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get indicator groups metadata from DHIS2.
 
-        Return
-        ------
-        list of dict
-            Id, name and indicators of all indicator groups.
+        Parameters
+        ----------
+        fields: str, optional
+            Comma-separated DHIS2 fields to include in the response.
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
+
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of indicator groups.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `indicatorGroups` and `pager`
+            for pagination.
         """
-        ind_groups = []
-        for page in self.client.api.get_paged(
-            "indicatorGroups",
-            params={"fields": fields},
-        ):
-            groups = []
-            for group in page.get("indicatorGroups"):
-                groups.append(
-                    {
-                        key: group.get(key)
-                        if key != "indicators"
-                        else [indicator.get("id") for indicator in group["indicators"]]
-                        for key in fields.split(",")
-                    }
-                )
-            ind_groups += groups
+
+        def format_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            """Helper function to format an indicator group."""
+            return {
+                key: group.get(key)
+                if key != "indicators"
+                else [indicator.get("id") for indicator in group.get("indicators", [])]
+                for key in fields.split(",")
+            }
+
+        params = {"fields": fields}
+
+        if filters:
+            params["filter"] = filters  # Handle filters correctly
+
+        # Paginated request (return dict with indicator groups & pager)
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("indicatorGroups", params=params)
+
+            ind_groups = [format_group(group, fields) for group in response.get("indicatorGroups", [])]
+
+            return {
+                "indicatorGroups": ind_groups,
+                "pager": response.get("pager", {}),  # Pager info for iteration
+            }
+
+        ind_groups = [
+            format_group(group, fields)
+            for page in self.client.api.get_paged("indicatorGroups", params=params)
+            for group in page.get("indicatorGroups", [])
+        ]
+
         return ind_groups
 
     @staticmethod
@@ -713,7 +914,7 @@ class DataValueSets:
         Parameters
         ----------
         data_values : list of dict
-            Data values as a list of dictionnaries with the following keys: dataElement,
+            Data values as a list of dictionaries with the following keys: dataElement,
             period, orgUnit, categoryOptionCombo, attributeOptionCombo, and value.
         import_strategy : str, optional (default="CREATE")
             CREATE, UPDATE, CREATE_AND_UPDATE, or DELETE
