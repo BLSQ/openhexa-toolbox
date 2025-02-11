@@ -461,7 +461,6 @@ class Metadata:
         """
 
         def format_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
-            """Helper function to format an indicator group."""
             return {
                 key: group.get(key)
                 if key != "indicators"
@@ -472,9 +471,8 @@ class Metadata:
         params = {"fields": fields}
 
         if filters:
-            params["filter"] = filters  # Handle filters correctly
+            params["filter"] = filters
 
-        # Paginated request (return dict with indicator groups & pager)
         if page and pageSize:
             params["page"] = page
             params["pageSize"] = pageSize
@@ -484,7 +482,7 @@ class Metadata:
 
             return {
                 "indicatorGroups": ind_groups,
-                "pager": response.get("pager", {}),  # Pager info for iteration
+                "pager": response.get("pager", {}),
             }
 
         ind_groups = [
