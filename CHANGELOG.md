@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.8.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.7.0...v1.8.0) (2025-02-11)
+
+
+### Features
+
+* **dhis2:** improves DHIS2 api pagination ([#97](https://github.com/BLSQ/openhexa-toolbox/issues/97)) ([fee5c13](https://github.com/BLSQ/openhexa-toolbox/commit/fee5c1383b6935b8a5f9faee6eb408507b9dbbd9))
+* **dhis2:** removes unnecessary comments ([fee5c13](https://github.com/BLSQ/openhexa-toolbox/commit/fee5c1383b6935b8a5f9faee6eb408507b9dbbd9))
+
+
+### Bug Fixes
+
+* **era5:** dont close tmp file before processing ([cb161a7](https://github.com/BLSQ/openhexa-toolbox/commit/cb161a7505933ee5d504e9f3e338456052ae0488))
+* **era5:** ignore nan measurements ([#91](https://github.com/BLSQ/openhexa-toolbox/issues/91)) ([64d5219](https://github.com/BLSQ/openhexa-toolbox/commit/64d5219245604cee7382aa46fb9c684e57f5b783))
+* **era5:** support zipped grib files ([#93](https://github.com/BLSQ/openhexa-toolbox/issues/93)) ([d838437](https://github.com/BLSQ/openhexa-toolbox/commit/d8384371513a79cd9b40a1072fd62684c086bb11))
+
 ## [1.7.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.6.3...v1.7.0) (2025-01-28)
 
 
