@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.8.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.8.0...v1.8.1) (2025-02-12)
+
+
+### Bug Fixes
+
+* **dhis2:** standardise repsonse for dict ([aef6008](https://github.com/BLSQ/openhexa-toolbox/commit/aef60087fb894808399b4604a23ea8cc5e20427e))
+* **dhis2:** standardise response for paged response ([#99](https://github.com/BLSQ/openhexa-toolbox/issues/99)) ([aef6008](https://github.com/BLSQ/openhexa-toolbox/commit/aef60087fb894808399b4604a23ea8cc5e20427e))
+* **era5:** dont close tmp file before processing ([#94](https://github.com/BLSQ/openhexa-toolbox/issues/94)) ([1de2f56](https://github.com/BLSQ/openhexa-toolbox/commit/1de2f561ece969c8689bffd01127780e11e1cd1d))
+
 ## [1.8.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.7.0...v1.8.0) (2025-02-11)
 
 
