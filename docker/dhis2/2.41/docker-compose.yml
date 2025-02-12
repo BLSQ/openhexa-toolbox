@@ -28,7 +28,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - db-dump:/docker-entrypoint-initdb.d/
+      - ./db-dump:/docker-entrypoint-initdb.d/
       - ./postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: dhis
@@ -52,7 +52,4 @@ services:
       DHIS2_DB_DUMP_URL: "https://databases.dhis2.org/sierra-leone/2.41.0/dhis2-db-sierra-leone.sql.gz"
     working_dir: /opt/dump
     volumes:
-      - db-dump:/opt/dump
-
-volumes:
-  db-dump: { }
+      - ./db-dump:/opt/dump
