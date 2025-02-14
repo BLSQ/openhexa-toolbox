@@ -169,7 +169,7 @@ def get_organisation_units(
         else:
             filters = [level_filter]
 
-    meta = dhis2.meta.organisation_units(fields="id,name,level,path,geometry", filters=filters)
+    meta = dhis2.meta.organisation_units(fields="id,name,level,path,openingDate,closedDate,geometry", filters=filters)
 
     schema = {"id": str, "name": str, "level": int, "path": str, "geometry": str}
     df = pl.DataFrame(data=meta, schema=schema)
@@ -237,6 +237,28 @@ def get_category_option_combos(dhis2: DHIS2, filters: list[str] | None = None) -
     meta = dhis2.meta.category_option_combos(filters=filters)
     schema = {"id": str, "name": str}
     df = pl.DataFrame(meta, schema=schema)
+    return df.sort(by="name")
+
+
+def get_attributes(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
+    """Extract attributes metadata.
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing attributes metadata with the following columns: id, name.
+    """
+    r = dhis2.api.get("attributes", params={"paging": False, "fields": "id,name", "filter": filters})
+    rows = r["attributes"]
+    schema = {"id": str, "name": str}
+    df = pl.DataFrame(rows, schema=schema)
     return df.sort(by="name")
 
 
