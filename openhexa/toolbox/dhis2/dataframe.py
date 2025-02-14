@@ -788,7 +788,7 @@ def extract_organisation_unit_attributes(dhis2: DHIS2) -> pl.DataFrame:
     schema = {
         "id": str,
         "name": str,
-        "attributeValues": pl.List[pl.Struct({"attribute": str, "value": str})],
+        "attributeValues": pl.List(pl.Struct({"attribute": pl.Struct({"id": str}), "value": str})),
     }
     org_units = pl.DataFrame(org_units, schema=schema)
 
