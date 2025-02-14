@@ -77,7 +77,7 @@ def test_data_elements_paged(version, con):
     api = DHIS2(con, cache_dir=None)
     r = api.meta.data_elements(page=2, pageSize=1000)
     assert r.get("pager") is not None
-    df = pl.DataFrame(r.get("dataElements"))
+    df = pl.DataFrame(r.get("items"))
     assert len(df) > 30
 
 
@@ -126,7 +126,7 @@ def test_organisation_units_paged(version, con):
     api = DHIS2(con, cache_dir=None)
     r = api.meta.organisation_units(page=2, pageSize=1000)
     assert r.get("pager") is not None
-    df = pl.DataFrame(r.get("organisationUnits"))
+    df = pl.DataFrame(r.get("items"))
     assert not df.is_empty()
 
 
