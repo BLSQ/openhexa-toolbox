@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.9.0...v1.9.1) (2025-02-14)
+
+
+### Documentation
+
+* **dhis2:** fix connection to dhis2 instance ([aeb946a](https://github.com/BLSQ/openhexa-toolbox/commit/aeb946a9292f3dea60e7a01b14ffae23f4bdb034))
+
 ## [1.9.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.8.1...v1.9.0) (2025-02-14)
 
 
