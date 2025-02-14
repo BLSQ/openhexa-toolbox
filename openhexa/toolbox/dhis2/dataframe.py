@@ -172,7 +172,15 @@ def get_organisation_units(
 
     meta = dhis2.meta.organisation_units(fields="id,name,level,path,openingDate,closedDate,geometry", filters=filters)
 
-    schema = {"id": str, "name": str, "level": int, "path": str, "geometry": str}
+    schema = {
+        "id": str,
+        "name": str,
+        "level": int,
+        "path": str,
+        "openingDate": str,
+        "closedDate": str,
+        "geometry": str,
+    }
     df = pl.DataFrame(data=meta, schema=schema)
 
     for row in levels.iter_rows(named=True):
@@ -192,7 +200,15 @@ def get_organisation_units(
             how="left",
         )
 
-    df = df.select("id", "name", "level", *[col for col in df.columns if col.startswith("level_")], "geometry")
+    df = df.select(
+        "id",
+        "name",
+        "level",
+        pl.col("openingDate").str.to_datetime("%Y-%m-%dT%H:%M:%S.%3f").alias("opening_date"),
+        pl.col("closedDate").str.to_datetime("%Y-%m-%dT%H:%M:%S.%3f").alias("closed_date"),
+        *[col for col in df.columns if col.startswith("level_")],
+        "geometry",
+    )
 
     return df.sort(by=["level", "name"], descending=False)
 
