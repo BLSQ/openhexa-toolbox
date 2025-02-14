@@ -816,3 +816,137 @@ def extract_organisation_unit_attributes(dhis2: DHIS2, attributes: pl.DataFrame)
     }
 
     return pl.DataFrame(rows, schema=schema)
+
+
+def get_programs(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
+    """Extract programs metadata.
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing programs metadata with the following columns: id, name.
+    """
+    rows = []
+    for page in dhis2.api.get_paged("programs", params={"fields": "id,name", "filter": filters}):
+        rows.extend(page["programs"])
+
+    schema = {"id": str, "name": str}
+    return pl.DataFrame(rows, schema=schema)
+
+
+def get_tracked_entity_types(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
+    """Extract tracked entity types metadata.
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing tracked entity types metadata with the following columns: id, name.
+    """
+    rows = []
+    for page in dhis2.api.get_paged("trackedEntityTypes", params={"fields": "id,name", "filter": filters}):
+        rows.extend(page["trackedEntityTypes"])
+
+    schema = {"id": str, "name": str}
+    return pl.DataFrame(rows, schema=schema)
+
+
+def extract_events(dhis2: DHIS2, program_id: str, org_unit_parents: list[str]) -> pl.DataFrame:
+    """Extract events data.
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    program_id : str
+        Program UID.
+    org_unit_parents : list[str]
+        Organisation unit parents UIDs. Event data will be extracted for all descendants of these
+        organisation units.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing events data with the following columns: event_id, program_id,
+        organisation_unit_id, tracked_entity_instance_id, event_date.
+    """
+    data = []
+    for org_unit in org_unit_parents:
+        params = {
+            "orgUnit": org_unit,
+            "program": program_id,
+            "ouMode": "DESCENDANTS",
+            "occurredAfter": "2025-04-01",
+            "occurredBefore": "2025-06-01",
+            "fields": "event,status,program,programStage,orgUnit,occurredAt,deleted,attributeOptionCombo,dataValues",
+        }
+        for page in dhis2.api.get_paged("tracker/events", params=params):
+            data.extend(page["instances"])
+
+    schema = {
+        "event": str,
+        "status": str,
+        "program": str,
+        "programStage": str,
+        "orgUnit": str,
+        "occurredAt": str,
+        "deleted": bool,
+        "attributeOptionCombo": str,
+        "dataValues": pl.List(pl.Struct({"dataElement": str, "value": str})),
+    }
+
+    df = pl.DataFrame(data, schema=schema)
+    df = df.select(
+        [
+            pl.col("event").alias("event_id"),
+            pl.col("status"),
+            pl.col("program").alias("program_id"),
+            pl.col("programStage").alias("program_stage_id"),
+            pl.col("orgUnit").alias("organisation_unit_id"),
+            pl.col("occurredAt").str.to_datetime("%Y-%m-%dT%H:%M:%S.%3f").alias("occurred_at"),
+            pl.col("deleted"),
+            pl.col("attributeOptionCombo").alias("attribute_option_combo_id"),
+            pl.col("dataValues"),
+        ]
+    )
+
+    # build a new dataframe with one row per event data value, instead of storing all data values
+    # in a column of type list[struct]
+
+    new_rows = []
+
+    for row in df.iter_rows(named=True):
+        new_row = {col: value for col, value in row.items() if col != "dataValues"}
+
+        for data_value in row["dataValues"]:
+            new_row["data_element_id"] = data_value["dataElement"]
+            new_row["value"] = data_value["value"]
+            new_rows.append(new_row)
+
+    schema = {
+        "event_id": str,
+        "status": str,
+        "program_id": str,
+        "program_stage_id": str,
+        "organisation_unit_id": str,
+        "occurred_at": pl.Datetime(time_unit="ms", time_zone="UTC"),
+        "deleted": bool,
+        "attribute_option_combo_id": str,
+        "data_element_id": str,
+        "value": str,
+    }
+
+    return pl.DataFrame(new_rows, schema=schema)
