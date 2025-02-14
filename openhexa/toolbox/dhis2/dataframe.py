@@ -768,15 +768,13 @@ def _extract_attribute_values(attribute_values: list[dict], mapping: dict) -> li
     return values
 
 
-def extract_organisation_unit_attributes(dhis2: DHIS2, attributes: pl.DataFrame) -> pl.DataFrame:
+def extract_organisation_unit_attributes(dhis2: DHIS2) -> pl.DataFrame:
     """Extract organisation unit attributes.
 
     Parameters
     ----------
     dhis2 : DHIS2
         DHIS2 instance.
-    attributes : pl.DataFrame
-        Dataframe containing attributes metadata with the following columns: id, name.
 
     Returns
     -------
@@ -784,6 +782,7 @@ def extract_organisation_unit_attributes(dhis2: DHIS2, attributes: pl.DataFrame)
         Dataframe containing organisation unit attributes with the following columns:
         organisation_unit_id, organisation_unit_name, attribute_id, attribute_name, value.
     """
+    attributes = get_attributes(dhis2)
     mapping = {attr["id"]: attr["name"] for attr in attributes.to_dicts()}
     org_units = dhis2.meta.organisation_units(fields="id,name,attributeValues")
     schema = {
