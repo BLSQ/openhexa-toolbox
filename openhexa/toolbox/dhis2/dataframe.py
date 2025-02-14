@@ -47,7 +47,8 @@ def get_datasets(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame
         organisation_units, data_elements, indicators, period_type.
     """
     meta = dhis2.meta.datasets(
-        fields="id,name,organisationUnits,dataSetElements,indicators,periodType,lastUpdated", filters=filters
+        fields="id,name,organisationUnits,dataSetElements,indicators,periodType,lastUpdated",
+        filters=filters,
     )
 
     schema = {
@@ -720,7 +721,98 @@ def import_data_values(
     ).to_dicts()
 
     report = dhis2.data_value_sets.post(
-        data_values=data_values, import_strategy=import_strategy, dry_run=dry_run, skip_validation=True
+        data_values=data_values,
+        import_strategy=import_strategy,
+        dry_run=dry_run,
+        skip_validation=True,
     )
 
     return report
+
+
+def _extract_attribute_values(attribute_values: list[dict], mapping: dict) -> list[dict]:
+    """Reshape attributeValue struct returned by the DHIS2 API and join attribute names.
+
+    Parameters
+    ----------
+    attribute_values : list[dict]
+        List of attribute values.
+    mapping : dict
+        Mapping of attribute IDs to attribute names.
+
+    Returns
+    -------
+    list[dict]
+        List of attribute values with the following keys: attribute_id, attribute_name, value
+    """
+    if attribute_values is None:
+        return None
+
+    values = []
+
+    for attribute in attribute_values:
+        attribute_id = attribute["attribute"]["id"]
+        attribute_name = mapping[attribute_id]
+
+        if attribute_id == "coordinates":
+            continue
+
+        values.append(
+            {
+                "attribute_id": attribute_id,
+                "attribute_name": attribute_name,
+                "value": attribute["value"],
+            }
+        )
+
+    return values
+
+
+def extract_organisation_unit_attributes(dhis2: DHIS2, attributes: pl.DataFrame) -> pl.DataFrame:
+    """Extract organisation unit attributes.
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    attributes : pl.DataFrame
+        Dataframe containing attributes metadata with the following columns: id, name.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing organisation unit attributes with the following columns:
+        organisation_unit_id, organisation_unit_name, attribute_id, attribute_name, value.
+    """
+    mapping = {attr["id"]: attr["name"] for attr in attributes.to_dicts()}
+    org_units = dhis2.meta.organisation_units(fields="id,name,attributeValues")
+    schema = {
+        "id": str,
+        "name": str,
+        "attributeValues": pl.List[pl.Struct({"attribute": str, "value": str})],
+    }
+    org_units = pl.DataFrame(org_units, schema=schema)
+
+    rows = []
+    for row in org_units.iter_rows(named=True):
+        attrs = _extract_attribute_values(row["attributeValues"], mapping)
+        for attr in attrs:
+            rows.append(
+                {
+                    "organisation_unit_id": row["id"],
+                    "organisation_unit_name": row["name"],
+                    "attribute_id": attr["attribute_id"],
+                    "attribute_name": attr["attribute_name"],
+                    "value": attr["value"],
+                }
+            )
+
+    schema = {
+        "organisation_unit_id": str,
+        "organisation_unit_name": str,
+        "attribute_id": str,
+        "attribute_name": str,
+        "value": str,
+    }
+
+    return pl.DataFrame(rows, schema=schema)
