@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.8.1...v1.9.0) (2025-02-14)
+
+
+### Features
+
+* **dhis2:** add dataframe API ([#100](https://github.com/BLSQ/openhexa-toolbox/issues/100)) ([cdd2b9d](https://github.com/BLSQ/openhexa-toolbox/commit/cdd2b9dac274203aff7034a1ad93032d40f805f0))
+
 ## [1.8.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.8.0...v1.8.1) (2025-02-12)
 
 
