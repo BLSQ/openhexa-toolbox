@@ -366,7 +366,7 @@ class Metadata:
 
         return de_groups
 
-    def category_option_combos(self, fields: str = "id,name", filters: list[str] | None = None) -> list[dict]:
+    def category_option_combos(self, fields: str = "id,name", filters: Optional[list[str]] = None) -> list[dict]:
         """Get category option combos metadata.
 
         Parameters
