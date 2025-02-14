@@ -118,11 +118,14 @@ The `dataframe` module provides opinionated functions to extract DHIS2 metadata 
 ##### [Datasets](#)
 
 ```python
+from openhexa.sdk import workspace
+
 from openhexa.toolbox.dhis2 import DHIS2
 from openhexa.toolbox.dhis2.dataframe import get_datasets
 
 # Initialize DHIS2 connection
-dhis2 = DHIS2(connection)
+con = workspace.dhis2_connection("my_dhis2_connection")
+dhis2 = DHIS2(con)
 
 # Get datasets metadata
 df = dataframe.get_datasets(dhis2)
