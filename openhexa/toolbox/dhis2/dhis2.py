@@ -2,7 +2,7 @@ import itertools
 import json
 import logging
 from pathlib import Path
-from typing import Iterator, List, Tuple, Union, Optional, Any, Dict
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import pandas as pd
 import polars as pl
@@ -366,8 +366,15 @@ class Metadata:
 
         return de_groups
 
-    def category_option_combos(self) -> List[dict]:
+    def category_option_combos(self, fields: str = "id,name", filters: Optional[list[str]] = None) -> list[dict]:
         """Get category option combos metadata.
+
+        Parameters
+        ----------
+        fields: str, optional
+            Comma-separated DHIS2 fields to include in the response.
+        filters: list of str, optional
+            DHIS2 query filters.
 
         Return
         ------
@@ -375,7 +382,12 @@ class Metadata:
             Id and name of all category option combos.
         """
         combos = []
-        for page in self.client.api.get_paged("categoryOptionCombos", params={"fields": "id,name"}):
+
+        params = {"fields": fields}
+        if filters:
+            params["filter"] = filters
+
+        for page in self.client.api.get_paged("categoryOptionCombos", params=params):
             combos += page.get("categoryOptionCombos")
         return combos
 
