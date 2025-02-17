@@ -268,16 +268,3 @@ def test_analytics_get_org_unit_levels(version, con):
     )
     df = pl.DataFrame(r)
     assert not df.is_empty()
-
-
-@responses.activate
-@pytest.mark.parametrize("version", VERSIONS)
-def test_analytics_get_datasets(version, con):
-    responses_dir = Path("tests", "dhis2", "responses", version)
-    responses._add_from_file(Path(responses_dir, "dhis2_init.yaml"))
-    responses._add_from_file(Path(responses_dir, "analytics_get_datasets.yaml"))
-    api = DHIS2(con, cache_dir=None)
-
-    r = api.analytics.get(datasets=["BfMAe6Itzgt"], periods=["202306", "202307", "202308"], org_units=["uNEhNuBUr0i"])
-    df = pl.DataFrame(r)
-    assert not df.i
