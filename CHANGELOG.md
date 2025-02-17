@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.10.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.9.0...v1.10.0) (2025-02-17)
+
+
+### Features
+
+* **dhis2:** add dates to event ([f37ad2f](https://github.com/BLSQ/openhexa-toolbox/commit/f37ad2f35f583f6bc2b13254ebd0ac431925f893))
+* **dhis2:** add dates to event ([f54c054](https://github.com/BLSQ/openhexa-toolbox/commit/f54c05425348046d0b28fe8b0d823b5a044db9dd))
+
+
+### Bug Fixes
+
+* **dhis2:** removed anamytics test ([1a31206](https://github.com/BLSQ/openhexa-toolbox/commit/1a3120664a4fc2969d752dfe3956d6dad105b6b8))
+* **dhis2:** removed unused imports ([40a2a21](https://github.com/BLSQ/openhexa-toolbox/commit/40a2a212281b781594dcde5efabf2985a96e1840))
+
+
+### Documentation
+
+* **dhis2:** fix connection to dhis2 instance ([aeb946a](https://github.com/BLSQ/openhexa-toolbox/commit/aeb946a9292f3dea60e7a01b14ffae23f4bdb034))
+
 ## [1.9.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.8.1...v1.9.0) (2025-02-14)
 
 
