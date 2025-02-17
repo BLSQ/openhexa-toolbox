@@ -879,7 +879,7 @@ def get_tracked_entity_types(dhis2: DHIS2, filters: list[str] | None = None) -> 
     return pl.DataFrame(rows, schema=schema)
 
 
-def extract_events(dhis2: DHIS2, program_id: str, org_unit_parents: list[str]) -> pl.DataFrame:
+def extract_events(dhis2: DHIS2, program_id: str, org_unit_parents: list[str], date_from :str="2025-01-01", date_to:str="2025-02-15" ) -> pl.DataFrame:
     """Extract events data.
 
     Parameters
@@ -904,8 +904,8 @@ def extract_events(dhis2: DHIS2, program_id: str, org_unit_parents: list[str]) -
             "orgUnit": org_unit,
             "program": program_id,
             "ouMode": "DESCENDANTS",
-            "occurredAfter": "2025-04-01",
-            "occurredBefore": "2025-06-01",
+            "occurredAfter": date_from,
+            "occurredBefore": date_to,
             "fields": "event,status,program,programStage,orgUnit,occurredAt,deleted,attributeOptionCombo,dataValues",
         }
         for page in dhis2.api.get_paged("tracker/events", params=params):
