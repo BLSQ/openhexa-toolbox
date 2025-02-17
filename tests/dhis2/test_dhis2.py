@@ -7,7 +7,6 @@ import responses
 
 from openhexa.toolbox.dhis2 import DHIS2
 from openhexa.toolbox.dhis2.api import DHIS2Error
-from openhexa.toolbox.dhis2 import dataframe
 
 VERSIONS = ["2.36", "2.37", "2.38", "2.39", "2.40", "2.41"]
 
