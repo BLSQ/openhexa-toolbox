@@ -879,7 +879,13 @@ def get_tracked_entity_types(dhis2: DHIS2, filters: list[str] | None = None) -> 
     return pl.DataFrame(rows, schema=schema)
 
 
-def extract_events(dhis2: DHIS2, program_id: str, org_unit_parents: list[str], date_from :str="2025-01-01", date_to:str="2025-02-15" ) -> pl.DataFrame:
+def extract_events(
+    dhis2: DHIS2,
+    program_id: str,
+    org_unit_parents: list[str],
+    date_from: str = "2025-01-01",
+    date_to: str = "2025-02-15",
+) -> pl.DataFrame:
     """Extract events data.
 
     Parameters

@@ -279,9 +279,6 @@ def test_analytics_get_datasets(version, con):
     responses._add_from_file(Path(responses_dir, "analytics_get_datasets.yaml"))
     api = DHIS2(con, cache_dir=None)
 
-    r = api.analytics.get(
-        datasets=["BfMAe6Itzgt"], periods=["202306", "202307", "202308"], org_units=["uNEhNuBUr0i"]
-    )
+    r = api.analytics.get(datasets=["BfMAe6Itzgt"], periods=["202306", "202307", "202308"], org_units=["uNEhNuBUr0i"])
     df = pl.DataFrame(r)
     assert not df.i
-
