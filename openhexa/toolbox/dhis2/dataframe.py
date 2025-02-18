@@ -883,8 +883,8 @@ def extract_events(
     dhis2: DHIS2,
     program_id: str,
     org_unit_parents: list[str],
-    date_from: str = "2025-01-01",
-    date_to: str = "2025-02-15",
+    occurred_after: str | None = None,
+    occurred_before: str | None = None,
 ) -> pl.DataFrame:
     """Extract events data.
 
@@ -897,6 +897,10 @@ def extract_events(
     org_unit_parents : list[str]
         Organisation unit parents UIDs. Event data will be extracted for all descendants of these
         organisation units.
+    occurred_after : str, optional
+        Start date in the format "YYYY-MM-DD".
+    occurred_before : str, optional
+        End date in the format "YYYY-MM-DD".
 
     Returns
     -------
@@ -910,10 +914,12 @@ def extract_events(
             "orgUnit": org_unit,
             "program": program_id,
             "ouMode": "DESCENDANTS",
-            "occurredAfter": date_from,
-            "occurredBefore": date_to,
             "fields": "event,status,program,programStage,orgUnit,occurredAt,deleted,attributeOptionCombo,dataValues",
         }
+        if occurred_after:
+            params["occurredAfter"] = occurred_after
+        if occurred_before:
+            params["occurredBefore"] = occurred_before
         for page in dhis2.api.get_paged("tracker/events", params=params):
             data.extend(page["instances"])
 

@@ -528,8 +528,20 @@ Returns a DataFrame with columns:
 ```python
 df = dataframe.extract_events(
     dhis2,
-    program="uy2gU8kT1jF",
+    program_id="lxAQ7Zs9VYR",
     org_units=["ImspTQPwCqd"],  # Country org unit ID
+)
+```
+
+Or to filter by occurred date:
+
+```python
+df = dataframe.extract_events(
+    dhis2,
+    program_id="lxAQ7Zs9VYR",
+    org_units=["ImspTQPwCqd"],  # Country org unit ID
+    occurred_after="2024-01-01",
+    occurred_before="2025-01-01"
 )
 ```
 
