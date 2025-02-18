@@ -956,9 +956,8 @@ def extract_events(
     new_rows = []
 
     for row in df.iter_rows(named=True):
-        new_row = {col: value for col, value in row.items() if col != "dataValues"}
-
         for data_value in row["dataValues"]:
+            new_row = {col: value for col, value in row.items() if col != "dataValues"}
             new_row["data_element_id"] = data_value["dataElement"]
             new_row["value"] = data_value["value"]
             new_rows.append(new_row)
