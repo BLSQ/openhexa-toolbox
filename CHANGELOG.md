@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.10.0...v1.11.0) (2025-02-18)
+
+
+### Features
+
+* **dhis2:** add occurred_after and occurred_before parameters ([f6fbf88](https://github.com/BLSQ/openhexa-toolbox/commit/f6fbf8880cc86703f84bf9be24f947101f9080ef))
+
 ## [1.10.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.9.0...v1.10.0) (2025-02-17)
 
 
