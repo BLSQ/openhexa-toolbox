@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.11.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.0...v1.11.1) (2025-02-18)
+
+
+### Bug Fixes
+
+* **dhis2:** only the last event data value is returned ([2630d0b](https://github.com/BLSQ/openhexa-toolbox/commit/2630d0ba46dfa9c01afc7fcf0e642b30105f2a1f))
+
+
+### Documentation
+
+* **dhis2:** fix extract_events function signature ([05fddd6](https://github.com/BLSQ/openhexa-toolbox/commit/05fddd6261bd3deb418f4a7ad9fd562496c25366))
+
 ## [1.11.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.10.0...v1.11.0) (2025-02-18)
 
 
