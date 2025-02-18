@@ -1217,7 +1217,7 @@ class Analytics:
             include_cocs=include_cocs,
         )
 
-        params = {"dimension": dimension, "paging": True, "ignoreLimit": True}
+        params = {"dimension": dimension, "paging": True, "ignoreLimit": True, "skipMeta": True}
         params = self.split_params(params)
 
         responses = []
