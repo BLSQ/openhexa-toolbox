@@ -143,8 +143,8 @@ class Api:
         elif "pageCount" in r:
             page_count = r["pageCount"]
             while params["page"] < page_count:
-                r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
                 params["page"] += 1
+                r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
                 yield r
 
     @staticmethod
