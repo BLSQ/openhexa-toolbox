@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.5](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.4...v1.11.5) (2025-02-19)
+
+
+### Bug Fixes
+
+* **dhis2:** initialize page parameter for Tracker api calls ([731894f](https://github.com/BLSQ/openhexa-toolbox/commit/731894f6772e3ed6a34f0edd19698cf59ff5a0fc))
+
 ## [1.11.4](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.3...v1.11.4) (2025-02-19)
 
 
