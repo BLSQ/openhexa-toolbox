@@ -123,6 +123,10 @@ class Api:
             params = {}
         params["pageSize"] = self.PAGE_SIZE
 
+        if "tracker" in endpoint:
+            params["page"] = 1
+            params["totalPages"] = True
+
         # 1st page
         r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
         yield r
@@ -137,10 +141,8 @@ class Api:
         # Tracker API do not have any pager
         # instead, check for a pageCount key and use that to check if there are more pages
         elif "pageCount" in r:
-            if "page" not in params:
-                params["page"] = 1
             page_count = r["pageCount"]
-            while params["page"] <= page_count:
+            while params["page"] < page_count:
                 r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
                 params["page"] += 1
                 yield r
