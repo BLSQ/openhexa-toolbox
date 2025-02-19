@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.4](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.3...v1.11.4) (2025-02-19)
+
+
+### Bug Fixes
+
+* **dhis2:** enable totalPages param to Tracker API calls ([6674e5f](https://github.com/BLSQ/openhexa-toolbox/commit/6674e5f83e465700947a80758cd66a2b6a0fa296))
+
 ## [1.11.3](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.2...v1.11.3) (2025-02-19)
 
 
