@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.3](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.2...v1.11.3) (2025-02-19)
+
+
+### Bug Fixes
+
+* **dhis2:** also get last response page ([1bbf869](https://github.com/BLSQ/openhexa-toolbox/commit/1bbf8694c8aab6a8a17685390ecea371e796a071))
+
 ## [1.11.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.1...v1.11.2) (2025-02-19)
 
 
