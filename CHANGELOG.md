@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.2](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.1...v1.11.2) (2025-02-19)
+
+
+### Bug Fixes
+
+* **dhis2:** support Tracker API pager ([542179a](https://github.com/BLSQ/openhexa-toolbox/commit/542179a1a462affedc750c3d2d91eeb1b82c4893))
+
 ## [1.11.1](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.0...v1.11.1) (2025-02-18)
 
 
