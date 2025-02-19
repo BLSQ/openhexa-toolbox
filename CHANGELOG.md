@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.7](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.6...v1.11.7) (2025-02-19)
+
+
+### Bug Fixes
+
+* **dhis2:** do not request 1st page twice ([e6ec441](https://github.com/BLSQ/openhexa-toolbox/commit/e6ec44129d5f87d130a4a01c1b8f84687f67ea3b))
+
 ## [1.11.6](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.5...v1.11.6) (2025-02-19)
 
 
