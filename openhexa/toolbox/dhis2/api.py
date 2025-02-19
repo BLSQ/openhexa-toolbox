@@ -137,6 +137,8 @@ class Api:
         # Tracker API do not have any pager
         # instead, check for a pageCount key and use that to check if there are more pages
         elif "pageCount" in r:
+            if "page" not in params:
+                params["page"] = 1
             page_count = r["pageCount"]
             while params["page"] <= page_count:
                 r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
