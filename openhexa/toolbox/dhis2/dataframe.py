@@ -915,6 +915,7 @@ def extract_events(
             "program": program_id,
             "ouMode": "DESCENDANTS",
             "fields": "event,status,program,programStage,orgUnit,occurredAt,deleted,attributeOptionCombo,dataValues",
+            "totalPages": True,
         }
         if occurred_after:
             params["occurredAfter"] = occurred_after
