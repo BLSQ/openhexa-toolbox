@@ -138,7 +138,7 @@ class Api:
         # instead, check for a pageCount key and use that to check if there are more pages
         elif "pageCount" in r:
             page_count = r["pageCount"]
-            while params["page"] < page_count:
+            while params["page"] <= page_count:
                 r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
                 params["page"] += 1
                 yield r
