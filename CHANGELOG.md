@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.8](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.7...v1.11.8) (2025-03-10)
+
+
+### Bug Fixes
+
+* **kobo:** include null columns in dataframe output ([#116](https://github.com/BLSQ/openhexa-toolbox/issues/116)) ([d1c27d0](https://github.com/BLSQ/openhexa-toolbox/commit/d1c27d04a8723bb4269a334b34b8dca9f11869ac))
+
 ## [1.11.7](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.6...v1.11.7) (2025-02-19)
 
 
