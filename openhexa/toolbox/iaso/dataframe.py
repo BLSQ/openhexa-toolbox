@@ -1,3 +1,5 @@
+"""A set of opinionated functions to extract data and metadata from a IASO account into dataframes."""
+
 import json
 from datetime import datetime, timezone
 from typing import Iterable
