@@ -64,6 +64,14 @@ def to_dataframe(survey: Survey) -> pl.DataFrame:
     """Get survey data as a polars dataframe."""
     rows = survey.get_data()
     df = pl.DataFrame(rows)
+
+    # columns with no data in the survey are not returned by the api
+    # add the missing columns as String with only null values
+    for field in survey.fields:
+        if field.type in ("text", "select_one", "select_multiple", "decimal", "integer", "date", "calculate"):
+            if field.xpath not in df.columns:
+                df = df.with_columns(pl.lit(None).cast(pl.String).alias(field.xpath))
+
     df = rename_columns(df)  # use kobo field names
     df = cast_values(df, survey)  # use kobo field types
     return df
