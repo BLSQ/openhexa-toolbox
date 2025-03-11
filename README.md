@@ -34,3 +34,17 @@ pip install openhexa.toolbox
 [**openhexa.toolbox.kobo**](docs/kobo.md) - Acquire and process submissions from KoboToolbox instances <br>
 [**openhexa.toolbox.hexa**](docs/hexa.md) - Interact with OpenHEXA API <br>
 [**openhexa.toolbox.ERA**](openhexa/toolbox/era5/README.md) - Acquire and process data from ERA5
+
+
+## Release
+ 
+This project uses [release-please](https://github.com/googleapis/release-please) to manage releases using conventional commits.
+
+To release a new version:
+
+1. You need to have a least a commit with a conventional commit message (`feat|fix`) since the last release.
+2. release-please will create a new release PR on GitHub.
+3. Once the PR is merged, release-please will create a new release on GitHub.
+4. A GitHub action will build the package on github release creation and upload it to PyPI and Anaconda.
+
+
