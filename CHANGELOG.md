@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.12.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.8...v1.12.0) (2025-03-11)
+
+
+### Features
+
+* Push on anaconda from this github repository ([5e3cd5d](https://github.com/BLSQ/openhexa-toolbox/commit/5e3cd5d71a56207708db731a2a789e38d647f6bc))
+
+
+### Bug Fixes
+
+* fix warning for release-please ([ca7fc42](https://github.com/BLSQ/openhexa-toolbox/commit/ca7fc42d80ac5527399032ccc7aa4229e7a5c55d))
+* Use another way to set the version for the conda package to avoid having the v in the version ([66739b5](https://github.com/BLSQ/openhexa-toolbox/commit/66739b59c6b1bbccd1ff115180bfd3fc0ace000e))
+
 ## [1.11.8](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.7...v1.11.8) (2025-03-10)
 
 
