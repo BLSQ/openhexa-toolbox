@@ -27,7 +27,13 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
-      
+
+      - name: Extract latest version from release files
+        run: |
+          VERSION=$(python -c "from importlib.metadata import version; print(version('openhexa.toolbox'))")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"  
+
       - name: Conda environment creation and activation
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -43,6 +49,7 @@ jobs:
         shell: bash -l {0}
         working-directory: recipe
         env:
+          VERSION: ${{ env.VERSION }}
           ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
           conda config --set anaconda_upload yes
