@@ -1,0 +1,53 @@
+package:
+  name: "openhexa.toolbox"
+  version: {{ GIT_DESCRIBE_TAG }}
+
+source:
+  path: ..
+
+build:
+  entry_points:
+    - openhexa = openhexa.cli:app
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  number: 0
+requirements:
+  host:
+    - python >=3.9,<3.15
+    - setuptools
+    - wheel
+    - pip
+  run:
+    - python>=3.9,<3.15
+    - requests
+    - python-dateutil
+    - pandas
+    - shapely
+    - geopandas
+    - polars
+    - diskcache
+    - pyjwt
+    - cdsapi >=0.7.3
+    - cads-api-client >=1.4.0
+    - rasterio
+    - cfgrib
+    - xarray
+    - epiweeks
+
+test:
+  imports:
+    - openhexa.toolbox
+  commands:
+    - pip check
+  requires:
+    - pip
+
+about:
+  summary: A set of tools to acquire & process data from various sources
+  home: https://github.com/blsq/openhexa-toolbox
+  license: 'MIT'
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    - blsq
