@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.12.0...v1.13.0) (2025-03-12)
+
+
+### Features
+
+* **iaso:** add dataframe API ([#115](https://github.com/BLSQ/openhexa-toolbox/issues/115)) ([5125d49](https://github.com/BLSQ/openhexa-toolbox/commit/5125d49f845cc8ac0dca7870e48151dcfa5ba273))
+
 ## [1.12.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.11.8...v1.12.0) (2025-03-11)
 
 
