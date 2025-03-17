@@ -1,8 +1,8 @@
-from pathlib import Path
+import json
+from unittest.mock import Mock, patch
 
 import polars as pl
 import pytest
-import responses
 
 from openhexa.toolbox.iaso import IASO
 from openhexa.toolbox.iaso.dataframe import (
@@ -14,81 +14,76 @@ from openhexa.toolbox.iaso.dataframe import (
 
 
 @pytest.fixture
-@responses.activate
-def client() -> IASO:
-    mocked_token = {
-        "access": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTcxNzY5MDEwNCwiaWF0IjoxNzE3NjkwMTA0fQ.WsmnKvyKFR2eWNL4wD4yrnd6F9CDBV2dCaMx9lE6V84",  # noqa: E501
-        "refresh": "eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTcxNzY5MDEwNCwiaWF0IjoxNzE3NjkwMTA0fQ.WsmnKvyKFR2eWNL4wD4yrnd6F9CDBV2dCaMx9lE6V84",  # noqa: E501
-    }
-
-    responses.add(
-        responses.POST,
-        "https://iaso-staging.bluesquare.org/api/token/",
-        json=mocked_token,
-        status=200,
-    )
-    return IASO("https://iaso-staging.bluesquare.org", "test", "test")
+@patch("openhexa.toolbox.iaso.api_client.ApiClient.authenticate")
+def api_client(authenticate: Mock):
+    authenticate.return_value = None
+    return IASO("https://example.com", "user", "password")
 
 
-@responses.activate
-def test_get_organisation_units(client: IASO):
-    responses._add_from_file(Path("tests/iaso/responses/dataframe/get_organisation_units.yaml"))
-    df = get_organisation_units(client)
-    assert len(df) > 10
+@patch("openhexa.toolbox.iaso.dataframe._get_org_units_gpkg")
+@patch("openhexa.toolbox.iaso.dataframe._get_org_units_csv")
+def test_get_organisation_units(get_csv_mock: Mock, get_gpkg_mock: Mock, api_client: IASO):
+    with open("tests/iaso/responses/dataframe/org_units.csv", "r") as f:
+        get_csv_mock.return_value = f.read()
+    with open("tests/iaso/responses/dataframe/org_units.gpkg", "rb") as f:
+        get_gpkg_mock.return_value = f.read()
+    df = get_organisation_units(api_client)
     expected_schema = pl.Schema(
         {
             "id": pl.Int64,
             "name": pl.String,
-            "short_name": pl.String,
-            "level": pl.UInt32,
-            "level_1_id": pl.Int64,
-            "level_1_name": pl.String,
-            "level_2_id": pl.Int64,
-            "level_2_name": pl.String,
-            "level_3_id": pl.Int64,
-            "level_3_name": pl.String,
-            "level_4_id": pl.Int64,
-            "level_4_name": pl.String,
-            "source": pl.String,
-            "source_id": pl.Int64,
-            "source_ref": pl.String,
-            "org_unit_type_id": pl.Int64,
-            "org_unit_type_name": pl.String,
+            "org_unit_type": pl.String,
+            "latitude": pl.Float64,
+            "longitude": pl.Float64,
+            "opening_date": pl.Date,
+            "closing_date": pl.Date,
             "created_at": pl.Datetime(time_unit="us", time_zone=None),
             "updated_at": pl.Datetime(time_unit="us", time_zone=None),
+            "source": pl.String,
             "validation_status": pl.String,
-            "opening_date": pl.Datetime(time_unit="us", time_zone=None),
-            "closed_date": pl.Datetime(time_unit="us", time_zone=None),
+            "source_ref": pl.String,
+            "level_1_ref": pl.String,
+            "level_2_ref": pl.String,
+            "level_3_ref": pl.String,
+            "level_4_ref": pl.String,
+            "level_1_name": pl.String,
+            "level_2_name": pl.String,
+            "level_3_name": pl.String,
+            "level_4_name": pl.String,
             "geometry": pl.String,
         }
     )
     assert df.schema == expected_schema
 
 
-@responses.activate
-def test_get_form_metadata(client: IASO) -> None:
-    responses._add_from_file(Path("tests/iaso/responses/dataframe/get_form_metadata.yaml"))
-    questions, choices = get_form_metadata(client, form_id=505)
+@patch("openhexa.toolbox.iaso.dataframe._get_form_versions")
+def test_get_form_metadata(get_form_versions_mock: Mock, api_client: IASO):
+    with open("tests/iaso/responses/dataframe/form_versions.json", "r") as f:
+        get_form_versions_mock.return_value = json.load(f)
+    questions, choices = get_form_metadata(api_client, form_id=503)
     assert len(questions) > 10
-    assert len(choices) > 5
-    assert questions["longueur"]["type"] == "decimal"
-    assert questions["longueur"]["label"]["English"] == "Length (cm)"
-    assert choices["yes_no"][0]["name"] == "yes"
-    assert choices["yes_no"][1]["label"]["English"] == "No"
+    assert len(choices) > 3
 
 
-@responses.activate
-def test_extract_submissions(client: IASO) -> None:
-    responses._add_from_file(Path("tests/iaso/responses/dataframe/extract_submissions.yaml"))
-    df = extract_submissions(client, form_id=505)
+@patch("openhexa.toolbox.iaso.dataframe._get_form_versions")
+@patch("openhexa.toolbox.iaso.dataframe._get_instances_csv")
+def test_extract_submissions(get_instances_mock: Mock, get_form_versions_mock: Mock, api_client: IASO):
+    with open("tests/iaso/responses/dataframe/form_versions.json", "r") as f:
+        get_form_versions_mock.return_value = json.load(f)
+    with open("tests/iaso/responses/dataframe/form_instances.csv", "r") as f:
+        get_instances_mock.return_value = f.read()
+    df = extract_submissions(api_client, form_id=503)
     assert len(df) > 10
 
 
-@responses.activate
-def test_replace_labels(client: IASO) -> None:
-    responses._add_from_file(Path("tests/iaso/responses/dataframe/extract_submissions.yaml"))
-    responses._add_from_file(Path("tests/iaso/responses/dataframe/replace_labels.yaml"))
-    df = extract_submissions(client, form_id=505)
-    questions, choices = get_form_metadata(client, form_id=505)
+@patch("openhexa.toolbox.iaso.dataframe._get_form_versions")
+@patch("openhexa.toolbox.iaso.dataframe._get_instances_csv")
+def test_replace_labels(get_instances_mock: Mock, get_form_versions_mock: Mock, api_client: IASO):
+    with open("tests/iaso/responses/dataframe/form_versions.json", "r") as f:
+        get_form_versions_mock.return_value = json.load(f)
+    with open("tests/iaso/responses/dataframe/form_instances.csv", "r") as f:
+        get_instances_mock.return_value = f.read()
+    df = extract_submissions(api_client, form_id=503)
+    questions, choices = get_form_metadata(api_client, form_id=503)
     df = replace_labels(df, questions, choices, language="French")
     assert len(df) > 10

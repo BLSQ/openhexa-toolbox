@@ -3,77 +3,57 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
+from io import BytesIO, StringIO
 from typing import Iterable
 
+import fiona
 import polars as pl
 
 from openhexa.toolbox.iaso import IASO
 
 
-def _get_parents(org_unit_id: int, mapping: dict[int, int]) -> list[int]:
-    """Get the list of parent org units.
+def _get_org_units_csv(iaso: IASO) -> str:
+    """Extract org units in CSV format."""
+    r = iaso.api_client.get(url="api/orgunits", params={"csv": True}, stream=True, timeout=30)
+    r.raise_for_status()
+    return r.content.decode("utf8")
+
+
+def _get_org_units_gpkg(iaso: IASO) -> bytes:
+    """Extract org units in GPKG format."""
+    r = iaso.api_client.get(url="api/orgunits", params={"gpkg": True}, stream=True, timeout=30)
+    r.raise_for_status()
+    return r.content
+
+
+def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
+    """Get the org units geometries from IASO.
+
+    Org unit geometries are absent from the CSV export, so we need to fetch them separately.
 
     Parameters
     ----------
-    org_unit_id: int
-        The org unit id.
-    mapping: dict[int, int]
-        A mapping of org unit ids to their parent ids.
+    iaso: IASO
+        The IASO client.
 
     Returns
     -------
-    list[int]
-        The list of parent org unit ids.
+    dict[int, str]
+        A dict with org unit ids as keys and GeoJSON geometries as values.
     """
-    if not mapping.get(org_unit_id):
-        return []
-    parents = [mapping.get(org_unit_id)]
-    while mapping.get(parents[-1]):
-        parents.append(mapping[parents[-1]])
-    return reversed(parents)
-
-
-def _add_hierarchy_levels(org_units: pl.DataFrame) -> pl.DataFrame:
-    """Add id ane name columns for each level of the hierarchy.
-
-    Parameters
-    ----------
-    org_units: pl.DataFrame
-        The org units dataframe.
-
-    Returns
-    -------
-    pl.DataFrame
-        The org units dataframe with the hierarchy levels.
-    """
-    mapping = {row["id"]: row["parent_id"] for row in org_units.iter_rows(named=True)}
-
-    # store list of parent ids in a column
-    df = org_units.with_columns(
-        pl.col("id").map_elements(lambda x: _get_parents(x, mapping), return_dtype=pl.List(int)).alias("parents")
-    )
-
-    # number of hierarchy levels defined as max number of parents
-    levels = df["parents"].list.len().max()
-
-    # add id and name columns for each level
-    for lvl in range(1, levels + 1):
-        df = df.with_columns(
-            [
-                pl.col("parents").list.get(lvl - 1, null_on_oob=True).alias(f"level_{lvl}_id"),
-            ]
-        )
-        df = df.join(
-            other=df.select(pl.col("id").alias(f"level_{lvl}_id"), pl.col("name").alias(f"level_{lvl}_name")),
-            on=f"level_{lvl}_id",
-            how="left",
-        )
-
-    # add a column with the org unit level in the hierarchy
-    df = df.with_columns(pl.col("parents").list.len().alias("level") + 1)
-
-    return df
+    gpkg = _get_org_units_gpkg(iaso)
+    features = {}
+    layers = fiona.listlayers(BytesIO(gpkg))
+    for layer in layers:
+        with fiona.open(BytesIO(gpkg), layer=layer) as src:
+            for feature in src:
+                if not feature.geometry:
+                    continue
+                ou_id = int(feature["properties"]["id"])
+                geom = json.dumps(feature["geometry"].__geo_interface__)
+                features[ou_id] = geom
+    return features
 
 
 def get_organisation_units(iaso: IASO) -> pl.DataFrame:
@@ -89,82 +69,33 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
     pl.DataFrame
         The organisation units dataframe.
     """
-    r = iaso.api_client.get("/api/orgunits", params={"withShapes": True})
-    r.raise_for_status()
+    csv = _get_org_units_csv(iaso)
+    df = pl.read_csv(StringIO(csv))
 
-    rows = []
-    for ou in r.json()["orgUnits"]:
-        row = {
-            "id": ou["id"],
-            "name": ou["name"],
-            "short_name": ou.get("short_name"),
-            "source": ou.get("source"),
-            "source_id": ou.get("source_id"),
-            "source_ref": ou.get("source_ref"),
-            "parent_id": ou.get("parent_id"),
-            "org_unit_type_id": ou.get("org_unit_type_id"),
-            "org_unit_type_name": ou.get("org_unit_type_name"),
-            "created_at": datetime.fromtimestamp(ou["created_at"], tz=timezone.utc),
-            "updated_at": datetime.fromtimestamp(ou["updated_at"], tz=timezone.utc),
-            "validation_status": ou.get("validation_status"),
-        }
-
-        if ou.get("opening_date"):
-            row["opening_date"] = datetime.strptime(ou["opening_date", "%d/%m/%Y"])
-        else:
-            row["opening_date"] = None
-
-        if ou.get("closed_date"):
-            row["closed_date"] = datetime.strptime(ou["closed_date"], "%d/%m/%Y")
-        else:
-            row["closed_date"] = None
-
-        if ou.get("geo_json"):
-            row["geometry"] = json.dumps(ou["geo_json"]["features"][0]["geometry"])
-        else:
-            row["geometry"] = None
-
-        rows.append(row)
-
-    schema = {
-        "id": int,
-        "name": str,
-        "short_name": str,
-        "source": str,
-        "source_id": int,
-        "source_ref": str,
-        "parent_id": int,
-        "org_unit_type_id": int,
-        "org_unit_type_name": str,
-        "created_at": datetime,
-        "updated_at": datetime,
-        "validation_status": str,
-        "opening_date": datetime,
-        "closed_date": datetime,
-        "geometry": str,
-    }
-
-    df = pl.DataFrame(rows, schema=schema)
-    df = _add_hierarchy_levels(df)
     df = df.select(
-        [
-            "id",
-            "name",
-            "short_name",
-            "level",
-            *[col for col in df.columns if col.startswith("level_")],
-            "source",
-            "source_id",
-            "source_ref",
-            "org_unit_type_id",
-            "org_unit_type_name",
-            "created_at",
-            "updated_at",
-            "validation_status",
-            "opening_date",
-            "closed_date",
-            "geometry",
-        ]
+        pl.col("ID").alias("id"),
+        pl.col("Nom").alias("name"),
+        pl.col("Type").alias("org_unit_type"),
+        pl.col("Latitude").alias("latitude"),
+        pl.col("Longitude").alias("longitude"),
+        pl.col("Date d'ouverture").str.to_date("%Y-%m-%d").alias("opening_date"),
+        pl.col("Date de fermeture").str.to_date("%Y-%m-%d").alias("closing_date"),
+        pl.col("Date de création").str.to_datetime("%Y-%m-%d %H:%M").alias("created_at"),
+        pl.col("Date de modification").str.to_datetime("%Y-%m-%d %H:%M").alias("updated_at"),
+        pl.col("Source").alias("source"),
+        pl.col("Validé").alias("validation_status"),
+        pl.col("Référence externe").alias("source_ref"),
+        *[
+            pl.col(f"Ref Ext parent {lvl}").alias(f"level_{lvl}_ref")
+            for lvl in range(1, 10)
+            if f"Ref Ext parent {lvl}" in df.columns
+        ],
+        *[pl.col(f"parent {lvl}").alias(f"level_{lvl}_name") for lvl in range(1, 10) if f"parent {lvl}" in df.columns],
+    )
+
+    geoms = _get_org_units_geometries(iaso)
+    df = df.with_columns(
+        pl.col("id").map_elements(lambda x: geoms.get(x, None), return_dtype=pl.String).alias("geometry")
     )
 
     return df
@@ -176,6 +107,13 @@ def _iter_children(children: list[dict]) -> Iterable[dict]:
             yield child
             if child.get("children"):
                 yield from _iter_children(child["children"])
+
+
+def _get_form_versions(iaso: IASO, form_id: int) -> dict:
+    """Extract form versions metadata from IASO."""
+    r = iaso.api_client.get(url="api/formversions", params={"form_id": form_id, "fields": "descriptor"}, timeout=5)
+    r.raise_for_status()
+    return r.json()
 
 
 def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
@@ -199,11 +137,8 @@ def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     tuple[dict, dict]
         The questions and choices metadata.
     """
-    params = {"form_id": form_id, "fields": "descriptor"}
-    r = iaso.api_client.get("/api/formversions", params=params, timeout=3)
-    r.raise_for_status()
-
-    descriptor = r.json()["form_versions"][0]["descriptor"]
+    form_versions = _get_form_versions(iaso=iaso, form_id=form_id)
+    descriptor = form_versions["form_versions"][0]["descriptor"]
 
     questions = {}
     for child in _iter_children(descriptor["children"]):
@@ -220,39 +155,14 @@ def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     return questions, choices
 
 
-def _get_instances(iaso: IASO, form_id: int, last_updated: str | None = None) -> list[dict]:
-    """Get submissions instances for a IASO form.
-
-    Parameters
-    ----------
-    iaso: IASO
-        The IASO client.
-    form_id: int
-        The form id.
-    last_updated: str, optional
-        The last updated date in ISO format.
-
-    Returns
-    -------
-    list[dict]
-        List of submissions as dicts.
-    """
-    instances = []
-    has_next = True
-
-    params = {"form_id": form_id, "page": 1, "limit": 10}
-
-    if last_updated:
+def _get_instances_csv(iaso: IASO, form_id: int, last_updated: str | None = None) -> str:
+    """Extract form instances in CSV format."""
+    params = {"form_id": form_id, "csv": True}
+    if last_updated is not None:
         params["modificationDateFrom"] = last_updated
-
-    while has_next:
-        r = iaso.api_client.get("/api/instances", params=params, timeout=5)
-        r.raise_for_status()
-        instances.extend(r.json()["instances"])
-        has_next = r.json()["has_next"]
-        params["page"] += 1
-
-    return instances
+    r = iaso.api_client.get(url="api/instances", params=params, stream=True, timeout=30)
+    r.raise_for_status()
+    return r.content.decode("utf8")
 
 
 def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
@@ -275,15 +185,21 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
         The row as a dict (with column names as key).
     """
     row = {
-        "uuid": instance.get("uuid"),
-        "id": instance.get("id"),
-        "form_id": instance.get("form_id"),
-        "created_at": datetime.fromtimestamp(instance["created_at"], tz=timezone.utc),
-        "updated_at": datetime.fromtimestamp(instance["updated_at"], tz=timezone.utc),
-        "org_unit_id": instance["org_unit"].get("id") if "org_unit" in instance else None,
-        "org_unit_name": instance["org_unit"].get("name") if "org_unit" in instance else None,
-        "latitude": instance.get("latitude"),
-        "longitude": instance.get("longitude"),
+        "id": instance.get("ID du formulaire"),
+        "form_version": instance.get("Version du formulaire"),
+        "created_at": datetime.strptime(
+            instance.get("Date de création"),
+            "%Y-%m-%d %H:%M:%S",
+        ),
+        "updated_at": datetime.strptime(
+            instance.get("Date de modification"),
+            "%Y-%m-%d %H:%M:%S",
+        ),
+        "org_unit_id": instance.get("Org unit id"),
+        "org_unit_name": instance.get("Org unit"),
+        "org_unit_ref": instance.get("Référence externe"),
+        "latitude": instance.get("Latitude"),
+        "longitude": instance.get("Longitude"),
     }
 
     for name, question in questions.items():
@@ -291,7 +207,7 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
         if type not in mapping:
             continue
 
-        src_value = instance["file_content"].get(name)
+        src_value = instance.get(name)
         if src_value == "" or src_value is None:
             dst_value = None
 
@@ -340,21 +256,21 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
     pl.DataFrame
         The submissions dataframe with one row per submission.
     """
-    instances = _get_instances(iaso=iaso, form_id=form_id, last_updated=last_updated)
+    csv = _get_instances_csv(iaso=iaso, form_id=form_id, last_updated=last_updated)
     questions, _ = get_form_metadata(iaso=iaso, form_id=form_id)
     rows = []
 
     # Polars schema for default instance properties
     schema = {
-        "uuid": str,
-        "id": int,
-        "form_id": int,
-        "created_at": datetime,
-        "updated_at": datetime,
-        "org_unit_id": int,
-        "org_unit_name": str,
-        "latitude": float,
-        "longitude": float,
+        "id": pl.String,
+        "form_version": pl.String,
+        "created_at": pl.Datetime(time_unit="us", time_zone=None),
+        "updated_at": pl.Datetime(time_unit="us", time_zone=None),
+        "org_unit_id": pl.Int64,
+        "org_unit_name": pl.String,
+        "org_unit_ref": pl.String,
+        "latitude": pl.Float64,
+        "longitude": pl.Float64,
     }
 
     # mapping between ODK question types and target Polars data types
@@ -380,7 +296,8 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
         "range": pl.String,
     }
 
-    for instance in instances:
+    instances = pl.read_csv(StringIO(csv))
+    for instance in instances.iter_rows(named=True):
         row = _process_instance(instance=instance, questions=questions, mapping=mapping)
         rows.append(row)
 
