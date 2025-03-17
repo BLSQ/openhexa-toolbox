@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from datetime import datetime
 from io import BytesIO, StringIO
 from typing import Iterable
@@ -156,36 +155,14 @@ def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     return questions, choices
 
 
-def _get_instances(iaso: IASO, form_id: int, last_updated: str | None = None) -> pl.DataFrame:
-    """Get submissions instances for a IASO form.
-
-    Parameters
-    ----------
-    iaso: IASO
-        The IASO client.
-    form_id: int
-        The form id.
-    last_updated: str, optional
-        The last updated date in ISO format.
-
-    Returns
-    -------
-    pl.DataFrame
-        Instances dataframe with one row per submission
-    """
+def _get_instances_csv(iaso: IASO, form_id: int, last_updated: str | None = None) -> str:
+    """Extract form instances in CSV format."""
     params = {"form_id": form_id, "csv": True}
-
     if last_updated is not None:
         params["modificationDateFrom"] = last_updated
-
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".csv") as f:
-        with iaso.api_client.get("api/instances", params=params, stream=True, timeout=30) as r:
-            for chunk in r.iter_content(chunk_size=1024**2):
-                if chunk:
-                    f.write(chunk)
-        df = pl.read_csv(f.name)
-
-    return df
+    r = iaso.api_client.get(url="api/instances", params=params, stream=True, timeout=30)
+    r.raise_for_status()
+    return r.content.decode("utf8")
 
 
 def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
@@ -279,7 +256,7 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
     pl.DataFrame
         The submissions dataframe with one row per submission.
     """
-    instances = _get_instances(iaso=iaso, form_id=form_id, last_updated=last_updated)
+    csv = _get_instances_csv(iaso=iaso, form_id=form_id, last_updated=last_updated)
     questions, _ = get_form_metadata(iaso=iaso, form_id=form_id)
     rows = []
 
@@ -319,6 +296,7 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
         "range": pl.String,
     }
 
+    instances = pl.read_csv(StringIO(csv))
     for instance in instances.iter_rows(named=True):
         row = _process_instance(instance=instance, questions=questions, mapping=mapping)
         rows.append(row)
