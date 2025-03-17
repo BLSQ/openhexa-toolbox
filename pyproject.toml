@@ -22,6 +22,7 @@ dependencies = [
     "pandas",
     "shapely",
     "geopandas",
+    "fiona",
     "polars>=1.0",
     "diskcache",
     "pyjwt",
