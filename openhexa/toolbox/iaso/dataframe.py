@@ -110,6 +110,13 @@ def _iter_children(children: list[dict]) -> Iterable[dict]:
                 yield from _iter_children(child["children"])
 
 
+def _get_form_versions(iaso: IASO, form_id: int) -> dict:
+    """Extract form versions metadata from IASO."""
+    r = iaso.api_client.get(url="api/formversions", params={"form_id": form_id, "fields": "descriptor"}, timeout=5)
+    r.raise_for_status()
+    return r.json()
+
+
 def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     """Get form metadata from IASO.
 
@@ -131,11 +138,8 @@ def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     tuple[dict, dict]
         The questions and choices metadata.
     """
-    params = {"form_id": form_id, "fields": "descriptor"}
-    r = iaso.api_client.get("/api/formversions", params=params, timeout=3)
-    r.raise_for_status()
-
-    descriptor = r.json()["form_versions"][0]["descriptor"]
+    form_versions = _get_form_versions(iaso=iaso, form_id=form_id)
+    descriptor = form_versions["form_versions"][0]["descriptor"]
 
     questions = {}
     for child in _iter_children(descriptor["children"]):
