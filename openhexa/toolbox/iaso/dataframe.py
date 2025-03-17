@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Iterable
 
 import fiona
@@ -238,7 +238,7 @@ def _get_instances(iaso: IASO, form_id: int, last_updated: str | None = None) ->
     pl.DataFrame
         Instances dataframe with one row per submission
     """
-    params = {"form_id": form_id}
+    params = {"form_id": form_id, "csv": True}
 
     if last_updated is not None:
         params["modificationDateFrom"] = last_updated
@@ -250,7 +250,7 @@ def _get_instances(iaso: IASO, form_id: int, last_updated: str | None = None) ->
                 if chunk:
                     f.write(chunk)
         df = pl.read_csv(f.name)
-    
+
     return df
 
 
@@ -274,15 +274,21 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
         The row as a dict (with column names as key).
     """
     row = {
-        "uuid": instance.get("uuid"),
-        "id": instance.get("id"),
-        "form_id": instance.get("form_id"),
-        "created_at": datetime.fromtimestamp(instance["created_at"], tz=timezone.utc),
-        "updated_at": datetime.fromtimestamp(instance["updated_at"], tz=timezone.utc),
-        "org_unit_id": instance["org_unit"].get("id") if "org_unit" in instance else None,
-        "org_unit_name": instance["org_unit"].get("name") if "org_unit" in instance else None,
-        "latitude": instance.get("latitude"),
-        "longitude": instance.get("longitude"),
+        "id": instance.get("ID du formulaire"),
+        "form_version": instance.get("Version du formulaire"),
+        "created_at": datetime.strptime(
+            instance.get("Date de création"),
+            "%Y-%m-%d %H:%M:%S",
+        ),
+       "updated_at": datetime.strptime(
+            instance.get("Date de modification"),
+            "%Y-%m-%d %H:%M:%S", 
+        ),
+        "org_unit_id": instance.get("Org unit id"),
+        "org_unit_name": instance.get("Org unit"),
+        "org_unit_ref": instance.get("Référence externe"),
+        "latitude": instance.get("Latitude"),
+        "longitude": instance.get("Longitude"),
     }
 
     for name, question in questions.items():
@@ -290,7 +296,7 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
         if type not in mapping:
             continue
 
-        src_value = instance["file_content"].get(name)
+        src_value = instance.get(name)
         if src_value == "" or src_value is None:
             dst_value = None
 
@@ -345,15 +351,15 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
 
     # Polars schema for default instance properties
     schema = {
-        "uuid": str,
-        "id": int,
-        "form_id": int,
-        "created_at": datetime,
-        "updated_at": datetime,
-        "org_unit_id": int,
-        "org_unit_name": str,
-        "latitude": float,
-        "longitude": float,
+        "id": pl.String,
+        "form_version": pl.String,
+        "created_at": pl.Datetime(time_unit="us", time_zone=None),
+        "updated_at": pl.Datetime(time_unit="us", time_zone=None),
+        "org_unit_id": pl.Int64,
+        "org_unit_name": pl.String,
+        "org_unit_ref": pl.String,
+        "latitude": pl.Float64,
+        "longitude": pl.Float64,
     }
 
     # mapping between ODK question types and target Polars data types
@@ -379,7 +385,7 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
         "range": pl.String,
     }
 
-    for instance in instances:
+    for instance in instances.iter_rows(named=True):
         row = _process_instance(instance=instance, questions=questions, mapping=mapping)
         rows.append(row)
 
