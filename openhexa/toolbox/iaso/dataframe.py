@@ -134,7 +134,7 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
                 if chunk:
                     f.write(chunk)
         df = pl.read_csv(f.name)
-    
+
     df = df.select(
         pl.col("ID").alias("id"),
         pl.col("Nom").alias("name"),
@@ -157,7 +157,7 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
             pl.col(f"parent {lvl}").alias(f"level_{lvl}_name")
             for lvl in range(1, 10)
             if f"parent {lvl}" in df.columns
-        ]
+        ],
     )
 
     geoms = _get_org_units_geometries(iaso)
@@ -165,10 +165,9 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
         pl.col("id").map_elements(
             lambda x: geoms.get(x, None),
             return_dtype=pl.String
-        )
-        .alias("geometry")
+        ).alias("geometry")
     )
-    
+
     return df
 
 
@@ -222,7 +221,7 @@ def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     return questions, choices
 
 
-def _get_instances(iaso: IASO, form_id: int, last_updated: str | None = None) -> list[dict]:
+def _get_instances(iaso: IASO, form_id: int, last_updated: str | None = None) -> pl.DataFrame:
     """Get submissions instances for a IASO form.
 
     Parameters
@@ -236,25 +235,23 @@ def _get_instances(iaso: IASO, form_id: int, last_updated: str | None = None) ->
 
     Returns
     -------
-    list[dict]
-        List of submissions as dicts.
+    pl.DataFrame
+        Instances dataframe with one row per submission
     """
-    instances = []
-    has_next = True
+    params = {"form_id": form_id}
 
-    params = {"form_id": form_id, "page": 1, "limit": 10}
-
-    if last_updated:
+    if last_updated is not None:
         params["modificationDateFrom"] = last_updated
 
-    while has_next:
-        r = iaso.api_client.get("/api/instances", params=params, timeout=5)
-        r.raise_for_status()
-        instances.extend(r.json()["instances"])
-        has_next = r.json()["has_next"]
-        params["page"] += 1
 
-    return instances
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".csv") as f:
+        with iaso.api_client.get("api/instances", params=params, stream=True, timeout=30) as r:
+            for chunk in r.iter_content(chunk_size=1024**2):
+                if chunk:
+                    f.write(chunk)
+        df = pl.read_csv(f.name)
+    
+    return df
 
 
 def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
