@@ -34,34 +34,30 @@ def client() -> IASO:
 def test_get_organisation_units(client: IASO):
     responses._add_from_file(Path("tests/iaso/responses/dataframe/get_organisation_units.yaml"))
     df = get_organisation_units(client)
-    assert len(df) > 10
-    expected_schema = pl.Schema(
-        {
-            "id": pl.Int64,
-            "name": pl.String,
-            "short_name": pl.String,
-            "level": pl.UInt32,
-            "level_1_id": pl.Int64,
-            "level_1_name": pl.String,
-            "level_2_id": pl.Int64,
-            "level_2_name": pl.String,
-            "level_3_id": pl.Int64,
-            "level_3_name": pl.String,
-            "level_4_id": pl.Int64,
-            "level_4_name": pl.String,
-            "source": pl.String,
-            "source_id": pl.Int64,
-            "source_ref": pl.String,
-            "org_unit_type_id": pl.Int64,
-            "org_unit_type_name": pl.String,
-            "created_at": pl.Datetime(time_unit="us", time_zone=None),
-            "updated_at": pl.Datetime(time_unit="us", time_zone=None),
-            "validation_status": pl.String,
-            "opening_date": pl.Datetime(time_unit="us", time_zone=None),
-            "closed_date": pl.Datetime(time_unit="us", time_zone=None),
-            "geometry": pl.String,
-        }
-    )
+    assert len(df) > 100
+    expected_schema = pl.Schema({
+        "id": pl.Int64,
+        "name": pl.String,
+        "org_unit_type": pl.String,
+        "latitude": pl.Float64,
+        "longitude": pl.Float64,
+        "opening_date": pl.Date,
+        "closing_date": pl.Date,
+        "created_at": pl.Datetime(time_unit="us", time_zone=None),
+        "updated_at": pl.Datetime(time_unit="us", time_zone=None),
+        "source": pl.String,
+        "validation_status": pl.String,
+        "source_ref": pl.String,
+        "level_1_ref": pl.String,
+        "level_2_ref": pl.String,
+        "level_3_ref": pl.String,
+        "level_4_ref": pl.String,
+        "level_1_name": pl.String,
+        "level_2_name": pl.String,
+        "level_3_name": pl.String,
+        "level_4_name": pl.String,
+        "geometry": pl.String,
+    })
     assert df.schema == expected_schema
 
 

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from datetime import datetime, timezone
 from typing import Iterable
 
+import fiona
 import polars as pl
 
 from openhexa.toolbox.iaso import IASO
@@ -76,6 +78,42 @@ def _add_hierarchy_levels(org_units: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
+def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
+    """Get the org units geometries from IASO.
+
+    Org unit geometries are absent from the CSV export, so we need to fetch them separately.
+
+    Parameters
+    ----------
+    iaso: IASO
+        The IASO client.
+
+    Returns
+    -------
+    dict[int, str]
+        A dict with org unit ids as keys and GeoJSON geometries as values.
+    """
+    r = iaso.api_client.request(method="GET", url="/api/orgunits", params={"gpkg": True})
+    r.raise_for_status()
+
+    features = {}
+
+    with tempfile.NamedTemporaryFile(suffix=".gpkg") as f:
+        f.write(r.content)
+        # iaso gpkg exports usually have multiple layers, one per hierarchical level
+        layers = fiona.listlayers(f.name)
+        for layer in layers:
+            with fiona.open(f.name, layer=layer) as src:
+                for feature in src:
+                    if not feature.geometry:
+                        continue
+                    ou_id = int(feature["properties"]["id"])
+                    geom = json.dumps(feature["geometry"].__geo_interface__)
+                    features[ou_id] = geom
+
+    return features
+
+
 def get_organisation_units(iaso: IASO) -> pl.DataFrame:
     """Get the organisation units from IASO.
 
@@ -89,84 +127,48 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
     pl.DataFrame
         The organisation units dataframe.
     """
-    r = iaso.api_client.get("/api/orgunits", params={"withShapes": True})
-    r.raise_for_status()
-
-    rows = []
-    for ou in r.json()["orgUnits"]:
-        row = {
-            "id": ou["id"],
-            "name": ou["name"],
-            "short_name": ou.get("short_name"),
-            "source": ou.get("source"),
-            "source_id": ou.get("source_id"),
-            "source_ref": ou.get("source_ref"),
-            "parent_id": ou.get("parent_id"),
-            "org_unit_type_id": ou.get("org_unit_type_id"),
-            "org_unit_type_name": ou.get("org_unit_type_name"),
-            "created_at": datetime.fromtimestamp(ou["created_at"], tz=timezone.utc),
-            "updated_at": datetime.fromtimestamp(ou["updated_at"], tz=timezone.utc),
-            "validation_status": ou.get("validation_status"),
-        }
-
-        if ou.get("opening_date"):
-            row["opening_date"] = datetime.strptime(ou["opening_date", "%d/%m/%Y"])
-        else:
-            row["opening_date"] = None
-
-        if ou.get("closed_date"):
-            row["closed_date"] = datetime.strptime(ou["closed_date"], "%d/%m/%Y")
-        else:
-            row["closed_date"] = None
-
-        if ou.get("geo_json"):
-            row["geometry"] = json.dumps(ou["geo_json"]["features"][0]["geometry"])
-        else:
-            row["geometry"] = None
-
-        rows.append(row)
-
-    schema = {
-        "id": int,
-        "name": str,
-        "short_name": str,
-        "source": str,
-        "source_id": int,
-        "source_ref": str,
-        "parent_id": int,
-        "org_unit_type_id": int,
-        "org_unit_type_name": str,
-        "created_at": datetime,
-        "updated_at": datetime,
-        "validation_status": str,
-        "opening_date": datetime,
-        "closed_date": datetime,
-        "geometry": str,
-    }
-
-    df = pl.DataFrame(rows, schema=schema)
-    df = _add_hierarchy_levels(df)
+    params = {"csv": True}
+    with tempfile.NamedTemporaryFile(suffix=".csv") as f:
+        with iaso.api_client.get("api/orgunits", params=params, stream=True, timeout=30) as r:
+            for chunk in r.iter_content(chunk_size=1024**2):
+                if chunk:
+                    f.write(chunk)
+        df = pl.read_csv(f.name)
+    
     df = df.select(
-        [
-            "id",
-            "name",
-            "short_name",
-            "level",
-            *[col for col in df.columns if col.startswith("level_")],
-            "source",
-            "source_id",
-            "source_ref",
-            "org_unit_type_id",
-            "org_unit_type_name",
-            "created_at",
-            "updated_at",
-            "validation_status",
-            "opening_date",
-            "closed_date",
-            "geometry",
+        pl.col("ID").alias("id"),
+        pl.col("Nom").alias("name"),
+        pl.col("Type").alias("org_unit_type"),
+        pl.col("Latitude").alias("latitude"),
+        pl.col("Longitude").alias("longitude"),
+        pl.col("Date d'ouverture").str.to_date("%Y-%m-%d").alias("opening_date"),
+        pl.col("Date de fermeture").str.to_date("%Y-%m-%d").alias("closing_date"),
+        pl.col("Date de création").str.to_datetime("%Y-%m-%d %H:%M").alias("created_at"),
+        pl.col("Date de modification").str.to_datetime("%Y-%m-%d %H:%M").alias("updated_at"),
+        pl.col("Source").alias("source"),
+        pl.col("Validé").alias("validation_status"),
+        pl.col("Référence externe").alias("source_ref"),
+        *[
+            pl.col(f"Ref Ext parent {lvl}").alias(f"level_{lvl}_ref")
+            for lvl in range(1, 10)
+            if f"Ref Ext parent {lvl}" in df.columns
+        ],
+        *[
+            pl.col(f"parent {lvl}").alias(f"level_{lvl}_name")
+            for lvl in range(1, 10)
+            if f"parent {lvl}" in df.columns
         ]
     )
 
+    geoms = _get_org_units_geometries(iaso)
+    df = df.with_columns(
+        pl.col("id").map_elements(
+            lambda x: geoms.get(x, None),
+            return_dtype=pl.String
+        )
+        .alias("geometry")
+    )
+    
     return df
 
 
