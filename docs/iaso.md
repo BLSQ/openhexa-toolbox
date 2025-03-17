@@ -215,10 +215,10 @@ Returns the submissions DataFrame with choice values replaced by their labels fo
 
 ```python
 # Get submissions
-df = extract_submissions(iaso, form_id=505)
+df = extract_submissions(iaso, form_id=503)
 
 # Get form metadata
-questions, choices = get_form_metadata(iaso, form_id=505)
+questions, choices = get_form_metadata(iaso, form_id=503)
 
 # Replace choice values with labels
 df = replace_labels(
