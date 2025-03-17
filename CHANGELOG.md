@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.13.0...v2.0.0) (2025-03-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **iaso:** dummy commit message for release-please
+
+### Features
+
+* **iaso:** dummy commit message for release-please ([cc5a260](https://github.com/BLSQ/openhexa-toolbox/commit/cc5a260aa14b4659a69894b7aed3f04569a06fe2))
+
 ## [1.13.0](https://github.com/BLSQ/openhexa-toolbox/compare/v1.12.0...v1.13.0) (2025-03-12)
 
 
