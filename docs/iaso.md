@@ -76,20 +76,18 @@ and metadata from an IASO account into Polars DataFrames.
 Extract the organisation unit hierarchy for a given IASO account. Returns a DataFrame with columns:
 - `id`: Organisation unit identifier
 - `name`: Organisation unit name
-- `short_name`: Organisation unit short name
-- `level`: Organisation unit level in hierarchy
+- `org_unit_type`: Organisation unit type
+- `latitude`: Latitude
+- `longitude`: Longitude
+- `opening_date`: Org unit opening date
+- `closing_date`: Org unit closing date
+- `created_at`: Org unit creation date
+- `updated_at`: Org unit last updated date
+- `source`: Data source
+- `source_ref`: Org unit ID in source
+- `validation_status`: Validation status
 - `level_{n}_id`: ID of parent org unit at level n
 - `level_{n}_name`: Name of parent org unit at level n
-- `source`: Data source
-- `source_id`: ID in source
-- `source_ref`: Org unit ID in source
-- `org_unit_type_id`: Organisation unit type ID
-- `org_unit_type_name`: Organisation unit type name
-- `created_at`: Creation date
-- `updated_at`: Last updated date
-- `validation_status`: Validation status
-- `opening_date`: Opening date
-- `closed_date`: Closing date
 - `geometry`: GeoJSON geometry string
 
 ```python
@@ -104,24 +102,24 @@ df = dataframe.get_organisation_units(iaso)
 ```
 
 ```
-shape: (136, 23)
-┌─────────┬────────────┬────────────┬───────┬────────────┬──────────────┬────────────┬───────────────────┬────────────┬──────────────┬────────────┬──────────────┬─────────┬───────────┬─────────────┬──────────────────┬─────────────────────────────────┬────────────────────────────┬────────────────────────────┬───────────────────┬──────────────┬─────────────────────┬─────────────────────────────────┐
-│ id      ┆ name       ┆ short_name ┆ level ┆ level_1_id ┆ level_1_name ┆ level_2_id ┆ level_2_name      ┆ level_3_id ┆ level_3_name ┆ level_4_id ┆ level_4_name ┆ source  ┆ source_id ┆ source_ref  ┆ org_unit_type_id ┆ org_unit_type_name              ┆ created_at                 ┆ updated_at                 ┆ validation_status ┆ opening_date ┆ closed_date         ┆ geometry                        │
-│ ---     ┆ ---        ┆ ---        ┆ ---   ┆ ---        ┆ ---          ┆ ---        ┆ ---               ┆ ---        ┆ ---          ┆ ---        ┆ ---          ┆ ---     ┆ ---       ┆ ---         ┆ ---              ┆ ---                             ┆ ---                        ┆ ---                        ┆ ---               ┆ ---          ┆ ---                 ┆ ---                             │
-│ i64     ┆ str        ┆ str        ┆ u32   ┆ i64        ┆ str          ┆ i64        ┆ str               ┆ i64        ┆ str          ┆ i64        ┆ str          ┆ str     ┆ i64       ┆ str         ┆ i64              ┆ str                             ┆ datetime[μs]               ┆ datetime[μs]               ┆ str               ┆ datetime[μs] ┆ datetime[μs]        ┆ str                             │
-╞═════════╪════════════╪════════════╪═══════╪════════════╪══════════════╪════════════╪═══════════════════╪════════════╪══════════════╪════════════╪══════════════╪═════════╪═══════════╪═════════════╪══════════════════╪═════════════════════════════════╪════════════════════════════╪════════════════════════════╪═══════════════════╪══════════════╪═════════════════════╪═════════════════════════════════╡
-│ 2049004 ┆ Balave     ┆ Balave     ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048980    ┆ DS Solenzo   ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ UMJIrkSBNbU ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:40.949980 ┆ 2024-12-12 10:52:00.283874 ┆ VALID             ┆ null         ┆ 2024-12-01 00:00:00 ┆ {"type": "MultiPolygon", "coor… │
-│ 2048991 ┆ Bana       ┆ Bana       ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048978    ┆ DS Boromo    ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ uQB7JiOOrjv ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:40.718413 ┆ 2024-09-26 12:21:49.526091 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-│ 2049022 ┆ Barani     ┆ Barani     ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048983    ┆ DS Nouna     ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ NrG13X1XYqQ ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:41.182463 ┆ 2024-09-26 12:21:50.372129 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-│ 2049020 ┆ Bomborokuy ┆ Bomborokuy ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048983    ┆ DS Nouna     ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ DHl6M4QkLwf ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:41.153741 ┆ 2024-09-26 12:21:50.309763 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-│ 2049013 ┆ Bondokuy   ┆ Bondokuy   ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048981    ┆ DS Dedougou  ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ mj68YizDVF5 ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:41.079592 ┆ 2024-09-26 12:21:50.012641 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-│ …       ┆ …          ┆ …          ┆ …     ┆ …          ┆ …            ┆ …          ┆ …                 ┆ …          ┆ …            ┆ …          ┆ …            ┆ …       ┆ …         ┆ …           ┆ …                ┆ …                               ┆ …                          ┆ …                          ┆ …                 ┆ …            ┆ …                   ┆ …                               │
-│ 2049016 ┆ Toma       ┆ Toma       ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048982    ┆ DS Toma      ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ Uhsw8vIvsoC ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:41.108300 ┆ 2024-09-26 12:21:50.146649 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-│ 2048999 ┆ Tougan     ┆ Tougan     ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048979    ┆ DS Tougan    ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ qX6MMu2XR7K ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:40.847298 ┆ 2024-09-26 12:21:49.695558 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-│ 2049018 ┆ Yaba       ┆ Yaba       ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048982    ┆ DS Toma      ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ lHf8j547iaL ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:41.130610 ┆ 2024-09-26 12:21:50.213055 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-│ 2048987 ┆ Yaho       ┆ Yaho       ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048978    ┆ DS Boromo    ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ Pzf416puQrn ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:40.668022 ┆ 2024-09-26 12:21:49.424601 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-│ 2049017 ┆ Ye         ┆ Ye         ┆ 4     ┆ 2048976    ┆ Burkina Faso ┆ 2048977    ┆ Boucle du Mouhoun ┆ 2048982    ┆ DS Toma      ┆ null       ┆ null         ┆ wfdmqgv ┆ 251       ┆ caFiJxeH5k7 ┆ 1054             ┆ Health area/Aire de santé - AR… ┆ 2024-09-26 12:21:41.119577 ┆ 2024-09-26 12:21:50.179429 ┆ VALID             ┆ null         ┆ null                ┆ {"type": "MultiPolygon", "coor… │
-└─────────┴────────────┴────────────┴───────┴────────────┴──────────────┴────────────┴───────────────────┴────────────┴──────────────┴────────────┴──────────────┴─────────┴───────────┴─────────────┴──────────────────┴─────────────────────────────────┴────────────────────────────┴────────────────────────────┴───────────────────┴──────────────┴─────────────────────┴─────────────────────────────────┘
+shape: (136, 21)
+┌─────────┬────────────┬─────────────────────────────────┬──────────┬───────────┬──────────────┬──────────────┬─────────────────────┬─────────────────────┬─────────┬───────────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬──────────────┬───────────────────┬──────────────┬──────────────┬─────────────────────────────────┐
+│ id      ┆ name       ┆ org_unit_type                   ┆ latitude ┆ longitude ┆ opening_date ┆ closing_date ┆ created_at          ┆ updated_at          ┆ source  ┆ validation_status ┆ source_ref  ┆ level_1_ref ┆ level_2_ref ┆ level_3_ref ┆ level_4_ref ┆ level_1_name ┆ level_2_name      ┆ level_3_name ┆ level_4_name ┆ geometry                        │
+│ ---     ┆ ---        ┆ ---                             ┆ ---      ┆ ---       ┆ ---          ┆ ---          ┆ ---                 ┆ ---                 ┆ ---     ┆ ---               ┆ ---         ┆ ---         ┆ ---         ┆ ---         ┆ ---         ┆ ---          ┆ ---               ┆ ---          ┆ ---          ┆ ---                             │
+│ i64     ┆ str        ┆ str                             ┆ f64      ┆ f64       ┆ date         ┆ date         ┆ datetime[μs]        ┆ datetime[μs]        ┆ str     ┆ str               ┆ str         ┆ str         ┆ str         ┆ str         ┆ str         ┆ str          ┆ str               ┆ str          ┆ str          ┆ str                             │
+╞═════════╪════════════╪═════════════════════════════════╪══════════╪═══════════╪══════════════╪══════════════╪═════════════════════╪═════════════════════╪═════════╪═══════════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪══════════════╪═══════════════════╪══════════════╪══════════════╪═════════════════════════════════╡
+│ 2049004 ┆ Balave     ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ 2024-12-01   ┆ 2024-09-26 12:21:00 ┆ 2024-12-12 10:52:00 ┆ wfdmqgv ┆ VALID             ┆ UMJIrkSBNbU ┆ XfC8RKeUvO4 ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Solenzo   ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-4.0141167… │
+│ 2048991 ┆ Bana       ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ uQB7JiOOrjv ┆ CTtB0TPRvWc ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Boromo    ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-3.4937746… │
+│ 2049022 ┆ Barani     ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ NrG13X1XYqQ ┆ B4Ra7K6HuCE ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Nouna     ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-3.4389384… │
+│ 2049020 ┆ Bomborokuy ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ DHl6M4QkLwf ┆ B4Ra7K6HuCE ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Nouna     ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-4.0204591… │
+│ 2049013 ┆ Bondokuy   ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ mj68YizDVF5 ┆ tiEY3MitYl2 ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Dedougou  ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-3.4937746… │
+│ …       ┆ …          ┆ …                               ┆ …        ┆ …         ┆ …            ┆ …            ┆ …                   ┆ …                   ┆ …       ┆ …                 ┆ …           ┆ …           ┆ …           ┆ …           ┆ …           ┆ …            ┆ …                 ┆ …            ┆ …            ┆ …                               │
+│ 2049016 ┆ Toma       ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ Uhsw8vIvsoC ┆ hEu36sUTBzU ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Toma      ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-2.7440644… │
+│ 2048999 ┆ Tougan     ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ qX6MMu2XR7K ┆ LatuEy3yR38 ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Tougan    ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-3.0308257… │
+│ 2049018 ┆ Yaba       ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ lHf8j547iaL ┆ hEu36sUTBzU ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Toma      ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-3.0316312… │
+│ 2048987 ┆ Yaho       ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ Pzf416puQrn ┆ CTtB0TPRvWc ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Boromo    ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-3.4668757… │
+│ 2049017 ┆ Ye         ┆ Health area/Aire de santé - AR… ┆ null     ┆ null      ┆ null         ┆ null         ┆ 2024-09-26 12:21:00 ┆ 2024-09-26 12:21:00 ┆ wfdmqgv ┆ VALID             ┆ caFiJxeH5k7 ┆ hEu36sUTBzU ┆ awG7snlrjVy ┆ zmSNCYjqQGj ┆ null        ┆ DS Toma      ┆ Boucle du Mouhoun ┆ Burkina Faso ┆ null         ┆ {"coordinates": [[[[-3.0823771… │
+└─────────┴────────────┴─────────────────────────────────┴──────────┴───────────┴──────────────┴──────────────┴─────────────────────┴─────────────────────┴─────────┴───────────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴──────────────┴───────────────────┴──────────────┴──────────────┴─────────────────────────────────┘
 ```
 
 ## Get Form Metadata
