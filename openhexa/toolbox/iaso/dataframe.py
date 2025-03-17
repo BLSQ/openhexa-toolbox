@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import tempfile
 from datetime import datetime
+from io import BytesIO, StringIO
 from typing import Iterable
 
 import fiona
@@ -13,69 +14,18 @@ import polars as pl
 from openhexa.toolbox.iaso import IASO
 
 
-def _get_parents(org_unit_id: int, mapping: dict[int, int]) -> list[int]:
-    """Get the list of parent org units.
-
-    Parameters
-    ----------
-    org_unit_id: int
-        The org unit id.
-    mapping: dict[int, int]
-        A mapping of org unit ids to their parent ids.
-
-    Returns
-    -------
-    list[int]
-        The list of parent org unit ids.
-    """
-    if not mapping.get(org_unit_id):
-        return []
-    parents = [mapping.get(org_unit_id)]
-    while mapping.get(parents[-1]):
-        parents.append(mapping[parents[-1]])
-    return reversed(parents)
+def _get_org_units_csv(iaso: IASO) -> str:
+    """Extract org units in CSV format."""
+    r = iaso.api_client.get(url="api/orgunits", params={"csv": True}, stream=True, timeout=30)
+    r.raise_for_status()
+    return r.content.decode("utf8")
 
 
-def _add_hierarchy_levels(org_units: pl.DataFrame) -> pl.DataFrame:
-    """Add id ane name columns for each level of the hierarchy.
-
-    Parameters
-    ----------
-    org_units: pl.DataFrame
-        The org units dataframe.
-
-    Returns
-    -------
-    pl.DataFrame
-        The org units dataframe with the hierarchy levels.
-    """
-    mapping = {row["id"]: row["parent_id"] for row in org_units.iter_rows(named=True)}
-
-    # store list of parent ids in a column
-    df = org_units.with_columns(
-        pl.col("id").map_elements(lambda x: _get_parents(x, mapping), return_dtype=pl.List(int)).alias("parents")
-    )
-
-    # number of hierarchy levels defined as max number of parents
-    levels = df["parents"].list.len().max()
-
-    # add id and name columns for each level
-    for lvl in range(1, levels + 1):
-        df = df.with_columns(
-            [
-                pl.col("parents").list.get(lvl - 1, null_on_oob=True).alias(f"level_{lvl}_id"),
-            ]
-        )
-        df = df.join(
-            other=df.select(pl.col("id").alias(f"level_{lvl}_id"), pl.col("name").alias(f"level_{lvl}_name")),
-            on=f"level_{lvl}_id",
-            how="left",
-        )
-
-    # add a column with the org unit level in the hierarchy
-    df = df.with_columns(pl.col("parents").list.len().alias("level") + 1)
-
-    return df
+def _get_org_units_gpkg(iaso: IASO) -> bytes:
+    """Extract org units in GPKG format."""
+    r = iaso.api_client.get(url="api/orgunits", params={"gpkg": True}, stream=True, timeout=30)
+    r.raise_for_status()
+    return r.content
 
 
 def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
@@ -93,24 +43,17 @@ def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
     dict[int, str]
         A dict with org unit ids as keys and GeoJSON geometries as values.
     """
-    r = iaso.api_client.request(method="GET", url="/api/orgunits", params={"gpkg": True})
-    r.raise_for_status()
-
+    gpkg = _get_org_units_gpkg(iaso)
     features = {}
-
-    with tempfile.NamedTemporaryFile(suffix=".gpkg") as f:
-        f.write(r.content)
-        # iaso gpkg exports usually have multiple layers, one per hierarchical level
-        layers = fiona.listlayers(f.name)
-        for layer in layers:
-            with fiona.open(f.name, layer=layer) as src:
-                for feature in src:
-                    if not feature.geometry:
-                        continue
-                    ou_id = int(feature["properties"]["id"])
-                    geom = json.dumps(feature["geometry"].__geo_interface__)
-                    features[ou_id] = geom
-
+    layers = fiona.listlayers(BytesIO(gpkg))
+    for layer in layers:
+        with fiona.open(BytesIO(gpkg), layer=layer) as src:
+            for feature in src:
+                if not feature.geometry:
+                    continue
+                ou_id = int(feature["properties"]["id"])
+                geom = json.dumps(feature["geometry"].__geo_interface__)
+                features[ou_id] = geom
     return features
 
 
@@ -127,13 +70,8 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
     pl.DataFrame
         The organisation units dataframe.
     """
-    params = {"csv": True}
-    with tempfile.NamedTemporaryFile(suffix=".csv") as f:
-        with iaso.api_client.get("api/orgunits", params=params, stream=True, timeout=30) as r:
-            for chunk in r.iter_content(chunk_size=1024**2):
-                if chunk:
-                    f.write(chunk)
-        df = pl.read_csv(f.name)
+    csv = _get_org_units_csv(iaso)
+    df = pl.read_csv(StringIO(csv))
 
     df = df.select(
         pl.col("ID").alias("id"),
@@ -153,19 +91,12 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
             for lvl in range(1, 10)
             if f"Ref Ext parent {lvl}" in df.columns
         ],
-        *[
-            pl.col(f"parent {lvl}").alias(f"level_{lvl}_name")
-            for lvl in range(1, 10)
-            if f"parent {lvl}" in df.columns
-        ],
+        *[pl.col(f"parent {lvl}").alias(f"level_{lvl}_name") for lvl in range(1, 10) if f"parent {lvl}" in df.columns],
     )
 
     geoms = _get_org_units_geometries(iaso)
     df = df.with_columns(
-        pl.col("id").map_elements(
-            lambda x: geoms.get(x, None),
-            return_dtype=pl.String
-        ).alias("geometry")
+        pl.col("id").map_elements(lambda x: geoms.get(x, None), return_dtype=pl.String).alias("geometry")
     )
 
     return df
@@ -243,7 +174,6 @@ def _get_instances(iaso: IASO, form_id: int, last_updated: str | None = None) ->
     if last_updated is not None:
         params["modificationDateFrom"] = last_updated
 
-
     with tempfile.NamedTemporaryFile(mode="wb", suffix=".csv") as f:
         with iaso.api_client.get("api/instances", params=params, stream=True, timeout=30) as r:
             for chunk in r.iter_content(chunk_size=1024**2):
@@ -280,9 +210,9 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
             instance.get("Date de création"),
             "%Y-%m-%d %H:%M:%S",
         ),
-       "updated_at": datetime.strptime(
+        "updated_at": datetime.strptime(
             instance.get("Date de modification"),
-            "%Y-%m-%d %H:%M:%S", 
+            "%Y-%m-%d %H:%M:%S",
         ),
         "org_unit_id": instance.get("Org unit id"),
         "org_unit_name": instance.get("Org unit"),
