@@ -36,6 +36,7 @@ requirements:
     - cfgrib
     - xarray
     - epiweeks
+    - fiona
 
 test:
   imports:
