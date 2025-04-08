@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.1...v2.0.1) (2025-04-08)
+
+
+### Miscellaneous Chores
+
+* release 2.0.1 rerun ([e4839e8](https://github.com/BLSQ/openhexa-toolbox/commit/e4839e81c89cbdc5662efa3bd29c5ff9dc2dfe20))
+
 ## [2.0.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.0...v2.0.1) (2025-04-08)
 
 
