@@ -33,7 +33,7 @@ dependencies = [
     "xarray",
     "epiweeks",
     "datapi >=0.1.1",
-    "multiurl >=0.3.2"
+    "multiurl ==0.3.5"
 ]
 
 [project.optional-dependencies]
