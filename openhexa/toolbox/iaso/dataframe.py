@@ -116,6 +116,57 @@ def _get_form_versions(iaso: IASO, form_id: int) -> dict:
     return r.json()
 
 
+def _get_questions(descriptor: dict) -> dict:
+    """Extract questions metadata from form descriptor.
+
+    Parameters
+    ----------
+    descriptor: dict
+        The form descriptor.
+
+    Returns
+    -------
+    dict
+        A dict with question names as keys and metadata as values.
+    """
+    questions = {}
+    for child in _iter_children(descriptor["children"]):
+        questions[child["name"]] = {
+            "name": child["name"],
+            "type": child["type"],
+            "label": child.get("label"),
+            "list_name": child.get("list_name"),
+            "calculate": child["bind"].get("calculate") if child["type"] == "calculate" else None,
+        }
+    return questions
+
+
+def _get_choices(descriptor: dict) -> dict:
+    """Extract choices metadata from form descriptor.
+
+    Parameters
+    ----------
+    descriptor: dict
+        The form descriptor.
+
+    Returns
+    -------
+    dict
+        A dict with choice list names as keys and a list of choices as values.
+    """
+    all_choices = {}
+    for child in _iter_children(descriptor["children"]):
+        if child["type"].startswith("select"):
+            question_choices = child["children"]
+            list_name = child["list_name"]
+            if list_name not in all_choices:
+                all_choices[list_name] = []
+            for choice in question_choices:
+                if choice not in all_choices[list_name]:
+                    all_choices[list_name].append(choice)
+    return all_choices
+
+
 def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     """Get form metadata from IASO.
 
@@ -140,17 +191,8 @@ def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     form_versions = _get_form_versions(iaso=iaso, form_id=form_id)
     descriptor = form_versions["form_versions"][0]["descriptor"]
 
-    questions = {}
-    for child in _iter_children(descriptor["children"]):
-        questions[child["name"]] = {
-            "name": child["name"],
-            "type": child["type"],
-            "label": child.get("label"),
-            "list_name": child.get("list_name"),
-            "calculate": child["bind"].get("calculate") if child["type"] == "calculate" else None,
-        }
-
-    choices = descriptor["choices"]
+    questions = _get_questions(descriptor=descriptor)
+    choices = _get_choices(descriptor=descriptor)
 
     return questions, choices
 
