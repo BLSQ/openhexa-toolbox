@@ -52,7 +52,7 @@ class Metadata:
         return r
 
     def organisation_unit_levels(
-        self, fields: str = "id,name,level", filter=None, page=None, pageSize=None
+        self, fields: str = "id,name,level", filters=None, page=None, pageSize=None
     ) -> List[dict]:
         """Get names of all organisation unit levels.
 
@@ -60,7 +60,7 @@ class Metadata:
         ----------
         fields: str, optional
             DHIS2 fields to include in the response, where default value is "id,name,level"
-        filter: Not implemented
+        filters: Not implemented
         page: Not implemented
         pageSize: Not implemented
 
