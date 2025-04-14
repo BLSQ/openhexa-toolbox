@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.3](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.2...v2.0.3) (2025-04-14)
+
+
+### Bug Fixes
+
+* **dhis2:** fixes filters for levels ([23aa905](https://github.com/BLSQ/openhexa-toolbox/commit/23aa9052011dd736a7538b8bd40644b1eaf92b5d))
+* **iaso:** fetching form metadata fails when no choices in descriptor ([#126](https://github.com/BLSQ/openhexa-toolbox/issues/126)) ([4abf48e](https://github.com/BLSQ/openhexa-toolbox/commit/4abf48e14a0b4d60611f191840a1d07c74ea3956))
+
 ## [2.0.2](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.1...v2.0.2) (2025-04-08)
 
 
