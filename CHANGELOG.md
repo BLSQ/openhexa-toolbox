@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.4](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.3...v2.0.4) (2025-04-17)
+
+
+### Miscellaneous Chores
+
+* Release 2.0.4 ([49f513d](https://github.com/BLSQ/openhexa-toolbox/commit/49f513d8e05d74972d2d84ecf0ff3aca41fc3893))
+
 ## [2.0.3](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.2...v2.0.3) (2025-04-14)
 
 
