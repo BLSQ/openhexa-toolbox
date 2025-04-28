@@ -349,13 +349,13 @@ class CDS:
         If an identical data request has already been submitted, the Remote object corresponding to
         the existing data request is returned instead of submitting a new one.
         """
-        return self.client.submit(DATASET, **request.__dict__)
+        return self.client.submit(DATASET, request=request.__dict__)
 
     def retrieve(self, request: DataRequest, dst_file: Path | str) -> None:
         """Submit and download a data request to the CDS API."""
         dst_file = Path(dst_file)
         dst_file.parent.mkdir(parents=True, exist_ok=True)
-        self.client.retrieve(collection_id=DATASET, target=dst_file, **request.__dict__)
+        self.client.retrieve(collection_id=DATASET, target=dst_file, request=request.__dict__)
 
     def download_between(
         self,
