@@ -423,13 +423,13 @@ class CDS:
             else:
                 remote = self.submit(request)
                 remotes.append(remote)
-                msg = f"Submitted new data request {remote.request_uid} for {request.year}-{request.month}"
+                msg = f"Submitted new data request {remote.request_id} for {request.year}-{request.month}"
 
         while remotes:
             for remote in remotes:
                 if remote.results_ready:
                     request = remote.request
-                    fname = f"{request['year']}{request['month']}_{remote.request_uid}.grib"
+                    fname = f"{request['year']}{request['month']}_{remote.request_id}.grib"
                     dst_file = Path(dst_dir, fname)
                     remote.download(dst_file.as_posix())
                     msg = f"Downloaded {dst_file.name}"
