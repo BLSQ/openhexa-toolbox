@@ -48,16 +48,16 @@ def test_latest(mock_get_collection: Mock, fake_cds: CDS):
 
 
 class TestJobs(datapi.processing.Jobs):
-    """Datapi Jobs class with mocked request_uids property."""
+    """Datapi Jobs class with mocked request_ids property."""
 
     __test__ = False
 
-    def __init__(self, request_uids: list[str]) -> None:
-        self._request_uids = request_uids
+    def __init__(self, request_ids: list[str]) -> None:
+        self._request_ids = request_ids
 
     @property
-    def request_uids(self):
-        return self._request_uids
+    def request_ids(self):
+        return self._request_ids
 
 
 class TestRemote(datapi.processing.Remote):
@@ -65,8 +65,8 @@ class TestRemote(datapi.processing.Remote):
 
     __test__ = False
 
-    def __init__(self, request_uid: str, status: str, results_ready: bool, request: dict) -> None:
-        self._request_uid = request_uid
+    def __init__(self, request_id: str, status: str, results_ready: bool, request: dict) -> None:
+        self._request_id = request_id
         self._status = status
         self._results_ready = results_ready
         self._request = request
@@ -77,8 +77,8 @@ class TestRemote(datapi.processing.Remote):
         return self._status
 
     @property
-    def request_uid(self):
-        return self._request_uid
+    def request_id(self):
+        return self._request_id
 
     @property
     def results_ready(self):
@@ -93,7 +93,7 @@ class TestRemote(datapi.processing.Remote):
 @patch("datapi.ApiClient.get_remote")
 def test_cds_get_remote_requests(mock_get_remote: Mock, mock_get_jobs: Mock, fake_cds: CDS):
     mock_get_jobs.return_value = TestJobs(
-        request_uids=[
+        request_ids=[
             "73dc0d2d-8288-4041-a84d-87e70772d5a8",
             "3973ec55-4b38-449b-b7f1-5edd1034f663",
             "a5c7093d-56d9-40a4-a363-c60cd242ce66",
@@ -101,7 +101,7 @@ def test_cds_get_remote_requests(mock_get_remote: Mock, mock_get_jobs: Mock, fak
     )
 
     mock_get_remote.return_value = TestRemote(
-        request_uid="73dc0d2d-8288-4041-a84d-87e70772d5a8", status="successful", results_ready=True, request={}
+        request_id="73dc0d2d-8288-4041-a84d-87e70772d5a8", status="successful", results_ready=True, request={}
     )
 
     remote_requests = fake_cds.get_remote_requests()
@@ -145,7 +145,7 @@ def test_cds_get_remote_from_request(
     mock_get_remote: Mock, fake_cds: CDS, tp_request: DataRequest, tp_request_remote: dict
 ):
     mock_get_remote.return_value = TestRemote(
-        request_uid="73dc0d2d-8288-4041-a84d-87e70772d5a8",
+        request_id="73dc0d2d-8288-4041-a84d-87e70772d5a8",
         status="successful",
         results_ready=True,
         request=tp_request_remote,
@@ -154,5 +154,5 @@ def test_cds_get_remote_from_request(
     existing_requests = [tp_request_remote]
     remote = fake_cds.get_remote_from_request(tp_request, existing_requests=existing_requests)
     assert remote
-    assert remote.request_uid == "73dc0d2d-8288-4041-a84d-87e70772d5a8"
+    assert remote.request_id == "73dc0d2d-8288-4041-a84d-87e70772d5a8"
     assert remote.request["request"] == tp_request.__dict__
