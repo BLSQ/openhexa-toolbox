@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.5](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.4...v2.0.5) (2025-04-29)
+
+
+### Bug Fixes
+
+* **era5:** support breaking changes in datapi &gt;= 0.3 ([#130](https://github.com/BLSQ/openhexa-toolbox/issues/130)) ([c86dec0](https://github.com/BLSQ/openhexa-toolbox/commit/c86dec02335a3179b2f0d49c9d28d74e70213b4f))
+
 ## [2.0.4](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.3...v2.0.4) (2025-04-17)
 
 
