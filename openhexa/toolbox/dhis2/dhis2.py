@@ -48,7 +48,7 @@ class DHIS2:
 
     def ping(self) -> bool:
         """Ping the DHIS2 instance to check if it's reachable."""
-        url = f"{self.api.url}/api/ping"
+        url = f"{self.api.url}/ping"
         r = self.api.session.get(url)
         return r.status_code == 200
 
