@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import itertools
 import json
 import logging
+from collections import namedtuple
+from datetime import date, timedelta
+from itertools import islice
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, Iterator, List, Optional, Tuple, Union
 
 import pandas as pd
 import polars as pl
+from dateutil.relativedelta import relativedelta
 
 from .api import Api, DHIS2Connection, DHIS2Error
 from .periods import Period
@@ -695,14 +701,193 @@ def _split_list(src_list: list, length: int) -> Iterator[List]:
         yield src_list[i : i + length]
 
 
+def _batch_dates(start: date, end: date, delta: timedelta | relativedelta) -> Generator[tuple[date, date]]:
+    """Yield delta-sized chunks from start to end.
+
+    Parameters
+    ----------
+    start : date
+        Start date
+    end : date
+        End date
+    delta : timedelta or relativedelta
+        Size of each chunk
+
+    Yields
+    ------
+    tuple[date, date]
+        A tuple containing the start and end date of each chunk.
+    """
+    current_date = start
+    while current_date < end:
+        next_date = current_date + delta
+        if next_date > end:
+            next_date = end
+        yield (current_date, next_date)
+        current_date = next_date
+
+
+def _batch(items: list, n: int) -> Generator[list]:
+    """Yield successive n-sized chunks from items.
+
+    Parameters
+    ----------
+    items : list
+        List of items to be batched.
+    n : int
+        Size of each batch.
+
+    Yields
+    ------
+    list
+        A list containing a batch of items.
+    """
+    it = iter(items)
+    while batch := tuple(islice(it, n)):
+        yield batch
+
+
+def _iter_batches(
+    data_elements: list[str] | None = None,
+    datasets: list[str] | None = None,
+    data_element_groups: list[str] | None = None,
+    org_units: list[str] | None = None,
+    org_unit_groups: list[str] | None = None,
+    periods: list[str] | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    max_data_elements: int = 50,
+    max_datasets: int = 1,
+    max_data_element_groups: int = 1,
+    max_org_units: int = 50,
+    max_org_unit_groups: int = 1,
+    max_periods: int = 10,
+    max_dates_delta: timedelta | relativedelta = relativedelta(months=1),
+):
+    """Yield batches of objects based on the provided parameters.
+
+    This function generates batches of data elements, datasets, data element groups,
+    organisation units, organisation unit groups, and periods based on the specified
+    maximum limits for each parameter. It also handles start/end dates ranges by splitting them
+    into smaller chunks.
+
+    Parameters
+    ----------
+    data_elements : list of str, optional
+        Data element identifiers
+    datasets : list of str, optional
+        Dataset identifiers
+    data_element_groups : list of str, optional
+        Data element groups identifiers
+    org_units : list of str, optional
+        Organisation units identifiers
+    org_unit_groups : list of str, optional
+        Organisation unit groups identifiers
+    periods : list of str, optional
+        Period identifiers in DHIS2 format
+    start_date : str or None, optional
+        Start date for the time span of the values to export (example: "2020-01-01")
+    end_date : str or None, optional
+        End date for the time span of the values to export (example: "2020-06-01")
+    max_data_elements : int, default=50
+        Maximum number of data elements per batch.
+    max_datasets : int, default=1
+        Maximum number of datasets per batch.
+    max_data_element_groups : int, default=1
+        Maximum number of data element groups per batch.
+    max_org_units : int, default=50
+        Maximum number of organisation units per batch.
+    max_org_unit_groups : int, default=1
+        Maximum number of organisation unit groups per batch.
+    max_periods : int, default=10
+        Maximum number of periods per batch.
+    max_dates_delta : timedelta or relativedelta, default=relativedelta(months=1)
+        Maximum delta for date ranges per batch.
+
+    Yields
+    ------
+    dict
+        A dictionary containing the batch of objects, where the keys are the types of objects
+        (e.g., "data_elements", "datasets", etc.) and the values are lists of identifiers for those objects.
+    """
+    batches = []
+    Batch = namedtuple("Batch", field_names=["type", "items"])
+
+    if data_elements:
+        batches.append(Batch(type="data_elements", items=b) for b in _batch(data_elements, max_data_elements))
+
+    if datasets:
+        batches.append(Batch(type="datasets", items=b) for b in _batch(datasets, max_datasets))
+
+    if data_element_groups:
+        batches.append(
+            Batch(type="data_element_groups", items=b) for b in _batch(data_element_groups, max_data_element_groups)
+        )
+
+    if org_units:
+        batches.append(Batch(type="org_units", items=b) for b in _batch(org_units, max_org_units))
+
+    if org_unit_groups:
+        batches.append(Batch(type="org_unit_groups", items=b) for b in _batch(org_unit_groups, max_org_unit_groups))
+
+    if periods:
+        batches.append(Batch(type="periods", items=b) for b in _batch(periods, max_periods))
+
+    if start_date and end_date:
+        start_date = date.fromisoformat(start_date)
+        end_date = date.fromisoformat(end_date)
+        batches.append(Batch(type="dates", items=b) for b in _batch_dates(start_date, end_date, max_dates_delta))
+
+    for batch in itertools.product(*batches):
+        yield {b.type: b.items for b in batch}
+
+
 class DataValueSets:
     def __init__(self, client: DHIS2):
         """Methods for the dataValueSets API endpoint."""
         self.client = client
         self.MAX_DATA_ELEMENTS = 50
         self.MAX_ORG_UNITS = 50
-        self.MAX_PERIODS = 1
+        self.MAX_PERIODS = 5
         self.MAX_POST_DATA_VALUES = 50
+        self.DATE_RANGE_DELTA = relativedelta(years=1)
+
+    @staticmethod
+    def format_params(items: dict) -> dict:
+        """Convert a dictionary of items to a dictionary of parameters for a request.
+
+        Parameters
+        ----------
+        items : dict
+            A dictionary containing the items to be converted to parameters, with object types as keys
+            ("data_elements", "datasets", etc.) and lists of identifiers as values.
+
+        Returns
+        -------
+        dict
+            A dictionary of parameters for a request, with keys formatted for the API (e.g., "dataElement",
+            "dataSet", etc.) and lists of identifiers as values.
+        """
+        mapping = {
+            "data_elements": "dataElement",
+            "datasets": "dataSet",
+            "data_element_groups": "dataElementGroup",
+            "org_units": "orgUnit",
+            "org_unit_groups": "orgUnitGroup",
+            "periods": "period",
+        }
+
+        params = {}
+        for param_type, param_items in items.items():
+            if param_type in mapping:
+                params[mapping[param_type]] = list(param_items)
+
+        if "dates" in items:
+            start, end = items["dates"]
+            params["startDate"] = start.isoformat()
+            params["endDate"] = end.isoformat()
+
+        return params
 
     def split_params(self, params: dict) -> List[dict]:
         """Split request parameters into chunks.
@@ -803,29 +988,40 @@ class DataValueSets:
             elif not all([isinstance(pe, str) for pe in periods]):
                 raise ValueError("Mixed period types")
 
-        params = {
-            "dataElement": data_elements,
-            "dataSet": datasets,
-            "dataElementGroup": data_element_groups,
-            "period": periods,
-            "startDate": start_date,
-            "endDate": end_date,
-            "orgUnit": org_units,
-            "orgUnitGroup": org_unit_groups,
+        # shared params for all request batches
+        base_params = {
             "children": children,
-            "attributeOptionCombo": attribute_option_combos,
             "lastUpdated": last_updated,
             "lastUpdatedDuration": last_updated_duration,
         }
 
-        chunks = self.split_params(params)
-        response = []
-        for chunk in chunks:
-            r = self.client.api.get("dataValueSets", params=chunk)
-            if "dataValues" in r:
-                response += r["dataValues"]
+        data_values = []
 
-        return response
+        for batch in _iter_batches(
+            data_elements=data_elements,
+            datasets=datasets,
+            data_element_groups=data_element_groups,
+            org_units=org_units,
+            org_unit_groups=org_unit_groups,
+            periods=periods,
+            start_date=start_date,
+            end_date=end_date,
+            max_data_elements=self.MAX_DATA_ELEMENTS,
+            max_datasets=self.MAX_DATA_ELEMENTS,
+            max_data_element_groups=self.MAX_DATA_ELEMENTS,
+            max_org_units=self.MAX_ORG_UNITS,
+            max_org_unit_groups=self.MAX_ORG_UNITS,
+            max_periods=self.MAX_PERIODS,
+            max_dates_delta=self.DATE_RANGE_DELTA,
+        ):
+            params = self.format_params(batch)
+            params.update(base_params)
+
+            r = self.client.api.get("dataValueSets", params=params)
+            if "dataValues" in r:
+                data_values += r["dataValues"]
+
+        return data_values
 
     def _validate(self, data_values: List[dict]):
         """Validate data values based on data element value type.
