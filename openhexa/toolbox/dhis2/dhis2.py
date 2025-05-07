@@ -5,6 +5,7 @@ import json
 import logging
 from collections import namedtuple
 from datetime import date, timedelta
+from functools import cached_property
 from itertools import islice
 from pathlib import Path
 from typing import Any, Dict, Generator, Iterator, List, Optional, Tuple, Union
@@ -37,9 +38,13 @@ class DHIS2:
             cache_dir = Path(cache_dir)
         self.api = Api(connection, cache_dir, **kwargs)
         self.meta = Metadata(self)
-        self.version = self.meta.system_info().get("version")
         self.data_value_sets = DataValueSets(self)
         self.analytics = Analytics(self)
+
+    @cached_property
+    def version(self) -> str:
+        """Get the version of the DHIS2 instance."""
+        return self.meta.system_info().get("version")
 
 
 class Metadata:
