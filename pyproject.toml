@@ -78,3 +78,4 @@ max-doc-length = 120
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
+testpaths = ["tests/dhis2", "tests/era5", "tests/hexa", "tests/iaso"]
