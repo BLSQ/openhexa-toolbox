@@ -1,6 +1,6 @@
 services:
   web:
-    image: "dhis2/core:2.39.8"
+    image: "dhis2/core:2.42.0"
     ports:
       - "127.0.0.1:8080:8080" # DHIS2
       - "127.0.0.1:8081:8081" # Debugger: connect using commandline flag -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8081
