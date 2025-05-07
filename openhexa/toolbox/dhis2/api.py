@@ -85,13 +85,6 @@ class Api:
         """Authentify using Basic Authentication."""
         s = requests.Session()
         s.auth = requests.auth.HTTPBasicAuth(username, password)
-        r = s.get(f"{self.url}/system/ping")
-        # some old instances doesn't have a "system/ping" endpoint
-        # we don't want to raise an error in that case
-        if r.status_code in [200, 406]:
-            logger.info(f"Logged in to '{self.url}' as '{username}'")
-        else:
-            self.raise_if_error(r)
         return s
 
     def get(self, endpoint: str, params: dict = None, use_cache: bool = True) -> dict:
