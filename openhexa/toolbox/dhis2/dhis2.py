@@ -46,6 +46,16 @@ class DHIS2:
         """Get the version of the DHIS2 instance."""
         return self.meta.system_info().get("version")
 
+    def ping(self) -> bool:
+        """Ping the DHIS2 instance to check if it's reachable."""
+        url = f"{self.api.url}/api/ping"
+        r = self.api.session.get(url)
+        return r.status_code == 200
+
+    def me(self) -> dict:
+        """Get the current user information."""
+        return self.api.get("me", use_cache=False)
+
 
 class Metadata:
     def __init__(self, client: DHIS2):
