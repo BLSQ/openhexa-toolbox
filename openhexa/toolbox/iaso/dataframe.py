@@ -167,7 +167,7 @@ def _get_choices(descriptor: dict) -> dict:
     return all_choices
 
 
-def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
+def get_form_metadata(iaso: IASO, form_id: int) -> dict:
     """Get form metadata from IASO.
 
     Return a dict with form versions as keys and, for each version, two dicts:
@@ -193,7 +193,7 @@ def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
 
     for version in form_versions["form_versions"]:
         descriptor = version["descriptor"]
-        ver = descriptor["version"]
+        ver = int(descriptor["version"])
         meta[ver] = {}
         meta[ver]["questions"] = _get_questions(descriptor=descriptor)
         meta[ver]["choices"] = _get_choices(descriptor=descriptor)
@@ -211,7 +211,7 @@ def _get_instances_csv(iaso: IASO, form_id: int, last_updated: str | None = None
     return r.content.decode("utf8")
 
 
-def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
+def _process_instance(instance: dict, form_metadata: dict, mapping: dict) -> dict:
     """Create a dict row from a submission instance.
 
     Also handles casting of values based on ODK question type.
@@ -220,8 +220,8 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
     ----------
     instance: dict
         The submission instance.
-    questions: dict
-        Form questions metadata (with question names as keys).
+    form_metadata: dict
+        The form metadata for all versions.
     mapping: dict
         Mapping between ODK question types and Polars data types.
 
@@ -248,7 +248,8 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
         "longitude": instance.get("Longitude"),
     }
 
-    print(row)
+    form_version = instance.get("Version du formulaire")
+    questions = form_metadata[form_version]["questions"]
 
     for name, question in questions.items():
         type = question["type"]
@@ -256,7 +257,6 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
             continue
 
         src_value = instance.get(name)
-        print(src_value, type)
         if src_value == "" or src_value is None:
             dst_value = None
 
@@ -288,6 +288,42 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
     return row
 
 
+def _merge_schemas(schemas: list[dict]) -> dict:
+    """Merge multiple schemas into one.
+
+    Merge data types of questions with the same name. If data types differ between form versions,
+    then the most permissive type is used (e.g. if one version is int and another is str,
+    then the merged type is str).
+
+    Parameters
+    ----------
+    schemas: list[dict]
+        A list of schemas to merge.
+
+    Returns
+    -------
+    dict
+        The merged schema.
+    """
+    merged_schema = {}
+
+    for schema in schemas:
+        for column in schema:
+            if column not in merged_schema:
+                merged_schema[column] = []  # use a list to store all types
+            merged_schema[column].append(schema[column])
+
+    final_schema = {}
+    for column, dtypes in merged_schema.items():
+        dtype = dtypes[0]
+        for dtype_ in dtypes[1:]:
+            if dtype_ != dtype:
+                dtype = pl.String  # use string as the most permissive type
+        final_schema[column] = dtype
+
+    return final_schema
+
+
 def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = None) -> pl.DataFrame:
     """Extract submissions instances for a IASO form.
 
@@ -306,11 +342,11 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
         The submissions dataframe with one row per submission.
     """
     csv = _get_instances_csv(iaso=iaso, form_id=form_id, last_updated=last_updated)
-    questions, _ = get_form_metadata(iaso=iaso, form_id=form_id)
+    form_metadata = get_form_metadata(iaso=iaso, form_id=form_id)
     rows = []
 
     # Polars schema for default instance properties
-    schema = {
+    base_schema = {
         "id": pl.String,
         "form_version": pl.String,
         "created_at": pl.Datetime(time_unit="us", time_zone=None),
@@ -346,28 +382,40 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
     }
 
     instances = pl.read_csv(StringIO(csv))
+
     for instance in instances.iter_rows(named=True):
-        row = _process_instance(instance=instance, questions=questions, mapping=mapping)
+        row = _process_instance(instance=instance, form_metadata=form_metadata, mapping=mapping)
         rows.append(row)
 
-    # expand Polars schema with question columns
-    for name, question in questions.items():
-        if question["type"] not in mapping:
+    # build polars schemas for all form versions that are found in the data
+    versions_with_submissions = instances["Version du formulaire"].unique().to_list()
+    schemas = []
+    for form_version, form_meta in form_metadata.items():
+        if form_version not in versions_with_submissions:
             continue
-        schema[name] = mapping[question["type"]]
+        schema = base_schema.copy()
+        for name, question in form_meta["questions"].items():
+            if question["type"] not in mapping:
+                continue
+            schema[name] = mapping[question["type"]]
+        schemas.append(schema)
+
+    # schemas are merged - if multiple data types are found for the same question across versions,
+    # the most permissive type is used (e.g. str)
+    schema = _merge_schemas(schemas=schemas)
 
     return pl.DataFrame(rows, schema=schema)
 
 
-def replace_labels(
-    submissions: pl.DataFrame, questions: dict, choices: dict, language: str | None = None
-) -> pl.DataFrame:
+def replace_labels(submissions: pl.DataFrame, form_metadata: dict, language: str | None = None) -> pl.DataFrame:
     """Replace choice list values with labels.
 
     Parameters
     ----------
     submissions: pl.DataFrame
         The submissions dataframe.
+    form_metadata: dict
+        The form metadata for all versions.
     questions: dict
         The questions metadata.
     choices: dict
@@ -380,28 +428,58 @@ def replace_labels(
     pl.DataFrame
         The submissions dataframe with choice values replaced by labels.
     """
-    for name, question in questions.items():
-        type = question["type"]
-        if type not in ["select one", "select all that apply", "rank"]:
-            continue
+    # build label mapping for all form versions
+    # keep "select one", "select all that apply" and "rank" types separate because they
+    # need to be handled differently
+    mapping = {}
+    for form_version, form_meta in form_metadata.items():
+        mapping[form_version] = {"select one": {}, "select all that apply": {}, "rank": {}}
+        questions = form_meta["questions"]
+        choices = form_meta["choices"]
+        for name, question in questions.items():
+            qtype = question["type"]
+            if qtype not in ["select one", "select all that apply", "rank"]:
+                continue
+            if question not in submissions.columns:
+                continue
+            mapping[form_version][qtype][name] = {}
+            for choice in choices[question["list_name"]]:
+                # in single-language forms, choice labels are strings
+                if isinstance(choice["label"], str):
+                    mapping[form_version][qtype][name][choice["name"]] = choice["label"]
+                # in multi-language forms, choice labels are dicts with language as keys
+                else:
+                    if language not in choice["label"]:
+                        raise ValueError(f"Language {language} not found in choice list labels")
+                    mapping[form_version][qtype][name][choice["name"]] = choice["label"].get(language)
 
-        mapping = {}
-        for choice in choices[question["list_name"]]:
-            # in single-language forms, choice labels are strings
-            if isinstance(choice["label"], str):
-                mapping[choice["name"]] = choice["label"]
-            # in multi-language forms, choice labels are dicts with language as keys
-            else:
-                if language not in choice["label"]:
-                    raise ValueError(f"Language {language} not found in choice list labels")
-                mapping[choice["name"]] = choice["label"].get(language)
-
-        if type == "select one":
-            submissions = submissions.with_columns(pl.col(name).replace(mapping))
-
-        if type in ["select all that apply", "rank"]:
+    # replace values with labels (select one)
+    for form_version, label_mapping in mapping.items():
+        form_version = str(form_version)
+        for question, choices in label_mapping["select one"].items():
             submissions = submissions.with_columns(
-                pl.col(name).map_elements(lambda x: [mapping.get(v, v) for v in x], return_dtype=pl.List(str))
+                pl.when(pl.col("form_version") == form_version)
+                .then(pl.col(question).map_elements(lambda x: choices.get(x, x), return_dtype=pl.String))
+                .otherwise(pl.col(question))
+                .alias(question)
+            )
+        for question, choices in label_mapping["select all that apply"].items():
+            submissions = submissions.with_columns(
+                pl.when(pl.col("form_version") == form_version)
+                .then(
+                    pl.col(question).map_elements(lambda x: [choices.get(v, v) for v in x], return_dtype=pl.List(str))
+                )
+                .otherwise(pl.col(question))
+                .alias(question)
+            )
+        for question, choices in label_mapping["rank"].items():
+            submissions = submissions.with_columns(
+                pl.when(pl.col("form_version") == form_version)
+                .then(
+                    pl.col(question).map_elements(lambda x: [choices.get(v, v) for v in x], return_dtype=pl.List(str))
+                )
+                .otherwise(pl.col(question))
+                .alias(question)
             )
 
     return submissions
