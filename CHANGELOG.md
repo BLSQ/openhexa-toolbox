@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.1.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.5...v2.1.0) (2025-05-08)
+
+
+### Features
+
+* **dhis2:** better request batches ([#133](https://github.com/BLSQ/openhexa-toolbox/issues/133)) ([87aa189](https://github.com/BLSQ/openhexa-toolbox/commit/87aa1893ba1a8b36493d9f60dcaccfd080a7db3d))
+* **dhis2:** check for instance health and auth status ([#135](https://github.com/BLSQ/openhexa-toolbox/issues/135)) ([81e922f](https://github.com/BLSQ/openhexa-toolbox/commit/81e922fde885640d811952231bbfd8e93779fc1d))
+
+
+### Bug Fixes
+
+* **dhis2:** add more logs ([#136](https://github.com/BLSQ/openhexa-toolbox/issues/136)) ([bb6cb2b](https://github.com/BLSQ/openhexa-toolbox/commit/bb6cb2b141b05e7b7f639805ad5c17c0f9b5f5bd))
+* **dhis2:** ping method always failing ([1212037](https://github.com/BLSQ/openhexa-toolbox/commit/1212037484d8f96007bcdf7410091cfd817a135f))
+* **iaso:** handle different question types across form versions ([#137](https://github.com/BLSQ/openhexa-toolbox/issues/137)) ([90a40db](https://github.com/BLSQ/openhexa-toolbox/commit/90a40dbea6ce89abfe6d787eda4e8a0a9f232a5f))
+
+
+### Performance Improvements
+
+* **dhis2:** skip metadata in analytics requests ([#96](https://github.com/BLSQ/openhexa-toolbox/issues/96)) ([77f0eea](https://github.com/BLSQ/openhexa-toolbox/commit/77f0eea933a2daf672893afd93d5cc77838b59ef))
+
+
+### Documentation
+
+* **iaso:** update docs ([fcd93c7](https://github.com/BLSQ/openhexa-toolbox/commit/fcd93c7226dec85e808add47149cfe6901d875d6))
+
 ## [2.0.5](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.4...v2.0.5) (2025-04-29)
 
 
