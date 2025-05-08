@@ -1016,3 +1016,58 @@ def extract_events(
     }
 
     return pl.DataFrame(new_rows, schema=schema)
+
+
+def join_object_names(
+    df: pl.DataFrame,
+    data_elements: pl.DataFrame | None = None,
+    organisation_units: pl.DataFrame | None = None,
+    category_option_combos: pl.DataFrame | None = None,
+) -> pl.DataFrame:
+    if (data_elements is None) and (organisation_units is None) and (category_option_combos is None):
+        msg = "At least one of data_elements, organisation_units or category_option_combos must be provided"
+        logger.error(msg)
+        raise ValueError(msg)
+
+    if data_elements is not None and "data_element_name" not in df.columns:
+        df = df.join(
+            other=data_elements.select("id", pl.col("name").alias("data_element_name")),
+            left_on="data_element_id",
+            right_on="id",
+            how="left",
+        )
+
+    if organisation_units is not None and "organisation_unit_name" not in df.columns:
+        ou_ids = [col for col in organisation_units.columns if col.startswith("level_") and col.endswith("_id")]
+        ou_names = [col for col in organisation_units.columns if col.startswith("level_") and col.endswith("_name")]
+        df = df.join(
+            other=organisation_units.select("id", *ou_ids, *ou_names),
+            left_on="organisation_unit_id",
+            right_on="id",
+            how="left",
+        )
+
+    if category_option_combos is not None and "category_option_combo_name" not in df.columns:
+        df = df.join(
+            other=category_option_combos.select("id", pl.col("name").alias("category_option_combo_name")),
+            left_on="category_option_combo_id",
+            right_on="id",
+            how="left",
+        )
+
+    COLUMNS = [
+        "data_element_id",
+        "data_element_name",
+        "organisation_unit_id",
+        "organisation_unit_name",
+        "category_option_combo_id",
+        "category_option_combo_name",
+        "attribute_option_combo_id",
+        "period",
+        "value",
+        *[col for col in df.columns if col.startswith("level_")],
+        "created",
+        "last_updated",
+    ]
+
+    return df.select([col for col in COLUMNS if col in df.columns])
