@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -21,7 +21,7 @@ def test_org_unit_levels(mock_get, client):
         {"name": "Facility", "level": 4, "id": "m9lBJogzE95"},
     ]
 
-    mock_response = Mock(spec=Response)
+    mock_response = MagicMock(spec=Response)
     mock_response.status_code = 200
     mock_response.json.return_value = response
     mock_get.return_value = mock_response
