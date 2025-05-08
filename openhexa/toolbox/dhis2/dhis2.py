@@ -14,7 +14,7 @@ import pandas as pd
 import polars as pl
 from dateutil.relativedelta import relativedelta
 
-from .api import Api, DHIS2Connection, DHIS2Error
+from .api import Api, DHIS2ApiError, DHIS2Connection
 from .periods import Period
 
 logger = logging.getLogger(__name__)
@@ -987,21 +987,31 @@ class DataValueSets:
         where = org_units or org_unit_groups
         when = (start_date and end_date) or periods or last_updated or last_updated_duration
         if not what:
-            raise DHIS2Error("No data dimension provided")
+            msg = "No data dimension provided. One of data_elements, datasets or data_element_groups is required"
+            logger.error(msg)
+            raise ValueError(msg)
         if not where:
-            raise DHIS2Error("No spatial dimension provided")
+            msg = "No spatial dimension provided. One of org_units or org_unit_groups is required"
+            logger.error(msg)
+            raise ValueError(msg)
         if not when:
-            raise DHIS2Error("No temporal dimension provided")
+            msg = "No temporal dimension provided. One of periods or start_date/end_date is required"
+            logger.error(msg)
+            raise ValueError(msg)
 
         if data_elements and not self.client.version >= "2.39":
-            raise DHIS2Error("Data elements parameter not supported for DHIS2 versions < 2.39")
+            msg = "data_elements parameter not supported for DHIS2 versions < 2.39"
+            logger.error(msg)
+            raise ValueError(msg)
 
         if periods:
             if all([isinstance(pe, Period) for pe in periods]):
                 # convert Period objects to ISO strings
                 periods = [str(pe) for pe in periods]
             elif not all([isinstance(pe, str) for pe in periods]):
-                raise ValueError("Mixed period types")
+                msg = "Mixed period types. Use either strings or Period objects, but not both"
+                logger.error(msg)
+                raise ValueError(msg)
 
         # shared params for all request batches
         base_params = {
@@ -1035,7 +1045,9 @@ class DataValueSets:
             r = self.client.api.get("dataValueSets", params=params)
             if "dataValues" in r:
                 data_values += r["dataValues"]
+                logger.debug(f"Extracted {len(r['dataValues'])} data values")
 
+        logger.info(f"Extracted a total of {len(data_values)} data values")
         return data_values
 
     def _validate(self, data_values: List[dict]):
@@ -1169,7 +1181,7 @@ class DataValueSets:
                 summary = r.json()
 
             if r.status_code != 200:
-                raise DHIS2Error(summary.get("description"))
+                raise DHIS2ApiError(summary.get("description"))
 
             for key in ["imported", "updated", "ignored", "deleted"]:
                 import_counts[key] += summary["importCount"][key]
@@ -1402,11 +1414,20 @@ class Analytics:
         where = org_units or org_unit_groups or org_unit_levels
         when = bool(periods)
         if not what:
-            raise DHIS2Error("No data dimension provided")
+            msg = (
+                "No data dimension provided. One of data_elements, data_element_groups, indicators "
+                "or indicators_groups is required"
+            )
+            logger.error(msg)
+            raise ValueError(msg)
         if not where:
-            raise DHIS2Error("No spatial dimension provided")
+            msg = "No spatial dimension provided. One of org_units or org_unit_groups is required"
+            logger.error(msg)
+            raise ValueError(msg)
         if not when:
-            raise DHIS2Error("No temporal dimension provided")
+            msg = "No temporal dimension provided. One of periods or start_date/end_date is required"
+            logger.error(msg)
+            raise ValueError(msg)
 
         if all([isinstance(pe, Period) for pe in periods]):
             # convert Period objects to ISO strings
@@ -1437,6 +1458,7 @@ class Analytics:
 
         merged_response = self.merge_chunked_responses(responses)
         data_values = self.to_data_values(merged_response)
+        logger.info(f"Extracted a total of {len(data_values)} data values")
         return data_values
 
 
