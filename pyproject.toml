@@ -33,7 +33,8 @@ dependencies = [
     "xarray",
     "epiweeks",
     "datapi >=0.3.0",
-    "openhexa.sdk"
+    "openhexa.sdk",
+    "humanize"
 ]
 
 [project.optional-dependencies]
