@@ -170,7 +170,7 @@ def _get_choices(descriptor: dict) -> dict:
 def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
     """Get form metadata from IASO.
 
-    Return two JSON-like dicts:
+    Return a dict with form versions as keys and, for each version, two dicts:
       * questions: a dict with metadata for each question, with question name as key
         includes name, type, label, list_name and calculate expression
       * choices: a dict with metadata for each choice list, with list_name as key
@@ -185,16 +185,20 @@ def get_form_metadata(iaso: IASO, form_id: int) -> tuple[dict, dict]:
 
     Returns
     -------
-    tuple[dict, dict]
-        The questions and choices metadata.
+    dict
+        A dict with form versions as keys and, for each version, questions and choices metadata.
     """
     form_versions = _get_form_versions(iaso=iaso, form_id=form_id)
-    descriptor = form_versions["form_versions"][0]["descriptor"]
+    meta = {}
 
-    questions = _get_questions(descriptor=descriptor)
-    choices = _get_choices(descriptor=descriptor)
+    for version in form_versions["form_versions"]:
+        descriptor = version["descriptor"]
+        ver = descriptor["version"]
+        meta[ver] = {}
+        meta[ver]["questions"] = _get_questions(descriptor=descriptor)
+        meta[ver]["choices"] = _get_choices(descriptor=descriptor)
 
-    return questions, choices
+    return meta
 
 
 def _get_instances_csv(iaso: IASO, form_id: int, last_updated: str | None = None) -> str:
@@ -244,12 +248,15 @@ def _process_instance(instance: dict, questions: dict, mapping: dict) -> dict:
         "longitude": instance.get("Longitude"),
     }
 
+    print(row)
+
     for name, question in questions.items():
         type = question["type"]
         if type not in mapping:
             continue
 
         src_value = instance.get(name)
+        print(src_value, type)
         if src_value == "" or src_value is None:
             dst_value = None
 
