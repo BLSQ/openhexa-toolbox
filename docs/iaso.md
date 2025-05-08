@@ -130,7 +130,7 @@ Parameters:
 - `iaso`: IASO client
 - `form_id`: Form ID
 
-Returns a tuple with:
+Returns a dictionary with form versions as keys. For each form version:
 1. `questions`: Dict with metadata for each question (name as key)
    - `name`: Question name
    - `type`: Question type
@@ -142,7 +142,7 @@ Returns a tuple with:
 
 ```python
 # Get form metadata
-questions, choices = dataframe.get_form_metadata(iaso, form_id=123)
+form_metadata = dataframe.get_form_metadata(iaso, form_id=123)
 ```
 
 ## Extract Submissions
@@ -204,8 +204,7 @@ Replace choice values in submissions dataframe by choice labels in the selected 
 
 Parameters:
 - `submissions`: Submissions dataframe (as returned by `extract_submissions()`)
-- `questions`: Questions metadata dict (as returned by `get_form_metadata()`)
-- `choices`: Choices metadata dict (as returned by `get_form_metadata()`)
+- `form_metadata`: Form metadata dict (as returned by `get_form_metadata()`)
 - `language`: Optional language code for multi-language forms
 
 Returns the submissions DataFrame with choice values replaced by their labels for:
@@ -218,13 +217,12 @@ Returns the submissions DataFrame with choice values replaced by their labels fo
 df = extract_submissions(iaso, form_id=503)
 
 # Get form metadata
-questions, choices = get_form_metadata(iaso, form_id=503)
+form_metadata = get_form_metadata(iaso, form_id=503)
 
 # Replace choice values with labels
 df = replace_labels(
     submissions=df,
-    questions=questions,
-    choices=choices,
+    form_metadata=form_metadata,
     language="French"
 )
 ```
