@@ -36,7 +36,7 @@ An utility library to acquire and process data from a DHIS2 instance.
             * [Extract event data values](#extract-event-data-values)
             * [Extract organisation unit attributes](#extract-organisation-unit-attributes)
             * [Import tabular data values](#import-tabular-data-values)
-        * [Join dataframe extracts](#join-dataframe-extracts)
+        * [Join object names](#join-object-names)
     * [JSON API](#json-api)
         * [Read metadata](#read-metadata)
         * [Read data](#read-data)
@@ -674,7 +674,9 @@ report = dataframe.import_data_values(
 )
 ```
 
-#### [Join dataframe extracts](#)
+#### [Join object names](#)
+
+##### Manually
 
 All dataframes extracted from DHIS2 can be joined together using the `join` method from Polars.
 
@@ -722,6 +724,43 @@ org_units = org_units.select(
     pl.col("id").alias("organisation_unit_id"),
     pl.col("name").alias("organisation_unit_name")
 )
+```
+
+##### Automatically
+
+In addition to the manual join, the `join_object_names()` function can be used to automatically join the data elements, organisation units and category option combos to a dataframe.
+
+``` python
+data_elements = get_data_elements(dhis2=dhis2)
+organisation_units = get_organisation_units(dhis2=dhis2)
+category_option_combos = get_category_option_combos(dhis2=dhis2)
+
+df = join_object_names(
+    df,
+    data_elements=data_elements,
+    organisation_units=organisation_units,
+    category_option_combos=category_option_combos
+)
+```
+```
+shape: (80, 26)
+┌─────────────────┬─────────────────────────────────┬──────────────────────┬──────────────────────────┬───┬────────────────────┬────────────────────┬─────────────────────────┬─────────────────────────┐
+│ data_element_id ┆ data_element_name               ┆ organisation_unit_id ┆ category_option_combo_id ┆ … ┆ level_3_name_right ┆ level_4_name_right ┆ created                 ┆ last_updated            │
+│ ---             ┆ ---                             ┆ ---                  ┆ ---                      ┆   ┆ ---                ┆ ---                ┆ ---                     ┆ ---                     │
+│ str             ┆ str                             ┆ str                  ┆ str                      ┆   ┆ str                ┆ str                ┆ datetime[ms, UTC]       ┆ datetime[ms, UTC]       │
+╞═════════════════╪═════════════════════════════════╪══════════════════════╪══════════════════════════╪═══╪════════════════════╪════════════════════╪═════════════════════════╪═════════════════════════╡
+│ pikOziyCXbM     ┆ OPV1 doses given                ┆ DiszpKrYNg8          ┆ hEFKSsPV5et              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2013-09-27 00:00:00 UTC │
+│ pikOziyCXbM     ┆ OPV1 doses given                ┆ DiszpKrYNg8          ┆ V6L425pT3A0              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2010-08-06 00:00:00 UTC │
+│ pikOziyCXbM     ┆ OPV1 doses given                ┆ DiszpKrYNg8          ┆ psbwp3CQEhs              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2013-11-05 00:00:00 UTC │
+│ pikOziyCXbM     ┆ OPV1 doses given                ┆ DiszpKrYNg8          ┆ Prlt0C1RF0s              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2010-08-06 00:00:00 UTC │
+│ O05mAByOgAv     ┆ OPV2 doses given                ┆ DiszpKrYNg8          ┆ hEFKSsPV5et              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2013-09-27 00:00:00 UTC │
+│ …               ┆ …                               ┆ …                    ┆ …                        ┆ … ┆ …                  ┆ …                  ┆ …                       ┆ …                       │
+│ ldGXl6SEdqf     ┆ Weight for age between middle … ┆ DiszpKrYNg8          ┆ Prlt0C1RF0s              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2010-08-06 00:00:00 UTC │
+│ tU7GixyHhsv     ┆ Vitamin A given to < 5y         ┆ DiszpKrYNg8          ┆ hEFKSsPV5et              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2013-09-27 00:00:00 UTC │
+│ tU7GixyHhsv     ┆ Vitamin A given to < 5y         ┆ DiszpKrYNg8          ┆ V6L425pT3A0              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2013-09-27 00:00:00 UTC │
+│ tU7GixyHhsv     ┆ Vitamin A given to < 5y         ┆ DiszpKrYNg8          ┆ psbwp3CQEhs              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2013-09-27 00:00:00 UTC │
+│ tU7GixyHhsv     ┆ Vitamin A given to < 5y         ┆ DiszpKrYNg8          ┆ Prlt0C1RF0s              ┆ … ┆ Badjia             ┆ Ngelehun CHC       ┆ 2022-09-05 13:06:21 UTC ┆ 2013-09-27 00:00:00 UTC │
+└─────────────────┴─────────────────────────────────┴──────────────────────┴──────────────────────────┴───┴────────────────────┴────────────────────┴─────────────────────────┴─────────────────────────┘
 ```
 
 ### [JSON API](#)
