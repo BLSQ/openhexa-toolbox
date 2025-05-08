@@ -11,19 +11,19 @@ from openhexa.toolbox.dhis2 import DHIS2
 logger = logging.getLogger(__name__)
 
 
-class MissingParameter(Exception):
+class MissingParameterError(Exception):
     """Exception raised when a required parameter is missing."""
 
 
-class MissingColumn(Exception):
+class MissingColumnError(Exception):
     """Exception raised when a required column is missing."""
 
 
-class InvalidDataType(Exception):
+class InvalidDataTypeError(Exception):
     """Exception raised when a column has an invalid data type."""
 
 
-class InvalidParameter(Exception):
+class InvalidParameterError(Exception):
     """Exception raised when a parameter is invalid."""
 
 
@@ -163,7 +163,9 @@ def get_organisation_units(
     levels = get_organisation_unit_levels(dhis2)
     if max_level:
         if max_level > levels["level"].max():
-            raise InvalidParameter(f"max_level cannot be greater than {levels['level'].max()}")
+            msg = f"max_level cannot be greater than {levels['level'].max()}"
+            logger.error(msg)
+            raise InvalidParameterError(msg)
         level_filter = f"level:le:{max_level}"
         if filters:
             filters = [*filters, max_level]
@@ -366,10 +368,14 @@ def extract_dataset(
         If org_units and org_unit_groups are provided at the same time.
     """
     if org_units is None and org_unit_groups is None:
-        raise MissingParameter("org_units or org_unit_groups must be provided")
+        msg = "org_units or org_unit_groups must be provided"
+        logger.error(msg)
+        raise MissingParameterError(msg)
 
     if org_units is not None and org_unit_groups is not None:
-        raise InvalidParameter("org_units and org_unit_groups cannot be provided at the same time")
+        msg = "org_units and org_unit_groups cannot be provided at the same time"
+        logger.error(msg)
+        raise InvalidParameterError(msg)
 
     values = dhis2.data_value_sets.get(
         datasets=[dataset],
@@ -431,10 +437,14 @@ def extract_data_element_group(
         If org_units and org_unit_groups are provided at the same time.
     """
     if org_units is None and org_unit_groups is None:
-        raise MissingParameter("org_units or org_unit_groups must be provided")
+        msg = "org_units or org_unit_groups must be provided"
+        logger.error(msg)
+        raise MissingParameterError(msg)
 
     if org_units is not None and org_unit_groups is not None:
-        raise InvalidParameter("org_units and org_unit_groups cannot be provided at the same time")
+        msg = "org_units and org_unit_groups cannot be provided at the same time"
+        logger.error(msg)
+        raise InvalidParameterError(msg)
 
     values = dhis2.data_value_sets.get(
         data_element_groups=[data_element_group],
@@ -498,10 +508,14 @@ def extract_data_elements(
         If org_units and org_unit_groups are provided at the same time.
     """
     if org_units is None and org_unit_groups is None:
-        raise MissingParameter("org_units or org_unit_groups must be provided")
+        msg = "org_units or org_unit_groups must be provided"
+        logger.error(msg)
+        raise MissingParameterError(msg)
 
     if org_units is not None and org_unit_groups is not None:
-        raise InvalidParameter("org_units and org_unit_groups cannot be provided at the same time")
+        msg = "org_units and org_unit_groups cannot be provided at the same time"
+        logger.error(msg)
+        raise InvalidParameterError(msg)
 
     values = dhis2.data_value_sets.get(
         data_elements=data_elements,
@@ -615,29 +629,53 @@ def _validate_data_values(df: pl.DataFrame) -> None:
         If a column has an invalid data type.
     """
     if "data_element_id" not in df.columns:
-        raise MissingColumn("Missing data_element_id column")
+        msg = "Missing data_element_id column"
+        logger.error(msg)
+        raise MissingColumnError(msg)
     if "organisation_unit_id" not in df.columns:
-        raise MissingColumn("Missing organisation_unit_id column")
+        msg = "Missing organisation_unit_id column"
+        logger.error(msg)
+        raise MissingColumnError(msg)
     if "period" not in df.columns:
-        raise MissingColumn("Missing period column")
+        msg = "Missing period column"
+        logger.error(msg)
+        raise MissingColumnError(msg)
     if "category_option_combo_id" not in df.columns:
-        raise MissingColumn("Missing category_option_combo_id column")
+        msg = "Missing category_option_combo_id column"
+        logger.error(msg)
+        raise MissingColumnError(msg)
     if "attribute_option_combo_id" not in df.columns:
-        raise MissingColumn("Missing attribute_option_combo_id column")
+        msg = "Missing attribute_option_combo_id column"
+        logger.error(msg)
+        raise MissingColumnError(msg)
     if "value" not in df.columns:
-        raise MissingColumn("Missing value column")
-    if df["data_element_id"].dtype != pl.String:
-        raise InvalidDataType("data_element_id must be of type String")
-    if df["organisation_unit_id"].dtype != pl.String:
-        raise InvalidDataType("organisation_unit_id must be of type String")
-    if df["period"].dtype != pl.String:
-        raise InvalidDataType("period must be of type String")
-    if df["category_option_combo_id"].dtype != pl.String:
-        raise InvalidDataType("category_option_combo_id must be of type String")
-    if df["attribute_option_combo_id"].dtype != pl.String:
-        raise InvalidDataType("attribute_option_combo_id must be of type String")
-    if df["value"].dtype != pl.String:
-        raise InvalidDataType("value must be of type String")
+        msg = "Missing value column"
+        logger.error(msg)
+        raise MissingColumnError(msg)
+    if df["data_element_id"].dtype != pl.Utf8:
+        msg = "data_element_id must be of type String"
+        logger.error(msg)
+        raise InvalidDataTypeError(msg)
+    if df["organisation_unit_id"].dtype != pl.Utf8:
+        msg = "organisation_unit_id must be of type String"
+        logger.error(msg)
+        raise InvalidDataTypeError(msg)
+    if df["period"].dtype != pl.Utf8:
+        msg = "period must be of type String"
+        logger.error(msg)
+        raise InvalidDataTypeError(msg)
+    if df["category_option_combo_id"].dtype != pl.Utf8:
+        msg = "category_option_combo_id must be of type String"
+        logger.error(msg)
+        raise InvalidDataTypeError(msg)
+    if df["attribute_option_combo_id"].dtype != pl.Utf8:
+        msg = "attribute_option_combo_id must be of type String"
+        logger.error(msg)
+        raise InvalidDataTypeError(msg)
+    if df["value"].dtype != pl.Utf8:
+        msg = "value must be of type String"
+        logger.error(msg)
+        raise InvalidDataTypeError(msg)
 
 
 def _map_uids(df: pl.DataFrame, **mappings) -> pl.DataFrame:
@@ -662,7 +700,8 @@ def _map_uids(df: pl.DataFrame, **mappings) -> pl.DataFrame:
         if mapping:
             if col not in df.columns:
                 msg = f"Missing {col} column"
-                raise MissingColumn(msg)
+                logger.error(msg)
+                raise MissingColumnError(msg)
             df = df.with_columns(pl.col(col).replace_strict(mapping, default=None))
     return df
 

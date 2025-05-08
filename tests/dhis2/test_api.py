@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -51,7 +51,7 @@ def test_api_parse_api_url(client):
 
 @patch.object(requests.Session, "get")
 def test_api_get(mock_get, client):
-    mock_response = Mock(spec=Response)
+    mock_response = MagicMock(spec=Response)
     mock_response.status_code = 200
     mock_response.json.return_value = {"version": "2.41"}
     mock_get.return_value = mock_response
@@ -63,7 +63,7 @@ def test_api_get(mock_get, client):
 
 @patch.object(requests.Session, "get")
 def test_api_get_cache(mock_get, client_with_cache):
-    mock_response = Mock(spec=Response)
+    mock_response = MagicMock(spec=Response)
     mock_response.status_code = 200
     mock_response.json.return_value = {"version": "2.41"}
     mock_get.return_value = mock_response
@@ -92,7 +92,7 @@ def mock_get_paged():
 
         responses = []
         for response in [response1, response2, response3]:
-            mock_response = Mock(spec=Response)
+            mock_response = MagicMock(spec=Response)
             mock_response.status_code = 200
             mock_response.json.return_value = response
             responses.append(mock_response)
@@ -116,7 +116,7 @@ def mock_get_paged_tracker():
 
         responses = []
         for response in [response1, response2, response3]:
-            mock_response = Mock(spec=Response)
+            mock_response = MagicMock(spec=Response)
             mock_response.status_code = 200
             mock_response.json.return_value = response
             responses.append(mock_response)
