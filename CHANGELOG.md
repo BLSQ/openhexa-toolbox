@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.1.0...v2.2.0) (2025-05-08)
+
+
+### Features
+
+* **dhis2:** join object names in output dataframes ([#138](https://github.com/BLSQ/openhexa-toolbox/issues/138)) ([68edf81](https://github.com/BLSQ/openhexa-toolbox/commit/68edf81bc1dd9a9757de93e80c21dcc2127356e7))
+
+
+### Documentation
+
+* **dhis2:** update docs on joining object names ([53f56b6](https://github.com/BLSQ/openhexa-toolbox/commit/53f56b6656b83e2a5f3198c30b8f1d744ded7cd2))
+
 ## [2.1.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.0.5...v2.1.0) (2025-05-08)
 
 
