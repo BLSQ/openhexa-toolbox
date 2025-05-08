@@ -8,13 +8,22 @@ from urllib.parse import urlparse
 
 import requests
 from diskcache import DEFAULT_SETTINGS, Cache
+from humanize import naturalsize
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 logger = logging.getLogger(__name__)
 
 
-class DHIS2Error(Exception):
+class DHIS2ToolboxError(Exception):
+    """Base class for all exceptions raised by the DHIS2 Toolbox."""
+
+    pass
+
+
+class DHIS2ApiError(Exception):
+    """Base class for all exceptions raised by the DHIS2 API."""
+
     pass
 
 
@@ -39,7 +48,7 @@ class Api:
         self.session.mount("http://", adapter)
 
         if connection is None and ("url" not in kwargs or "username" not in kwargs or "password" not in kwargs):
-            raise DHIS2Error("Connection or url, username and password must be provided")
+            raise DHIS2ToolboxError("Connection or url, username and password must be provided")
 
         if connection:
             self.url = self.parse_api_url(connection.url)
@@ -47,6 +56,9 @@ class Api:
         else:
             self.url = self.parse_api_url(kwargs["url"])
             self.session = self.authenticate(kwargs["username"], kwargs["password"])
+
+        username = connection.username if connection else kwargs["username"]
+        logger.info(f"Using API URL {self.url} with user {username}")
 
         self.cache = None
         if cache_dir:
@@ -76,10 +88,16 @@ class Api:
         if response.status_code != 200 and "json" in response.headers["content-type"]:
             msg = response.json()
             if msg.get("status") == "ERROR":
-                raise DHIS2Error(f"{msg.get('status')} {msg.get('httpStatusCode')}: {msg.get('message')}")
+                full_error_msg = f"Error {msg.get('httpStatusCode')}: {msg.get('message')}"
+                logger.error(full_error_msg)
+                raise DHIS2ApiError(full_error_msg)
 
         # raise with requests if no error message provided
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.exception(f"HTTP error: {e}")
+            raise
 
     def authenticate(self, username: str, password: str) -> requests.Session:
         """Authentify using Basic Authentication."""
@@ -91,20 +109,24 @@ class Api:
         """Send GET request and return JSON response as a dict."""
         r = requests.Request(method="GET", url=f"{self.url}/{endpoint}", params=params)
         url = r.prepare().url
-        logger.debug(f"API request {url}")
+        logger.debug(f"GET {url}")
 
         use_cache = self.cache and use_cache
 
         if use_cache:
             r = self.cache.get(endpoint=endpoint, params=params)
             if r:
+                logger.debug("Cache hit, returning cached response")
                 return r
 
         r = self.session.get(f"{self.url}/{endpoint}", params=params)
         self.raise_if_error(r)
 
         if use_cache:
+            logger.debug("Cache miss, caching response")
             self.cache.set(endpoint=endpoint, params=params, response=r.json())
+
+        logger.debug(f"Successful request of size {naturalsize(len(r.content))}")
 
         return r.json()
 
@@ -125,6 +147,7 @@ class Api:
         yield r
 
         if "pager" in r:
+            logger.debug(f"Pager found, using page size {params['pageSize']}")
             params["page"] = r["pager"]["page"]
             while "nextPage" in r["pager"]:
                 params["page"] += 1
@@ -134,6 +157,7 @@ class Api:
         # Tracker API do not have any pager
         # instead, check for a pageCount key and use that to check if there are more pages
         elif "pageCount" in r:
+            logger.debug(f"Page count found, using page size {params['pageSize']}")
             page_count = r["pageCount"]
             while params["page"] < page_count:
                 params["page"] += 1
@@ -157,21 +181,30 @@ class Api:
         dict
             Merged response as a dict with merged lists
         """
+        n = 0
         merged_response = {}
         first_page = pages[0]
         for key in first_page.keys():
             if isinstance(first_page[key], list):
                 merged_response[key] = []
-                for page in pages:
+                for i, page in enumerate(pages):
                     merged_response[key] += page[key]
+                    n += 1
+        logger.debug(f"Merged {n} pages")
         return merged_response
 
     def post(self, endpoint: str, json: dict = None, params: dict = None) -> requests.Response:
+        r = requests.Request(method="POST", url=f"{self.url}/{endpoint}", json=json, params=params)
+        url = r.prepare().url
+        logger.debug(f"POST {url}")
         r = self.session.post(f"{self.url}/{endpoint}", json=json, params=params)
         self.raise_if_error(r)
         return r
 
     def put(self, endpoint: str, json: dict = None, params: dict = None) -> requests.Response:
+        r = requests.Request(method="PUT", url=f"{self.url}/{endpoint}", json=json, params=params)
+        url = r.prepare().url
+        logger.debug(f"PUT {url}")
         r = self.session.put(f"{self.url}/{endpoint}", json=json, params=params)
         self.raise_if_error(r)
         return r
@@ -201,12 +234,14 @@ class ApiCache:
     def expire(self):
         """Remove expired items from cache."""
         with Cache(self.dir, **self.SETTINGS) as cache:
-            cache.expire()
+            n_items = cache.expire()
+            logger.debug(f"Expired {n_items} items from cache")
 
     def clear(self):
         """Remove all items from cache."""
         with Cache(self.dir, **self.SETTINGS) as cache:
-            cache.clear()
+            n_items = cache.clear()
+            logger.debug(f"Cleared {n_items} items from cache")
 
     def get_key(self, endpoint: str, params: Optional[dict]) -> str:
         """Generate cache key from API endpoint and query parameters."""
