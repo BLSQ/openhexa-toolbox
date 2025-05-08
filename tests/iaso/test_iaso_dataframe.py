@@ -60,9 +60,8 @@ def test_get_organisation_units(get_csv_mock: Mock, get_gpkg_mock: Mock, api_cli
 def test_get_form_metadata(get_form_versions_mock: Mock, api_client: IASO):
     with open("tests/iaso/responses/dataframe/form_versions.json", "r") as f:
         get_form_versions_mock.return_value = json.load(f)
-    questions, choices = get_form_metadata(api_client, form_id=503)
-    assert len(questions) > 10
-    assert len(choices) > 3
+    form_metadata = get_form_metadata(api_client, form_id=503)
+    assert len(form_metadata) > 0
 
 
 @patch("openhexa.toolbox.iaso.dataframe._get_form_versions")
@@ -84,6 +83,6 @@ def test_replace_labels(get_instances_mock: Mock, get_form_versions_mock: Mock, 
     with open("tests/iaso/responses/dataframe/form_instances.csv", "r") as f:
         get_instances_mock.return_value = f.read()
     df = extract_submissions(api_client, form_id=503)
-    questions, choices = get_form_metadata(api_client, form_id=503)
-    df = replace_labels(df, questions, choices, language="French")
+    form_metadata = get_form_metadata(api_client, form_id=503)
+    df = replace_labels(df, form_metadata, language="French")
     assert len(df) > 10
