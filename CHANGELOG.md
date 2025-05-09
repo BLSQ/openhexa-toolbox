@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.3.0...v2.3.1) (2025-05-09)
+
+
+### Bug Fixes
+
+* **dhis2:** indicator column missing from dataframe output ([55bce5c](https://github.com/BLSQ/openhexa-toolbox/commit/55bce5caa4676c4db68609dd930edc375b412d87))
+
 ## [2.3.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.2.0...v2.3.0) (2025-05-09)
 
 
