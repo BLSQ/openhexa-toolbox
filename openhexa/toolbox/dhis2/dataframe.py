@@ -116,6 +116,50 @@ def get_data_element_groups(dhis2: DHIS2, filters: list[str] | None = None) -> p
     return df.sort(by="name")
 
 
+def get_indicators(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
+    """Extract indicators metadata.
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing indicators metadata with the following columns: id, name, value_type.
+    """
+    meta = dhis2.meta.indicators(fields="id,name,numerator,denominator", filters=filters)
+    schema = {"id": str, "name": str, "numerator": str, "denominator": str}
+    df = pl.DataFrame(meta, schema=schema)
+    return df.select("id", "name", "numerator", "denominator")
+
+
+def get_indicator_groups(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
+    """Extract indicator groups metadata.
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing indicator groups metadata with the following columns: id, name,
+        data_elements.
+    """
+    meta = dhis2.meta.indicator_groups(fields="id,name,indicators", filters=filters)
+    schema = {"id": str, "name": str, "indicators": list[str]}
+    df = pl.DataFrame(meta, schema=schema)
+    df = df.select("id", "name", pl.col("indicators").alias("indicators"))
+    return df.sort(by="name")
+
+
 def get_organisation_unit_levels(dhis2: DHIS2) -> pl.DataFrame:
     """Extract organisation unit levels metadata.
 
