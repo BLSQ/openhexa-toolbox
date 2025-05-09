@@ -619,6 +619,11 @@ def extract_analytics(
     # always include COCs by default, except when extracting indicators
     include_cocs = False if indicators or indicator_groups else True
 
+    if (data_elements or data_element_groups) and (indicators or indicator_groups):
+        msg = "Data elements and indicators cannot be requested at the same time"
+        logger.error(msg)
+        raise ValueError(msg)
+
     values = dhis2.analytics.get(
         data_elements=data_elements,
         data_element_groups=data_element_groups,
@@ -1065,10 +1070,16 @@ def extract_events(
 def join_object_names(
     df: pl.DataFrame,
     data_elements: pl.DataFrame | None = None,
+    indicators: pl.DataFrame | None = None,
     organisation_units: pl.DataFrame | None = None,
     category_option_combos: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
-    if (data_elements is None) and (organisation_units is None) and (category_option_combos is None):
+    if (
+        (data_elements is None)
+        and (organisation_units is None)
+        and (category_option_combos is None)
+        and (indicators is None)
+    ):
         msg = "At least one of data_elements, organisation_units or category_option_combos must be provided"
         logger.error(msg)
         raise ValueError(msg)
@@ -1077,6 +1088,14 @@ def join_object_names(
         df = df.join(
             other=data_elements.select("id", pl.col("name").alias("data_element_name")),
             left_on="data_element_id",
+            right_on="id",
+            how="left",
+        )
+
+    if indicators is not None and "indicator_name" not in df.columns:
+        df = df.join(
+            other=indicators.select("id", pl.col("name").alias("indicator_name")),
+            left_on="indicator_id",
             right_on="id",
             how="left",
         )
