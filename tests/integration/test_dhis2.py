@@ -106,6 +106,27 @@ def get_attributes(client):
     }
 
 
+def test_get_indicator_groups(client):
+    df = dataframe.get_indicator_groups(client)
+    assert len(df) > 10
+    assert df.schema == {
+        "id": pl.String,
+        "name": pl.String,
+        "indicators": pl.List(pl.String),
+    }
+
+
+def test_get_indicators(client):
+    df = dataframe.get_indicators(client)
+    assert len(df) > 10
+    assert df.schema == {
+        "id": pl.String,
+        "name": pl.String,
+        "numerator": pl.String,
+        "denominator": pl.String,
+    }
+
+
 def test_extract_dataset(client):
     df = dataframe.extract_dataset(
         dhis2=client,
