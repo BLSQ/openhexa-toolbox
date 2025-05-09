@@ -1121,6 +1121,8 @@ def join_object_names(
     COLUMNS = [
         "data_element_id",
         "data_element_name",
+        "indicator_id",
+        "indicator_name",
         "organisation_unit_id",
         "organisation_unit_name",
         "category_option_combo_id",
