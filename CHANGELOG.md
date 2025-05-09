@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.2.0...v2.3.0) (2025-05-09)
+
+
+### Features
+
+* **dhis2:** support indicators in dataframe API ([#140](https://github.com/BLSQ/openhexa-toolbox/issues/140)) ([c33e541](https://github.com/BLSQ/openhexa-toolbox/commit/c33e54170cb4802a9ed2a1ca45479f211d56c5e2))
+
 ## [2.2.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.1.0...v2.2.0) (2025-05-08)
 
 
