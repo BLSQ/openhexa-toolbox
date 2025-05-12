@@ -13,6 +13,7 @@ from typing import Any, Dict, Generator, Iterator, List, Optional, Tuple, Union
 import pandas as pd
 import polars as pl
 from dateutil.relativedelta import relativedelta
+from rich.progress import Progress
 
 from .api import Api, DHIS2ApiError, DHIS2Connection
 from .periods import Period
@@ -1022,7 +1023,7 @@ class DataValueSets:
 
         data_values = []
 
-        for batch in _iter_batches(
+        batches = _iter_batches(
             data_elements=data_elements,
             datasets=datasets,
             data_element_groups=data_element_groups,
@@ -1038,14 +1039,22 @@ class DataValueSets:
             max_org_unit_groups=self.MAX_ORG_UNITS,
             max_periods=self.MAX_PERIODS,
             max_dates_delta=self.DATE_RANGE_DELTA,
-        ):
-            params = self.format_params(batch)
-            params.update(base_params)
+        )
+        batches = list(batches)
 
-            r = self.client.api.get("dataValueSets", params=params)
-            if "dataValues" in r:
-                data_values += r["dataValues"]
-                logger.debug(f"Extracted {len(r['dataValues'])} data values")
+        logger.info(f"Request split into {len(batches)} batches")
+
+        with Progress() as progress:
+            task = progress.add_task("Requesting data", total=len(batches))
+            for batch in batches:
+                params = self.format_params(batch)
+                params.update(base_params)
+
+                r = self.client.api.get("dataValueSets", params=params)
+                if "dataValues" in r:
+                    data_values += r["dataValues"]
+                    logger.debug(f"Extracted {len(r['dataValues'])} data values")
+                progress.update(task, advance=1)
 
         logger.info(f"Extracted a total of {len(data_values)} data values")
         return data_values
@@ -1168,23 +1177,30 @@ class DataValueSets:
 
         import_counts = {"imported": 0, "updated": 0, "ignored": 0, "deleted": 0}
 
-        for chunk in _split_list(data_values, self.MAX_POST_DATA_VALUES):
-            r = self.client.api.post(
-                endpoint="dataValueSets",
-                json={"dataValues": chunk},
-                params={"dryRun": dry_run, "importStrategy": import_strategy},
-            )
+        chunks = _split_list(data_values, self.MAX_POST_DATA_VALUES)
 
-            if "response" in r.json():
-                summary = r.json()["response"]
-            else:
-                summary = r.json()
+        with Progress() as progress:
+            task = progress.add_task("Uploading data values", total=len(chunks))
 
-            if r.status_code != 200:
-                raise DHIS2ApiError(summary.get("description"))
+            for chunk in _split_list(data_values, self.MAX_POST_DATA_VALUES):
+                r = self.client.api.post(
+                    endpoint="dataValueSets",
+                    json={"dataValues": chunk},
+                    params={"dryRun": dry_run, "importStrategy": import_strategy},
+                )
 
-            for key in ["imported", "updated", "ignored", "deleted"]:
-                import_counts[key] += summary["importCount"][key]
+                if "response" in r.json():
+                    summary = r.json()["response"]
+                else:
+                    summary = r.json()
+
+                if r.status_code != 200:
+                    raise DHIS2ApiError(summary.get("description"))
+
+                for key in ["imported", "updated", "ignored", "deleted"]:
+                    import_counts[key] += summary["importCount"][key]
+
+                progress.update(task, advance=1)
 
         return import_counts
 
@@ -1449,12 +1465,17 @@ class Analytics:
 
         params = {"dimension": dimension, "paging": True, "ignoreLimit": True, "skipMeta": True}
         params = self.split_params(params)
+        logger.info(f"Request split into {len(params)} chunks")
 
         responses = []
-        for chunk in params:
-            pages = [p for p in self.client.api.get_paged("analytics", params=chunk)]
-            response = self.client.api.merge_pages(pages)
-            responses.append(response)
+
+        with Progress() as progress:
+            task = progress.add_task("Requesting data", total=len(params))
+            for chunk in params:
+                pages = [p for p in self.client.api.get_paged("analytics", params=chunk)]
+                response = self.client.api.merge_pages(pages)
+                responses.append(response)
+                progress.update(task, advance=1)
 
         merged_response = self.merge_chunked_responses(responses)
         data_values = self.to_data_values(merged_response)
