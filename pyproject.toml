@@ -34,7 +34,8 @@ dependencies = [
     "epiweeks",
     "datapi >=0.3.0",
     "openhexa.sdk",
-    "humanize"
+    "humanize",
+    "rich"
 ]
 
 [project.optional-dependencies]
