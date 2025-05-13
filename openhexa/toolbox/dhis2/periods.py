@@ -44,7 +44,7 @@ class Period:
 
         current_date = start_date
         while current_date <= end_date:
-            yield self.from_datetime(current_date)
+            yield type(self).from_date(current_date)
             current_date += self.delta
 
     def get_range(self, other: Self) -> list[Self]:
@@ -130,7 +130,7 @@ class Day(Period):
         return datetime.date(self.year, self.month, self.day)
 
     @classmethod
-    def from_datetime(cls, dt: datetime.datetime | datetime.date):
+    def from_date(cls, dt: datetime.datetime | datetime.date):
         return cls(dt.year, dt.month, dt.day)
 
     @classmethod
