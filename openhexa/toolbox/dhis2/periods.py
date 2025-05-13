@@ -3,6 +3,7 @@ from __future__ import annotations
 import calendar
 import datetime
 import logging
+import re
 from dataclasses import dataclass
 from typing import Generator, Self
 from warnings import warn
@@ -798,3 +799,48 @@ class FinancialNov(Period):
     @property
     def end(self) -> datetime.date:
         return datetime.date(self.year + 1, 10, 31)
+
+
+_PERIODS_REGEX = {
+    Day: r"^\d{4}\d{2}\d{2}$",
+    Week: r"^\d{4}W([1-9]\d*)$",
+    Month: r"^\d{4}\d{2}$",
+    BiMonth: r"^\d{4}\d{2}B$",
+    Quarter: r"^\d{4}Q\d$",
+    SixMonth: r"^\d{4}S\d$",
+    Year: r"^\d{4}$",
+    FinancialApril: r"^\d{4}April$",
+    FinancialJuly: r"^\d{4}July$",
+    FinancialOct: r"^\d{4}Oct$",
+    FinancialNov: r"^\d{4}Nov$",
+    WeekWednesday: r"^\d{4}WedW([1-9]\d*)$",
+    WeekThursday: r"^\d{4}ThuW([1-9]\d*)$",
+    WeekSaturday: r"^\d{4}SatW([1-9]\d*)$",
+    WeekSunday: r"^\d{4}SunW([1-9]\d*)$",
+    BiWeek: r"^\d{4}BiW([1-9]\d*)$",
+}
+
+
+def period_from_string(period_str: str) -> Period:
+    """Convert a string to a Period object.
+
+    Parameters
+    ----------
+    period_str : str
+        The period string to convert.
+
+    Returns
+    -------
+    Period
+        The corresponding Period object.
+
+    Raises
+    ------
+    InvalidPeriodError
+        If the period string is not valid.
+    """
+    for period_type, regex in _PERIODS_REGEX.items():
+        if re.match(regex, period_str):
+            return period_type.from_string(period_str)
+
+    raise InvalidPeriodError(f"Invalid period string: {period_str}")
