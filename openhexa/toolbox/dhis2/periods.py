@@ -5,6 +5,7 @@ import datetime
 import logging
 from dataclasses import dataclass
 from typing import Generator, Self
+from warnings import warn
 
 from dateutil import relativedelta
 
@@ -44,6 +45,53 @@ class Period:
         while current_date <= end_date:
             yield self.from_datetime(current_date)
             current_date += self.delta
+
+    def get_range(self, other: Self) -> list[Self]:
+        """Get a range of periods between self and other, inclusive.
+
+        DEPRECATED: Use the range method instead.
+        """
+        warn(
+            "Period.get_range is deprecated. Use Period.range instead.",
+            DeprecationWarning,
+        )
+        return list(self.range(other))
+
+    @property
+    def _delta(self) -> datetime.timedelta | relativedelta.relativedelta:
+        """Return the delta for the period.
+
+        DEPRECATED: Use Period.delta instead.
+        """
+        warn(
+            "Period._delta is deprecated. Use Period.delta instead.",
+            DeprecationWarning,
+        )
+        return self.delta
+
+    @property
+    def datetime(self) -> datetime.datetime | datetime.date:
+        """Return the datetime representation of the period.
+
+        DEPRECATED: Use Period.start or Period.end instead.
+        """
+        warn(
+            "Period.datetime is deprecated. Use Period.start or Period.end instead.",
+            DeprecationWarning,
+        )
+        return self.start
+
+    @property
+    def period(self) -> str:
+        """Return the string representation of the period.
+
+        DEPRECATED: Use str(Period) instead.
+        """
+        warn(
+            "Period.period is deprecated. Use str(Period) instead.",
+            DeprecationWarning,
+        )
+        return str(self)
 
 
 @dataclass
