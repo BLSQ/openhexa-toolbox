@@ -369,8 +369,9 @@ def _data_values_to_dataframe(values: list[dict]) -> pl.DataFrame:
 def extract_dataset(
     dhis2: DHIS2,
     dataset: str,
-    start_date: datetime,
-    end_date: datetime,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    periods: list[str] | None = None,
     org_units: list[str] = None,
     org_unit_groups: list[str] = None,
     include_children: bool = False,
@@ -384,10 +385,15 @@ def extract_dataset(
         DHIS2 instance.
     dataset : str
         Dataset ID.
-    start_date : str
+    start_date : str, optional
         Start date in the format "YYYY-MM-DD".
-    end_date : str
+        Use either start_date and end_date or periods.
+    end_date : str, optional
         End date in the format "YYYY-MM-DD".
+        Use either start_date and end_date or periods.
+    periods : list[str], optional
+        Periods to extract data values for (ex: ["202101", "202102", "202103"]). Periods must be
+        provided in DHIS2 period format. Use either start_date and end_date or periods.
     org_units : list[str], optional
         Organisation units IDs.
     org_unit_groups : list[str], optional
@@ -421,10 +427,26 @@ def extract_dataset(
         logger.error(msg)
         raise InvalidParameterError(msg)
 
+    if not (start_date and end_date) and not periods:
+        msg = "Either start_date and end_date or periods must be provided"
+        logger.error(msg)
+        raise MissingParameterError(msg)
+
+    if (start_date or end_date) and periods:
+        msg = "Either start_date and end_date or periods must be provided, not both"
+        logger.error(msg)
+        raise InvalidParameterError(msg)
+
+    if start_date:
+        start_date = start_date.strftime("%Y-%m-%d")
+    if end_date:
+        end_date = end_date.strftime("%Y-%m-%d")
+
     values = dhis2.data_value_sets.get(
         datasets=[dataset],
-        start_date=start_date.strftime("%Y-%m-%d"),
-        end_date=end_date.strftime("%Y-%m-%d"),
+        periods=periods if periods else None,
+        start_date=start_date if start_date else None,
+        end_date=end_date if end_date else None,
         org_units=org_units if org_units else None,
         org_unit_groups=org_unit_groups if org_unit_groups else None,
         children=include_children,
@@ -438,8 +460,9 @@ def extract_dataset(
 def extract_data_element_group(
     dhis2: DHIS2,
     data_element_group: str,
-    start_date: datetime,
-    end_date: datetime,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    periods: list[str] | None = None,
     org_units: list[str] = None,
     org_unit_groups: list[str] = None,
     include_children: bool = False,
@@ -453,10 +476,15 @@ def extract_data_element_group(
         DHIS2 instance.
     data_element_group : str
         Data element group ID.
-    start_date : str
+    start_date : str, optional
         Start date in the format "YYYY-MM-DD".
-    end_date : str
+        Use either start_date and end_date or periods.
+    end_date : str, optional
         End date in the format "YYYY-MM-DD".
+        Use either start_date and end_date or periods.
+    periods : list[str], optional
+        Periods to extract data values for (ex: ["202101", "202102", "202103"]). Periods must be
+        provided in DHIS2 period format. Use either start_date and end_date or periods.
     org_units : list[str], optional
         Organisation units IDs.
     org_unit_groups : list[str], optional
@@ -490,10 +518,26 @@ def extract_data_element_group(
         logger.error(msg)
         raise InvalidParameterError(msg)
 
+    if not (start_date and end_date) and not periods:
+        msg = "Either start_date and end_date or periods must be provided"
+        logger.error(msg)
+        raise MissingParameterError(msg)
+
+    if (start_date or end_date) and periods:
+        msg = "Either start_date and end_date or periods must be provided, not both"
+        logger.error(msg)
+        raise InvalidParameterError(msg)
+
+    if start_date:
+        start_date = start_date.strftime("%Y-%m-%d")
+    if end_date:
+        end_date = end_date.strftime("%Y-%m-%d")
+
     values = dhis2.data_value_sets.get(
         data_element_groups=[data_element_group],
-        start_date=start_date.strftime("%Y-%m-%d"),
-        end_date=end_date.strftime("%Y-%m-%d"),
+        periods=periods if periods else None,
+        start_date=start_date if start_date else None,
+        end_date=end_date if end_date else None,
         org_units=org_units if org_units else None,
         org_unit_groups=org_unit_groups if org_unit_groups else None,
         children=include_children,
@@ -507,8 +551,9 @@ def extract_data_element_group(
 def extract_data_elements(
     dhis2: DHIS2,
     data_elements: list[str],
-    start_date: datetime,
-    end_date: datetime,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    periods: list[str] | None = None,
     org_units: list[str] = None,
     org_unit_groups: list[str] = None,
     include_children: bool = False,
@@ -524,10 +569,15 @@ def extract_data_elements(
         DHIS2 instance.
     data_elements : list[str]
         Data elements IDs.
-    start_date : str
+    start_date : str, optional
         Start date in the format "YYYY-MM-DD".
-    end_date : str
+        Use either start_date and end_date or periods.
+    end_date : str, optional
         End date in the format "YYYY-MM-DD".
+        Use either start_date and end_date or periods.
+    periods : list[str], optional
+        Periods to extract data values for (ex: ["202101", "202102", "202103"]). Periods must be
+        provided in DHIS2 period format. Use either start_date and end_date or periods.
     org_units : list[str], optional
         Organisation units IDs.
     org_unit_groups : list[str], optional
@@ -561,10 +611,25 @@ def extract_data_elements(
         logger.error(msg)
         raise InvalidParameterError(msg)
 
+    if not (start_date and end_date) and not periods:
+        msg = "Either start_date and end_date or periods must be provided"
+        logger.error(msg)
+        raise MissingParameterError(msg)
+
+    if (start_date or end_date) and periods:
+        msg = "Either start_date and end_date or periods must be provided, not both"
+        logger.error(msg)
+        raise InvalidParameterError(msg)
+
+    if start_date:
+        start_date = start_date.strftime("%Y-%m-%d")
+    if end_date:
+        end_date = end_date.strftime("%Y-%m-%d")
+
     values = dhis2.data_value_sets.get(
         data_elements=data_elements,
-        start_date=start_date.strftime("%Y-%m-%d"),
-        end_date=end_date.strftime("%Y-%m-%d"),
+        start_date=start_date if start_date else None,
+        end_date=end_date if end_date else None,
         org_units=org_units if org_units else None,
         org_unit_groups=org_unit_groups if org_unit_groups else None,
         children=include_children,
