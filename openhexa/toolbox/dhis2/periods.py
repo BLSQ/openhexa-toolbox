@@ -135,7 +135,11 @@ class Day(Period):
 
     @classmethod
     def from_string(cls, date_str: str):
-        year, month, day = map(int, date_str.split("-"))
+        if not re.match(_PERIODS_REGEX[Day], date_str):
+            raise InvalidPeriodError(f"Invalid period string: {date_str}")
+        year = int(date_str[:4])
+        month = int(date_str[4:6])
+        day = int(date_str[6:])
         return cls(year, month, day)
 
 
@@ -177,6 +181,8 @@ class Week(Period):
 
     @classmethod
     def from_string(cls, week_str: str) -> Self:
+        if not re.match(_PERIODS_REGEX[Week], week_str):
+            raise InvalidPeriodError(f"Invalid period string: {week_str}")
         year, week = map(int, week_str.split("W"))
         return cls(year, week)
 
@@ -214,6 +220,8 @@ class WeekWednesday(Week):
 
     @classmethod
     def from_string(cls, week_str: str) -> Self:
+        if not re.match(_PERIODS_REGEX[WeekWednesday], week_str):
+            raise InvalidPeriodError(f"Invalid period string: {week_str}")
         year, week = map(int, week_str.split("WedW"))
         return cls(year, week)
 
@@ -251,6 +259,8 @@ class WeekThursday(Week):
 
     @classmethod
     def from_string(cls, week_str: str) -> Self:
+        if not re.match(_PERIODS_REGEX[WeekThursday], week_str):
+            raise InvalidPeriodError(f"Invalid period string: {week_str}")
         year, week = map(int, week_str.split("ThuW"))
         return cls(year, week)
 
@@ -288,6 +298,8 @@ class WeekSaturday(Week):
 
     @classmethod
     def from_string(cls, week_str: str) -> Self:
+        if not re.match(_PERIODS_REGEX[WeekSaturday], week_str):
+            raise InvalidPeriodError(f"Invalid period string: {week_str}")
         year, week = map(int, week_str.split("SatW"))
         return cls(year, week)
 
@@ -325,6 +337,8 @@ class WeekSunday(Week):
 
     @classmethod
     def from_string(cls, week_str: str) -> Self:
+        if not re.match(_PERIODS_REGEX[WeekSunday], week_str):
+            raise InvalidPeriodError(f"Invalid period string: {week_str}")
         year, week = map(int, week_str.split("SunW"))
         return cls(year, week)
 
@@ -377,6 +391,8 @@ class BiWeek(Period):
 
     @classmethod
     def from_string(cls, bi_week_str: str):
+        if not re.match(_PERIODS_REGEX[BiWeek], bi_week_str):
+            raise InvalidPeriodError(f"Invalid period string: {bi_week_str}")
         year, bi_week = map(int, bi_week_str.split("BiW"))
         return cls(year, bi_week)
 
@@ -429,6 +445,8 @@ class Month(Period):
 
     @classmethod
     def from_string(cls, month_str: str):
+        if not re.match(_PERIODS_REGEX[Month], month_str):
+            raise InvalidPeriodError(f"Invalid period string: {month_str}")
         year = int(month_str[:4])
         month = int(month_str[4:])
         return cls(year, month)
@@ -483,6 +501,8 @@ class BiMonth(Period):
 
     @classmethod
     def from_string(cls, bi_month_str: str):
+        if not re.match(_PERIODS_REGEX[BiMonth], bi_month_str):
+            raise InvalidPeriodError(f"Invalid period string: {bi_month_str}")
         year = int(bi_month_str[:4])
         bi_month = int(bi_month_str[4:6])
         return cls(year, bi_month)
@@ -537,6 +557,8 @@ class Quarter(Period):
 
     @classmethod
     def from_string(cls, quarter_str: str):
+        if not re.match(_PERIODS_REGEX[Quarter], quarter_str):
+            raise InvalidPeriodError(f"Invalid period string: {quarter_str}")
         year, quarter = map(int, quarter_str.split("Q"))
         return cls(year, quarter)
 
@@ -591,6 +613,8 @@ class SixMonth(Period):
 
     @classmethod
     def from_string(cls, six_month_str: str):
+        if not re.match(_PERIODS_REGEX[SixMonth], six_month_str):
+            raise InvalidPeriodError(f"Invalid period string: {six_month_str}")
         year, six_month = map(int, six_month_str.split("S"))
         return cls(year, six_month)
 
@@ -637,6 +661,8 @@ class Year(Period):
 
     @classmethod
     def from_string(cls, year_str: str):
+        if not re.match(_PERIODS_REGEX[Year], year_str):
+            raise InvalidPeriodError(f"Invalid period string: {year_str}")
         year = int(year_str)
         return cls(year)
 
@@ -680,6 +706,8 @@ class FinancialApril(Period):
 
     @classmethod
     def from_string(cls, year_str: str):
+        if not re.match(_PERIODS_REGEX[FinancialApril], year_str):
+            raise InvalidPeriodError(f"Invalid period string: {year_str}")
         year = int(year_str[:4])
         return cls(year)
 
@@ -723,6 +751,8 @@ class FinancialJuly(Period):
 
     @classmethod
     def from_string(cls, year_str: str):
+        if not re.match(_PERIODS_REGEX[FinancialJuly], year_str):
+            raise InvalidPeriodError(f"Invalid period string: {year_str}")
         year = int(year_str[:4])
         return cls(year)
 
@@ -766,6 +796,8 @@ class FinancialOct(Period):
 
     @classmethod
     def from_string(cls, year_str: str):
+        if not re.match(_PERIODS_REGEX[FinancialOct], year_str):
+            raise InvalidPeriodError(f"Invalid period string: {year_str}")
         year = int(year_str[:4])
         return cls(year)
 
@@ -809,6 +841,8 @@ class FinancialNov(Period):
 
     @classmethod
     def from_string(cls, year_str: str):
+        if not re.match(_PERIODS_REGEX[FinancialNov], year_str):
+            raise InvalidPeriodError(f"Invalid period string: {year_str}")
         year = int(year_str[:4])
         return cls(year)
 
