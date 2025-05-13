@@ -496,7 +496,7 @@ class BiMonth(Period):
     @classmethod
     def from_date(cls, date: datetime.date | datetime.datetime):
         month = Month.from_date(date)
-        bi_month = month.month // 2 * 2 + 1
+        bi_month = (month.month - 1) // 2 * 2 + 1
         return cls(year=month.year, bi_month=bi_month)
 
     @classmethod
