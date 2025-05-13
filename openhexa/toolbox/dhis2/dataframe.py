@@ -628,6 +628,7 @@ def extract_data_elements(
 
     values = dhis2.data_value_sets.get(
         data_elements=data_elements,
+        periods=periods if periods else None,
         start_date=start_date if start_date else None,
         end_date=end_date if end_date else None,
         org_units=org_units if org_units else None,
