@@ -160,7 +160,7 @@ class Week(Period):
     delta: relativedelta.relativedelta = relativedelta.relativedelta(weeks=1)
 
     def __str__(self):
-        return f"{self.year:04}W{self.week:02}"
+        return f"{self.year:04}W{self.week}"
 
     def __post_init__(self):
         if self.week < 1 or self.week > 53:
@@ -205,7 +205,7 @@ class WeekWednesday(Week):
     """
 
     def __str__(self):
-        return f"{self.year:04}WedW{self.week:02}"
+        return f"{self.year:04}WedW{self.week}"
 
     @classmethod
     def from_date(cls, date: datetime.date | datetime.datetime):
@@ -237,7 +237,7 @@ class WeekThursday(Week):
     """
 
     def __str__(self):
-        return f"{self.year:04}ThuW{self.week:02}"
+        return f"{self.year:04}ThuW{self.week}"
 
     @classmethod
     def from_date(cls, date: datetime.date | datetime.datetime):
@@ -269,7 +269,7 @@ class WeekSaturday(Week):
     """
 
     def __str__(self):
-        return f"{self.year:04}SatW{self.week:02}"
+        return f"{self.year:04}SatW{self.week}"
 
     @classmethod
     def from_date(cls, date: datetime.date | datetime.datetime):
@@ -301,7 +301,7 @@ class WeekSunday(Week):
     """
 
     def __str__(self):
-        return f"{self.year:04}SunW{self.week:02}"
+        return f"{self.year:04}SunW{self.week}"
 
     @classmethod
     def from_date(cls, date: datetime.date | datetime.datetime):
@@ -338,7 +338,7 @@ class BiWeek(Period):
     delta: relativedelta.relativedelta = relativedelta.relativedelta(weeks=2)
 
     def __str__(self):
-        return f"{self.year:04}BiW{self.bi_week:02}"
+        return f"{self.year:04}BiW{self.bi_week}"
 
     def __post_init__(self):
         if self.bi_week < 1 or self.bi_week > 27:
