@@ -844,3 +844,18 @@ def period_from_string(period_str: str) -> Period:
             return period_type.from_string(period_str)
 
     raise InvalidPeriodError(f"Invalid period string: {period_str}")
+
+
+def get_range(start: Period, end: Period) -> list[Period]:
+    """Get a range of periods between start and end, inclusive.
+
+    DEPRECATED: Use Period.range instead.
+    """
+    warn(
+        "get_range is deprecated. Use Period.range instead.",
+        DeprecationWarning,
+    )
+    if not isinstance(start, type(end)):
+        raise MixedPeriodsError("Start and end periods must be of the same type.")
+
+    return list(start.range(end))
