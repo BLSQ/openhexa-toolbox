@@ -176,7 +176,7 @@ class Week(Period):
         return cls(year=date.isocalendar()[0], week=date.isocalendar()[1])
 
     @classmethod
-    def from_string(cls, week_str: str):
+    def from_string(cls, week_str: str) -> Self:
         year, week = map(int, week_str.split("W"))
         return cls(year, week)
 
@@ -212,6 +212,11 @@ class WeekWednesday(Week):
         adjusted_date = date - datetime.timedelta(days=2)
         return cls(year=adjusted_date.isocalendar()[0], week=adjusted_date.isocalendar()[1])
 
+    @classmethod
+    def from_string(cls, week_str: str) -> Self:
+        year, week = map(int, week_str.split("WedW"))
+        return cls(year, week)
+
     @property
     def start(self) -> datetime.date:
         return datetime.date.fromisocalendar(self.year, self.week, 1) + datetime.timedelta(days=2)
@@ -243,6 +248,11 @@ class WeekThursday(Week):
     def from_date(cls, date: datetime.date | datetime.datetime):
         adjusted_date = date - datetime.timedelta(days=3)
         return cls(year=adjusted_date.isocalendar()[0], week=adjusted_date.isocalendar()[1])
+
+    @classmethod
+    def from_string(cls, week_str: str) -> Self:
+        year, week = map(int, week_str.split("ThuW"))
+        return cls(year, week)
 
     @property
     def start(self) -> datetime.date:
@@ -276,6 +286,11 @@ class WeekSaturday(Week):
         adjusted_date = date + datetime.timedelta(days=2)
         return cls(year=adjusted_date.isocalendar()[0], week=adjusted_date.isocalendar()[1])
 
+    @classmethod
+    def from_string(cls, week_str: str) -> Self:
+        year, week = map(int, week_str.split("SatW"))
+        return cls(year, week)
+
     @property
     def start(self) -> datetime.date:
         return datetime.date.fromisocalendar(self.year, self.week, 1) - datetime.timedelta(days=2)
@@ -307,6 +322,11 @@ class WeekSunday(Week):
     def from_date(cls, date: datetime.date | datetime.datetime):
         adjusted_date = date + datetime.timedelta(days=1)
         return cls(year=adjusted_date.isocalendar()[0], week=adjusted_date.isocalendar()[1])
+
+    @classmethod
+    def from_string(cls, week_str: str) -> Self:
+        year, week = map(int, week_str.split("SunW"))
+        return cls(year, week)
 
     @property
     def start(self) -> datetime.date:
