@@ -1119,6 +1119,9 @@ def join_object_names(
         )
 
     COLUMNS = [
+        "dataset_name",
+        "dataset_id",
+        "dataset_period_type",
         "data_element_id",
         "data_element_name",
         "indicator_id",
@@ -1134,5 +1137,8 @@ def join_object_names(
         "created",
         "last_updated",
     ]
+
+    # if additional columns were present in the original dataframe, keep them at the end
+    COLUMNS += [col for col in df.columns if col not in COLUMNS]
 
     return df.select([col for col in COLUMNS if col in df.columns])
