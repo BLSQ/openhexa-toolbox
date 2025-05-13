@@ -1,237 +1,752 @@
-import math
-from datetime import datetime
-from typing import List, Union
+from __future__ import annotations
 
-from dateutil.relativedelta import relativedelta
+import calendar
+import datetime
+import logging
+from dataclasses import dataclass
+from typing import Generator, Self
+
+from dateutil import relativedelta
+
+from openhexa.toolbox.dhis2.api import DHIS2ToolboxError
+
+logger = logging.getLogger(__name__)
+
+
+class InvalidPeriodError(DHIS2ToolboxError):
+    """Exception raised for invalid period formats."""
+
+    pass
+
+
+class MixedPeriodsError(DHIS2ToolboxError):
+    """Exception raised for mixed period types."""
+
+    pass
 
 
 class Period:
-    def __init__(self, period: Union[str, datetime]):
-        if isinstance(period, str):
-            self.check_period(period)
-            self.period = period
-            self.datetime = self.to_datetime(period)
-        elif isinstance(period, datetime):
-            self.datetime = period
-            self.period = self.to_string(period)
-        else:
-            raise ValueError("Period must be str or datetime")
+    """Base class for all period types."""
 
-    def get_range(self, end) -> list:
-        """Get a range of DHIS2 periods."""
-        if type(self) != type(end):
-            raise ValueError("Start and end periods must be of same type")
+    def range(self, other: Self) -> Generator[Self]:
+        """Generate all periods between self and other, inclusive."""
+        if not isinstance(other, type(self)):
+            msg = "Range can only be generated between two Period objects of the same type."
+            raise InvalidPeriodError(msg)
 
-        if end.datetime <= self.datetime:
-            raise ValueError("End period must be inferior to start period")
+        start_date = self.start
+        end_date = other.start
 
-        prange = []
-        dt = self.datetime
-        while dt <= end.datetime:
-            prange.append(type(self)(dt))
-            dt += self._delta
+        if start_date >= end_date:
+            raise InvalidPeriodError("Start date must be before end date.")
 
-        return prange
+        current_date = start_date
+        while current_date <= end_date:
+            yield self.from_datetime(current_date)
+            current_date += self.delta
+
+
+@dataclass
+class Day(Period):
+    """Represents a single day period.
+
+    Format: yyyyMMdd
+    Example: 20040315
+    Description: March 15, 2004
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    month : int
+        The month of the period.
+    day : int
+        The day of the period.
+    """
+
+    year: int
+    month: int
+    day: int
+    delta: datetime.timedelta = datetime.timedelta(days=1)
 
     def __str__(self):
-        return self.period
+        return f"{self.year:04}{self.month:02}{self.day:02}"
 
-    def __eq__(self, other):
-        return self.period == other.period
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date(self.year, self.month, self.day)
 
-    def __ne__(self, other):
-        return self.period != other.period
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date(self.year, self.month, self.day)
 
-    def __gt__(self, other):
-        return self.period > other.period
+    @classmethod
+    def from_datetime(cls, dt: datetime.datetime | datetime.date):
+        return cls(dt.year, dt.month, dt.day)
 
-    def __lt__(self, other):
-        return self.period < other.period
-
-    def __ge__(self, other):
-        return self.period >= other.period
-
-    def __le__(self, other):
-        return self.period <= other.period
-
-    def __repr__(self):
-        return f'"{self.period}"'
+    @classmethod
+    def from_string(cls, date_str: str):
+        year, month, day = map(int, date_str.split("-"))
+        return cls(year, month, day)
 
 
-class Day(Period):
-    """Day.
-
-    Format: yyyyMMdd, example: 20040315
-    """
-
-    def __init__(self, period: Union[str, datetime]):
-        super().__init__(period)
-        self._delta = relativedelta(days=1)
-
-    @staticmethod
-    def check_period(period: str):
-        if len(period) != 8:
-            raise ValueError(f'"{period}" is not valid DHIS2 day')
-
-    @staticmethod
-    def to_datetime(period: str) -> datetime:
-        return datetime.strptime(period, "%Y%m%d")
-
-    @staticmethod
-    def to_string(dt: str) -> str:
-        return dt.strftime("%Y%m%d")
-
-
+@dataclass
 class Week(Period):
-    """Week.
+    """Represents a week period.
 
-    Format: yyyyWn, example: 2004W10
+    Format: yyyyWn
+    Example: 2004W10
+    Description: Week 10 2004
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    week : int
+        The week of the period.
     """
 
-    def __init__(self, period: Union[str, datetime]):
-        super().__init__(period)
-        self._delta = relativedelta(weeks=1)
+    year: int
+    week: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(weeks=1)
 
-    @staticmethod
-    def check_period(period: str):
-        if (len(period) != 6 and len(period) != 7) or period[4] != "W" or period[5] == "0":
-            raise ValueError(f'"{period}" is not valid DHIS2 week')
+    def __str__(self):
+        return f"{self.year:04}W{self.week:02}"
 
-    @staticmethod
-    def to_datetime(period: str) -> datetime:
-        # a dummy weekday is added so that strptime can be used
-        return datetime.strptime(period + "1", "%YW%W%w")
+    def __post_init__(self):
+        if self.week < 1 or self.week > 53:
+            msg = f"Invalid week number: {self.week}"
+            raise InvalidPeriodError(msg)
 
-    @staticmethod
-    def to_string(dt: datetime) -> str:
-        iso = dt.isocalendar()
-        return f"{iso.year}W{iso.week}"
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        return cls(year=date.isocalendar()[0], week=date.isocalendar()[1])
+
+    @classmethod
+    def from_string(cls, week_str: str):
+        year, week = map(int, week_str.split("W"))
+        return cls(year, week)
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 7)
 
 
+class WeekWednesday(Week):
+    """Represents a week period starting on Wednesday.
+
+    Format: yyyyWedWn
+    Example: 2015WedW5
+    Description: Week 5 with start Wednesday
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    week : int
+        The week of the period.
+    """
+
+    def __str__(self):
+        return f"{self.year:04}WedW{self.week:02}"
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        adjusted_date = date - datetime.timedelta(days=2)
+        return cls(year=adjusted_date.isocalendar()[0], week=adjusted_date.isocalendar()[1])
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 1) + datetime.timedelta(days=2)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 7) + datetime.timedelta(days=2)
+
+
+class WeekThursday(Week):
+    """Represents a week period starting on Thursday.
+
+    Format: yyyyThuWn
+    Example: 2015ThuW6
+    Description: Week 6 with start Thursday
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    week : int
+        The week of the period.
+    """
+
+    def __str__(self):
+        return f"{self.year:04}ThuW{self.week:02}"
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        adjusted_date = date - datetime.timedelta(days=3)
+        return cls(year=adjusted_date.isocalendar()[0], week=adjusted_date.isocalendar()[1])
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 1) + datetime.timedelta(days=3)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 7) + datetime.timedelta(days=3)
+
+
+class WeekSaturday(Week):
+    """Represents a week period starting on Saturday.
+
+    Format: yyyySatWn
+    Example: 2015SatW7
+    Description: Week 7 with start Saturday
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    week : int
+        The week of the period.
+    """
+
+    def __str__(self):
+        return f"{self.year:04}SatW{self.week:02}"
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        adjusted_date = date + datetime.timedelta(days=2)
+        return cls(year=adjusted_date.isocalendar()[0], week=adjusted_date.isocalendar()[1])
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 1) - datetime.timedelta(days=2)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 7) - datetime.timedelta(days=2)
+
+
+class WeekSunday(Week):
+    """Represents a week period starting on Sunday.
+
+    Format: yyyySunWn
+    Example: 2015SunW8
+    Description: Week 8 with start Sunday
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    week : int
+        The week of the period.
+    """
+
+    def __str__(self):
+        return f"{self.year:04}SunW{self.week:02}"
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        adjusted_date = date + datetime.timedelta(days=1)
+        return cls(year=adjusted_date.isocalendar()[0], week=adjusted_date.isocalendar()[1])
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 1) - datetime.timedelta(days=1)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date.fromisocalendar(self.year, self.week, 7) - datetime.timedelta(days=1)
+
+
+@dataclass
+class BiWeek(Period):
+    """Represents a bi-week period.
+
+    Format: yyyyBiWn
+    Example: 2015BiW1
+    Description: Week 1-2 2015
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    bi_week : int
+        The bi-week of the period.
+    """
+
+    year: int
+    bi_week: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(weeks=2)
+
+    def __str__(self):
+        return f"{self.year:04}BiW{self.bi_week:02}"
+
+    def __post_init__(self):
+        if self.bi_week < 1 or self.bi_week > 27:
+            msg = f"Invalid biweek number: {self.bi_week}"
+            raise InvalidPeriodError(msg)
+
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        week = Week.from_date(date)
+        bi_week = (week.week - 1) // 2 + 1
+        return cls(year=week.year, bi_week=bi_week)
+
+    @classmethod
+    def from_string(cls, bi_week_str: str):
+        year, bi_week = map(int, bi_week_str.split("BiW"))
+        return cls(year, bi_week)
+
+    @property
+    def start(self) -> datetime.date:
+        week = (self.bi_week - 1) * 2 + 1
+        return datetime.date.fromisocalendar(self.year, week, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        week = self.bi_week * 2
+        return datetime.date.fromisocalendar(self.year, week, 7)
+
+
+@dataclass
 class Month(Period):
-    """Month.
+    """Represents a month period.
 
-    Format: yyyyMM, example: 200403
+    Format: yyyyMM
+    Example: 200403
+    Description: March 2004
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    month : int
+        The month of the period.
     """
 
-    def __init__(self, period: Union[str, datetime]):
-        super().__init__(period)
-        self._delta = relativedelta(months=1)
+    year: int
+    month: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(months=1)
 
-    @staticmethod
-    def check_period(period: str):
-        if len(period) != 6:
-            raise ValueError(f'"{period}" is not valid DHIS2 month')
+    def __str__(self):
+        return f"{self.year:04}{self.month:02}"
 
-    @staticmethod
-    def to_datetime(period: str) -> datetime:
-        return datetime.strptime(period, "%Y%m")
+    def __post_init__(self):
+        if self.month < 1 or self.month > 12:
+            msg = f"Invalid month: {self.month}"
+            raise InvalidPeriodError(msg)
 
-    @staticmethod
-    def to_string(dt: datetime) -> str:
-        return dt.strftime("%Y%m")
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        return cls(year=date.year, month=date.month)
+
+    @classmethod
+    def from_string(cls, month_str: str):
+        year = int(month_str[:4])
+        month = int(month_str[4:])
+        return cls(year, month)
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date(self.year, self.month, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        last_day_of_month = calendar.monthrange(self.year, self.month)[1]
+        return datetime.date(self.year, self.month, last_day_of_month)
 
 
-class Year(Period):
-    """Year.
+@dataclass
+class BiMonth(Period):
+    """Represents a bi-month period.
 
-    Format: yyyy, example: 2004
+    Format: yyyyMMB
+    Example: 200401B
+    Description: January-February 2004
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    bi_month : int
+        The bi-month of the period.
     """
 
-    def __init__(self, period: Union[str, datetime]):
-        super().__init__(period)
-        self._delta = relativedelta(years=1)
+    year: int
+    bi_month: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(months=2)
 
-    @staticmethod
-    def check_period(period: str):
-        if len(period) != 4:
-            raise ValueError(f'"{period}" is not valid DHIS2 year')
+    def __str__(self):
+        return f"{self.year:04}{self.bi_month:02}B"
 
-    @staticmethod
-    def to_datetime(period: str) -> datetime:
-        return datetime.strptime(period, "%Y")
+    def __post_init__(self):
+        if self.bi_month < 1 or self.bi_month % 2 == 0:
+            msg = f"Invalid bi-month: {self.bi_month}"
+            raise InvalidPeriodError(msg)
 
-    @staticmethod
-    def to_string(dt: datetime) -> str:
-        return dt.strftime("%Y")
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        month = Month.from_date(date)
+        bi_month = month.month // 2 * 2 + 1
+        return cls(year=month.year, bi_month=bi_month)
+
+    @classmethod
+    def from_string(cls, bi_month_str: str):
+        year = int(bi_month_str[:4])
+        bi_month = int(bi_month_str[4:6])
+        return cls(year, bi_month)
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date(self.year, self.bi_month, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        last_day_of_month = calendar.monthrange(self.year, self.bi_month + 1)[1]
+        return datetime.date(self.year, self.bi_month + 1, last_day_of_month)
 
 
+@dataclass
 class Quarter(Period):
-    """Quarter.
+    """Represents a quarter period.
 
-    Format: yyyyQn, example: 2004Q1
+    Format: yyyyQn
+    Example: 2004Q1
+    Description: January-March 2004
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    quarter : int
+        The quarter of the period.
     """
 
-    def __init__(self, period: Union[str, datetime]):
-        super().__init__(period)
-        self._delta = relativedelta(months=3)
+    year: int
+    quarter: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(months=3)
 
-    @staticmethod
-    def check_period(period: str):
-        if len(period) != 6 and period[4] != "Q":
-            raise ValueError(f'"{period}" is not valid DHIS2 quarter')
+    def __str__(self):
+        return f"{self.year:04}Q{self.quarter}"
 
-    @staticmethod
-    def to_datetime(period: str) -> datetime:
-        y = int(period[0:4])  # year
-        q = int(period[5])  # quarter
-        return datetime(y, 1 + 3 * (q - 1), 1)
+    def __post_init__(self):
+        if not (1 <= self.quarter <= 5):
+            msg = f"Invalid quarter: {self.quarter}"
+            raise InvalidPeriodError(msg)
 
-    @staticmethod
-    def to_string(dt: datetime) -> str:
-        return f"{dt.strftime('%Y')}Q{math.ceil(dt.month/3)}"
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        month = Month.from_date(date)
+        quarter = (month.month - 1) // 3 + 1
+        return cls(year=month.year, quarter=quarter)
+
+    @classmethod
+    def from_string(cls, quarter_str: str):
+        year, quarter = map(int, quarter_str.split("Q"))
+        return cls(year, quarter)
+
+    @property
+    def start(self) -> datetime.date:
+        month = (self.quarter - 1) * 3 + 1
+        return datetime.date(self.year, month, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        month = self.quarter * 3
+        last_day_of_month = calendar.monthrange(self.year, month)[1]
+        return datetime.date(self.year, month, last_day_of_month)
 
 
+@dataclass
 class SixMonth(Period):
-    """Six-month period.
+    """Represents a six-month period.
 
-    Format: yyyySn, example: 2004S1
+    Format: yyyySn
+    Example: 2004S1
+    Description: January-June 2004
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    six_month : int
+        The six-month of the period.
     """
 
-    def __init__(self, period: Union[str, datetime]):
-        super().__init__(period)
-        self._delta = relativedelta(months=6)
+    year: int
+    six_month: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(months=6)
 
-    @staticmethod
-    def check_period(period: str):
-        if len(period) != 6 and period[4] != "Q":
-            raise ValueError(f'"{period}" is not valid DHIS2 six-month period')
+    def __str__(self):
+        return f"{self.year:04}S{self.six_month}"
 
-    @staticmethod
-    def to_datetime(period: str) -> datetime:
-        y = int(period[0:4])  # year
-        s = int(period[5])  # semester
-        return datetime(y, 1 + 6 * (s - 1), 1)
+    def __post_init__(self):
+        if self.six_month not in {1, 2}:
+            msg = f"Invalid six-month: {self.six_month}"
+            raise InvalidPeriodError(msg)
 
-    @staticmethod
-    def to_string(dt: datetime) -> str:
-        return f"{dt.strftime('%Y')}S{math.ceil(dt.month/6)}"
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        six_month = 1 if date.month <= 6 else 2
+        return cls(year=date.year, six_month=six_month)
+
+    @classmethod
+    def from_string(cls, six_month_str: str):
+        year, six_month = map(int, six_month_str.split("S"))
+        return cls(year, six_month)
+
+    @property
+    def start(self) -> datetime.date:
+        month = (self.six_month - 1) * 6 + 1
+        return datetime.date(self.year, month, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        month = self.six_month * 6
+        last_day_of_month = calendar.monthrange(self.year, month)[1]
+        return datetime.date(self.year, month, last_day_of_month)
 
 
-def period_from_string(period: str) -> Period:
-    """Get a DHIS2 period object from a period string."""
-    if len(period) == 4 and period.isnumeric():
-        return Year(period)
-    elif period[4] == "W":
-        return Week(period)
-    elif period[4] == "Q":
-        return Quarter(period)
-    elif period[4] == "S":
-        return SixMonth(period)
-    elif len(period) == 6 and period.isnumeric():
-        return Month(period)
-    elif len(period) == 8 and period.isnumeric():
-        return Day(period)
-    else:
-        raise ValueError("Unrecognized period format")
+@dataclass
+class Year(Period):
+    """Represents a year period.
+
+    Format: yyyy
+    Example: 2004
+    Description: 2004
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    """
+
+    year: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(years=1)
+
+    def __str__(self):
+        return f"{self.year:04}"
+
+    def __post_init__(self):
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        return cls(year=date.year)
+
+    @classmethod
+    def from_string(cls, year_str: str):
+        year = int(year_str)
+        return cls(year)
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date(self.year, 1, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date(self.year, 12, 31)
 
 
-def get_range(start: Union[str, Period], end: Union[str, Period]) -> List[Period]:
-    """Get a range of DHIS2 periods."""
-    if isinstance(start, str):
-        start = period_from_string(start)
-    if isinstance(end, str):
-        end = period_from_string(end)
+@dataclass
+class FinancialApril(Period):
+    """Represents a financial year period starting in April.
 
-    prange = start.get_range(end)
-    return prange
+    Format: yyyyApril
+    Example: 2004April
+    Description: April 2004-March 2005
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    """
+
+    year: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(years=1)
+
+    def __str__(self):
+        return f"{self.year:04}April"
+
+    def __post_init__(self):
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        return cls(year=date.year)
+
+    @classmethod
+    def from_string(cls, year_str: str):
+        year = int(year_str[:4])
+        return cls(year)
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date(self.year, 4, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date(self.year + 1, 3, 31)
+
+
+@dataclass
+class FinancialJuly(Period):
+    """Represents a financial year period starting in July.
+
+    Format: yyyyJuly
+    Example: 2004July
+    Description: July 2004-June 2005
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    """
+
+    year: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(years=1)
+
+    def __str__(self):
+        return f"{self.year:04}July"
+
+    def __post_init__(self):
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        return cls(year=date.year)
+
+    @classmethod
+    def from_string(cls, year_str: str):
+        year = int(year_str[:4])
+        return cls(year)
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date(self.year, 7, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date(self.year + 1, 6, 30)
+
+
+@dataclass
+class FinancialOct(Period):
+    """Represents a financial year period starting in October.
+
+    Format: yyyyOct
+    Example: 2004Oct
+    Description: October 2004-September 2005
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    """
+
+    year: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(years=1)
+
+    def __str__(self):
+        return f"{self.year:04}Oct"
+
+    def __post_init__(self):
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        return cls(year=date.year)
+
+    @classmethod
+    def from_string(cls, year_str: str):
+        year = int(year_str[:4])
+        return cls(year)
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date(self.year, 10, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date(self.year + 1, 9, 30)
+
+
+@dataclass
+class FinancialNov(Period):
+    """Represents a financial year period starting in November.
+
+    Format: yyyyNov
+    Example: 2004Nov
+    Description: November 2004-October 2005
+
+    Attributes
+    ----------
+    year : int
+        The year of the period.
+    """
+
+    year: int
+    delta: relativedelta.relativedelta = relativedelta.relativedelta(years=1)
+
+    def __str__(self):
+        return f"{self.year:04}Nov"
+
+    def __post_init__(self):
+        if self.year < 1900:
+            msg = f"Invalid year: {self.year}"
+            raise InvalidPeriodError(msg)
+
+    @classmethod
+    def from_date(cls, date: datetime.date | datetime.datetime):
+        return cls(year=date.year)
+
+    @classmethod
+    def from_string(cls, year_str: str):
+        year = int(year_str[:4])
+        return cls(year)
+
+    @property
+    def start(self) -> datetime.date:
+        return datetime.date(self.year, 11, 1)
+
+    @property
+    def end(self) -> datetime.date:
+        return datetime.date(self.year + 1, 10, 31)
