@@ -71,7 +71,7 @@ class TestIasoAPI:
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
         )
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/forms/", json=iaso_mocked_forms, status=200
+            responses.GET, "https://iaso-staging.bluesquare.org/api/forms/", json=iaso_mocked_forms, status=200
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "username", "password")
         r = iaso.get_forms(org_units=[781], projects=[149])
