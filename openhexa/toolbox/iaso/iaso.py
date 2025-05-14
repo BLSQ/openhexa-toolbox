@@ -101,7 +101,12 @@ class IASO:
         return forms
 
     def get_forms(
-        self, org_units: typing.List[int] = None, projects: typing.List[int] = None, page: int = 1, limit: int = 10, **kwargs
+        self,
+        org_units: typing.List[int] = None,
+        projects: typing.List[int] = None,
+        page: int = 1,
+        limit: int = 10,
+        **kwargs,
     ) -> dict:
         """
         Fetches forms from IASO. Method is paginated by default.
