@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.4.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.3.1...v2.4.0) (2025-05-14)
+
+
+### Features
+
+* **dhis2:** add progress bars ([#143](https://github.com/BLSQ/openhexa-toolbox/issues/143)) ([5fa5292](https://github.com/BLSQ/openhexa-toolbox/commit/5fa52929c8b08f6410e1b120b7ec6e7665b4150d))
+
+
+### Bug Fixes
+
+* fixes get on forms for IASO query ([#148](https://github.com/BLSQ/openhexa-toolbox/issues/148)) ([4ecae08](https://github.com/BLSQ/openhexa-toolbox/commit/4ecae08b66f3437055547ef908f7646ba74d5666))
+
 ## [2.3.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.3.0...v2.3.1) (2025-05-09)
 
 
