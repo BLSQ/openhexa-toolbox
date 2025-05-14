@@ -71,7 +71,7 @@ class TestIasoAPI:
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
         )
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/forms/", json=iaso_mocked_forms, status=200
+            responses.GET, "https://iaso-staging.bluesquare.org/api/forms/", json=iaso_mocked_forms, status=200
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "username", "password")
         r = iaso.get_forms(org_units=[781], projects=[149])
@@ -93,7 +93,7 @@ class TestIasoAPI:
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
         )
         mock_responses.add(
-            responses.POST,
+            responses.GET,
             "https://iaso-staging.bluesquare.org/api/forms/",
             json={"message": "Form submission failed"},
             status=500,
@@ -102,15 +102,15 @@ class TestIasoAPI:
         try:
             iaso.get_forms([781], [149])
         except Exception as e:
-            assert str(e) == "{'message': 'Form submission failed'}"
+            assert "Max retries exceeded" in str(e)
 
     def test_verify_expired_token(self, mock_responses):
         mock_responses.add(
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
         )
         mock_responses.add(
-            responses.POST,
-            "https://iaso-staging.bluesquare.org/api/forms/",
+            responses.GET,
+            "https://iaso-staging.bluesquare.org/api/projects/",
             json={"message": "No authorized"},
             status=401,
         )
@@ -121,6 +121,6 @@ class TestIasoAPI:
             status=200,
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "user", "test")
-        iaso.get_forms([781], [149])
+        iaso.get_projects()
         assert mock_responses.calls[2].request.url == "https://iaso-staging.bluesquare.org/api/token/refresh/"
         assert iaso.api_client.token == iaso_mocked_refreshed_auth_token["access"]
