@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.5.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.4.0...v2.5.0) (2025-05-14)
+
+
+### Features
+
+* **dhis2:** allow periods as arguments in dataframe API ([#146](https://github.com/BLSQ/openhexa-toolbox/issues/146)) ([67bf045](https://github.com/BLSQ/openhexa-toolbox/commit/67bf0456567d850964d7aed9dc9051063b186d8e))
+* **dhis2:** do not drop additional columns ([64053e5](https://github.com/BLSQ/openhexa-toolbox/commit/64053e561c26adfca093806d1675d3d81e1b471c))
+* **dhis2:** support all period types ([#145](https://github.com/BLSQ/openhexa-toolbox/issues/145)) ([c576de2](https://github.com/BLSQ/openhexa-toolbox/commit/c576de2739c801656f046ea0dde4bcbabadbf2f3))
+
+
+### Bug Fixes
+
+* **dhis2:** do not drop columns when joining object names ([#147](https://github.com/BLSQ/openhexa-toolbox/issues/147)) ([64053e5](https://github.com/BLSQ/openhexa-toolbox/commit/64053e561c26adfca093806d1675d3d81e1b471c))
+
 ## [2.4.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.3.1...v2.4.0) (2025-05-14)
 
 
