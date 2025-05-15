@@ -159,7 +159,7 @@ def list_datetimes_in_dataset(ds: xr.Dataset) -> list[datetime]:
         if dtime in dtimes:
             continue
         non_null = ds.sel(time=time)[var].notnull().sum().values.item()
-        if non_null >= 0:
+        if non_null > 0:
             dtimes.append(dtime)
 
     return dtimes
