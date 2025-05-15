@@ -43,7 +43,7 @@ class IASO:
         response = self.api_client.get("/api/projects", params=params)
         return response.json().get("projects")
 
-    def get_org_units(self, page: int = 1, limit: int = 10, **kwargs) -> dict:
+    def get_org_units(self, page: int = 1, limit: int = 10, optimized=True, **kwargs) -> dict:
         """
         Fetches org units from IASO. Method is paginated by default. Pagination can be modified and additional
         arguments can be passed as key value parameters.
@@ -55,9 +55,16 @@ class IASO:
             >>>             password="pass"))
             >>> projects = iaso.get_org_units(page=1, limit=1, id=1)
         """
+        org_units_endpoint = "/api/orgunits"
         params = kwargs
         params.update({"page": page, "limit": limit})
-        response = self.api_client.get("/api/orgunits", params=params)
+        params.update({"validation_status": "VALID"})
+        if optimized:
+            org_units_endpoint = "/api/orgunits/tree"
+        if "search" in kwargs:
+            params.update({"smallSearch": "true"})
+            org_units_endpoint = "/api/orgunits/tree/search"
+        response = self.api_client.get(org_units_endpoint, params=params)
         json_response = response.json()
         if "orgunits" in json_response:
             return json_response.get("orgunits")
