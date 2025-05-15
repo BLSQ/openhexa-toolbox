@@ -1177,7 +1177,7 @@ class DataValueSets:
 
         import_counts = {"imported": 0, "updated": 0, "ignored": 0, "deleted": 0}
 
-        chunks = _split_list(data_values, self.MAX_POST_DATA_VALUES)
+        chunks = list(_split_list(data_values, self.MAX_POST_DATA_VALUES))
 
         with Progress() as progress:
             task = progress.add_task("Uploading data values", total=len(chunks))
