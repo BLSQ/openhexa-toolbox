@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.6.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.5.0...v2.6.0) (2025-05-15)
+
+
+### Features
+
+* optimized org units search ([#151](https://github.com/BLSQ/openhexa-toolbox/issues/151)) ([f0883ff](https://github.com/BLSQ/openhexa-toolbox/commit/f0883ffb30840f97f17883f1f648820c5a7fb492))
+
+
+### Bug Fixes
+
+* **dhis2:** data import always failing ([#153](https://github.com/BLSQ/openhexa-toolbox/issues/153)) ([5382af7](https://github.com/BLSQ/openhexa-toolbox/commit/5382af7ce2eed8b1103fa439dc633bba1e627200))
+* **dhis2:** materialize iterator to compute length ([5382af7](https://github.com/BLSQ/openhexa-toolbox/commit/5382af7ce2eed8b1103fa439dc633bba1e627200))
+* **era5:** data availability checks fail in areas with nodata ([#154](https://github.com/BLSQ/openhexa-toolbox/issues/154)) ([26ec6bc](https://github.com/BLSQ/openhexa-toolbox/commit/26ec6bc1ddbbfe21a6c2bcb8af1bc630a49427c5))
+
 ## [2.5.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.4.0...v2.5.0) (2025-05-14)
 
 
