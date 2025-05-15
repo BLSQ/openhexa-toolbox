@@ -159,9 +159,7 @@ def list_datetimes_in_dataset(ds: xr.Dataset) -> list[datetime]:
         if dtime in dtimes:
             continue
         non_null = ds.sel(time=time)[var].notnull().sum().values.item()
-        non_null /= len(ds.latitude) * len(ds.longitude)
-        n_steps = len(ds.step) if ds.step.ndim else 1
-        if non_null >= n_steps:
+        if non_null > 0:
             dtimes.append(dtime)
 
     return dtimes
