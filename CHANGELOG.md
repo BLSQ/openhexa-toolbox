@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.3](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.2...v2.6.3) (2025-05-20)
+
+
+### Bug Fixes
+
+* return results for optmized orgunits search ([58fd9be](https://github.com/BLSQ/openhexa-toolbox/commit/58fd9be79759a3d85ce7229c72dc5f1f8c340941))
+
 ## [2.6.2](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.1...v2.6.2) (2025-05-20)
 
 
