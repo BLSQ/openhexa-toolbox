@@ -66,7 +66,9 @@ class IASO:
             org_units_endpoint = "/api/orgunits/tree/search"
         response = self.api_client.get(org_units_endpoint, params=params)
         json_response = response.json()
-        if "orgunits" in json_response:
+        if optimized and "results" in json_response:
+            return json_response.get("results")
+        elif "orgunits" in json_response:
             return json_response.get("orgunits")
         elif "orgUnits" in json_response:
             return json_response.get("orgUnits")
