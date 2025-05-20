@@ -133,5 +133,5 @@ class IASO:
         """
         params = kwargs
         params.update({"page": page, "limit": limit, "org_unit_types_id": org_units, "project_ids": projects})
-        response = self.api_client.get("/api/forms", data=params)
+        response = self.api_client.get("/api/forms", params=params)
         return response.json().get("forms")
