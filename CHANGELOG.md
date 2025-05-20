@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.0...v2.6.1) (2025-05-20)
+
+
+### Bug Fixes
+
+* fixes parameter usage for GET method ([8677c03](https://github.com/BLSQ/openhexa-toolbox/commit/8677c03b232a4d277566ea38854b4f23ebf8ac8c))
+
 ## [2.6.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.5.0...v2.6.0) (2025-05-15)
 
 
