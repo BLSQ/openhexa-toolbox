@@ -109,8 +109,6 @@ class IASO:
 
     def get_forms(
         self,
-        org_units: typing.List[int] = None,
-        projects: typing.List[int] = None,
         page: int = 1,
         limit: int = 10,
         **kwargs,
@@ -120,8 +118,6 @@ class IASO:
         Pagination can be modified and additional arguments can be passed as key value parameters.
 
         Params:
-            :param org_units: A list of organization units IDs.
-            :param projects: A list of project IDs.
             :param page: The page number of the form.
             :param limit: The maximum number of form.
             :param kwargs: additonal arguments passed to the /forms endpoint as URL parameters.
@@ -130,8 +126,9 @@ class IASO:
             >>> from openhexa.toolbox.iaso import IASO
             >>> iaso = IASO(url="http://iaso-staging.bluesquare.org",username="user",password="pass")
             >>> forms_by_orgunits_and_projects = iaso.get_forms(page=1, limit=1, org_units=[300], projects=[23])
+            >>> forms_by_orgunits_and_projects = iaso.get_forms(page=1, limit=1, search="test")
         """
         params = kwargs
-        params.update({"page": page, "limit": limit, "org_unit_types_id": org_units, "project_ids": projects})
+        params.update({"page": page, "limit": limit})
         response = self.api_client.get("/api/forms", params=params)
         return response.json().get("forms")
