@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.2](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.1...v2.6.2) (2025-05-20)
+
+
+### Bug Fixes
+
+* fixes required org_units and projects fields for forms ([60cce6a](https://github.com/BLSQ/openhexa-toolbox/commit/60cce6a7af395d685b5b5fcd863db169cee3b462))
+
 ## [2.6.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.0...v2.6.1) (2025-05-20)
 
 
