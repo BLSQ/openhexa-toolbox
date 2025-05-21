@@ -10,7 +10,7 @@ from tests.iaso.fixtures.iaso_api_fixtures import (
     iaso_mocked_refreshed_auth_token,
     iaso_mocked_projects,
     iaso_mocked_instances,
-    iaso_mocked_orgunits_with_params,
+    iaso_mocked_orgunits_with_params, iaso_mocked_orgunits_tree_search,
 )
 
 
@@ -47,7 +47,7 @@ class TestIasoAPI:
         )
         mock_responses.add(
             responses.GET,
-            "https://iaso-staging.bluesquare.org/api/orgunits/tree/?page=1&limit=10&validation_status=VALID",
+            "https://iaso-staging.bluesquare.org/api/orgunits/?page=1&limit=10&validation_status=VALID",
             json=iaso_mocked_orgunits,
             status=200,
         )
@@ -55,18 +55,18 @@ class TestIasoAPI:
         r = iaso.get_org_units()
         assert len(r) > 0
 
-    def test_get_org_units_with_params(self, mock_responses):
+    def test_get_org_units(self, mock_responses):
         mock_responses.add(
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
         )
         mock_responses.add(
             responses.GET,
-            "https://iaso-staging.bluesquare.org/api/orgunits/tree/?page=1&limit=10&validation_status=VALID",
-            json=iaso_mocked_orgunits_with_params,
+            "https://iaso-staging.bluesquare.org/api/orgunits/tree/search/?page=1&limit=10&validation_status=VALID",
+            json=iaso_mocked_orgunits_tree_search,
             status=200,
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "username", "password")
-        r = iaso.get_org_units()
+        r = iaso.get_org_units(optimized=True)
         assert len(r) > 0
 
     def test_get_org_units_with_search(self, mock_responses):
@@ -76,11 +76,11 @@ class TestIasoAPI:
         mock_responses.add(
             responses.GET,
             "https://iaso-staging.bluesquare.org/api/orgunits/tree/search/?search=test&page=1&limit=10&validation_status=VALID&smallSearch=true",
-            json=iaso_mocked_orgunits,
+            json=iaso_mocked_orgunits_tree_search,
             status=200,
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "username", "password")
-        r = iaso.get_org_units(search="test")
+        r = iaso.get_org_units(optimized=True, search="test")
         assert len(r) > 0
 
     def test_get_forms(self, mock_responses):

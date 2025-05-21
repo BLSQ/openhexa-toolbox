@@ -56,6 +56,18 @@ iaso_mocked_orgunits = {
         }
     ]
 }
+iaso_mocked_orgunits_tree_search = {
+    "results": [
+        {
+            "name": "ACEH",
+            "id": 1978297,
+            "parent_id": 1978331,
+            "org_unit_type_id": 781,
+            "org_unit_type_name": "Province",
+            "validation_status": "VALID"
+        }
+    ]
+}
 
 
 iaso_mocked_orgunits_with_params = {
