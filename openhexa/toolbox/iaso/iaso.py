@@ -59,11 +59,12 @@ class IASO:
         params = kwargs
         params.update({"page": page, "limit": limit})
         params.update({"validation_status": "VALID"})
+
         if optimized:
-            org_units_endpoint = "/api/orgunits/tree"
-        if "search" in kwargs:
-            params.update({"smallSearch": "true"})
             org_units_endpoint = "/api/orgunits/tree/search"
+            if "search" in kwargs:
+                params.update({"smallSearch": "true"})
+
         response = self.api_client.get(org_units_endpoint, params=params)
         json_response = response.json()
         if optimized and "results" in json_response:
@@ -99,6 +100,7 @@ class IASO:
         """
 
         params = kwargs
+        params.update({"page": page, "limit": limit})
         params.update({"page": page, "limit": limit})
         if as_dataframe:
             params.update({"csv": "true"})
