@@ -10,7 +10,8 @@ from tests.iaso.fixtures.iaso_api_fixtures import (
     iaso_mocked_refreshed_auth_token,
     iaso_mocked_projects,
     iaso_mocked_instances,
-    iaso_mocked_orgunits_with_params, iaso_mocked_orgunits_tree_search,
+    iaso_mocked_orgunits_with_params,
+    iaso_mocked_orgunits_tree_search,
 )
 
 
