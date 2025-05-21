@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.6.4](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.3...v2.6.4) (2025-05-21)
+
+
+### Bug Fixes
+
+* fix linting in tests ([e57abd1](https://github.com/BLSQ/openhexa-toolbox/commit/e57abd15362c29ea253b73e66b36ed52fcd11ec5))
+* fix tests ([84d79b9](https://github.com/BLSQ/openhexa-toolbox/commit/84d79b9f195db105dc7e25786e0e858d675e4904))
+* iaso tree org_units results only available in search ([e757756](https://github.com/BLSQ/openhexa-toolbox/commit/e757756a396f20e0e2a823f28e70514d1bd9e721))
+* linting ([373e4c6](https://github.com/BLSQ/openhexa-toolbox/commit/373e4c6d5268962757a6f737b6963186e95d462e))
+* set optmized tree search to false be default for backwards compatiblity ([d08591a](https://github.com/BLSQ/openhexa-toolbox/commit/d08591ae1649ee13a7a7854cb78f09a3b990e058))
+* test names ([5b4f3b2](https://github.com/BLSQ/openhexa-toolbox/commit/5b4f3b26ef09e6eb048defd1ee74edd0f5e4f13a))
+
 ## [2.6.3](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.2...v2.6.3) (2025-05-20)
 
 
