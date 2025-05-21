@@ -43,7 +43,7 @@ class IASO:
         response = self.api_client.get("/api/projects", params=params)
         return response.json().get("projects")
 
-    def get_org_units(self, page: int = 1, limit: int = 10, optimized=True, **kwargs) -> dict:
+    def get_org_units(self, page: int = 1, limit: int = 10, optimized=False, **kwargs) -> dict:
         """
         Fetches org units from IASO. Method is paginated by default. Pagination can be modified and additional
         arguments can be passed as key value parameters.
