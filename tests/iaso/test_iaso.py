@@ -55,7 +55,7 @@ class TestIasoAPI:
         r = iaso.get_org_units()
         assert len(r) > 0
 
-    def test_get_org_units(self, mock_responses):
+    def test_get_org_units_optimized(self, mock_responses):
         mock_responses.add(
             responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
         )
