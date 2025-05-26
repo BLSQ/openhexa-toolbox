@@ -31,19 +31,19 @@ class ApiClient(requests.Session):
 
     """
 
-    def __init__(self, server_url: str, username: str, password: str):
+    def __init__(self, url: str, username: str, password: str):
         """
         Initialize the IASO API client.
 
-        :param server_url: IASO server URL
+        :param url: IASO server URL
         :param username: IASO instance username
         :param password: IASO instance password
 
         Examples:
-            >>> client = ApiClient(server_url="http://localhost:8080", username="admin", password="<PASSWORD>")
+            >>> client = ApiClient(url="http://localhost:8080", username="admin", password="<PASSWORD>")
         """
         super().__init__()
-        self.server_url = server_url.rstrip("/")
+        self.server_url = url.rstrip("/")
         self.username = username
         self.password = password
         self.headers.update(
