@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.5](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.4...v2.6.5) (2025-05-26)
+
+
+### Bug Fixes
+
+* use same argument name for url ([#159](https://github.com/BLSQ/openhexa-toolbox/issues/159)) ([69e7066](https://github.com/BLSQ/openhexa-toolbox/commit/69e7066d8f03eb7d576e517f892377ea632e116f))
+
 ## [2.6.4](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.3...v2.6.4) (2025-05-21)
 
 
