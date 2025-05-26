@@ -10,10 +10,10 @@ class IASO:
     The IASO toolbox provides an interface to interact with the IASO.
     """
 
-    def __init__(self, server_url: str, username: str, password: str) -> None:
+    def __init__(self, url: str, username: str, password: str) -> None:
         """
         Initializes the IASO toolbox.
-        :param server_url: IASO server URL
+        :param url: IASO server URL
         :param username: IASO instance username
         :param password: IASO instance password
 
@@ -23,7 +23,7 @@ class IASO:
             >>>             username="user",
             >>>             password="pass")
         """
-        self.api_client = ApiClient(server_url, username, password)
+        self.api_client = ApiClient(url, username, password)
 
     def get_projects(self, page: int = 1, limit: int = 10, **kwargs) -> dict:
         """
