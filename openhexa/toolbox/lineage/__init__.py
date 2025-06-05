@@ -1,24 +1,25 @@
-from typing import Optional, List, Union
 from datetime import datetime
+from typing import Union
+
 from openlineage.client.event_v2 import InputDataset, OutputDataset, RunState
-
+from openlineage.client.generated.base import EventType as LineageEventType
 from .client import OpenHexaOpenLineageClient
-from .event_types import EventType
 
-_client: Optional[OpenHexaOpenLineageClient] = None
+_client: OpenHexaOpenLineageClient | None = None
 
 def init_client(*args, **kwargs):
     global _client
     _client = OpenHexaOpenLineageClient(*args, **kwargs)
 
 def event(
-    event_type: EventType,
+    event_type: OpenHexaOpenLineageClient,
     *,
-    inputs: Optional[List[Union[str, InputDataset]]] = None,
-    outputs: Optional[List[Union[str, OutputDataset]]] = None,
-    sql: Optional[str] = None,
-    start_time: Optional[datetime] = None,
-    end_time: Optional[datetime] = None,
+    task_name: str,
+    inputs: list[str | InputDataset] | None = None,
+    outputs: list[str | OutputDataset] | None = None,
+    sql: str | None = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
 ):
     if _client is None:
         raise RuntimeError("Lineage client not initialized. Call `lineage.init_client(...)` first.")
@@ -26,14 +27,16 @@ def event(
     input_objs = _wrap_datasets(inputs, is_input=True)
     output_objs = _wrap_datasets(outputs, is_input=False)
 
-    if event_type == EventType.EMIT_RUN_START:
-        _client.emit_run_event(RunState.START, inputs=input_objs, outputs=output_objs, start_time=start_time, sql=sql)
-    elif event_type == EventType.EMIT_RUN_COMPLETE:
-        _client.emit_run_event(RunState.COMPLETE, inputs=input_objs, outputs=output_objs, end_time=end_time, sql=sql)
-    else:
-        raise ValueError(f"Unsupported event type: {event_type}")
+    _client.emit_run_event(
+        event_type=event_type,
+        task_name=task_name,
+        inputs=input_objs,
+        outputs=output_objs,
+        start_time=start_time,
+        sql=sql
+    )
 
-def _wrap_datasets(datasets, is_input: bool):
+def _wrap_datasets(datasets: list[str | InputDataset | OutputDataset] | None, is_input: bool) -> list[InputDataset] | list[OutputDataset]:
     if not datasets:
         return []
 
