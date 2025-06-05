@@ -40,6 +40,7 @@ class OpenHexaOpenLineageClient:
     def emit_run_event(
         self,
         event_type: RunState,
+        task_name: str,
         inputs: Optional[List[InputDataset]] = None,
         outputs: Optional[List[OutputDataset]] = None,
         start_time: Optional[datetime] = None,
@@ -62,7 +63,8 @@ class OpenHexaOpenLineageClient:
         if sql:
             job_facets["sql"] = sql_job.SQLJobFacet(query=sql)
 
-        job = Job(namespace=self.namespace, name=self.job_name, facets=job_facets)
+        job_name = f"{self.job_name}.{task_name}" if task_name else self.job_name
+        job = Job(namespace=self.namespace, name=job_name, facets=job_facets)
 
         event = RunEvent(
             eventType=event_type,
