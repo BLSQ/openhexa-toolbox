@@ -14,7 +14,6 @@ from openlineage.client.event_v2 import (
 )
 from openlineage.client.facet_v2 import (
     nominal_time_run,
-    source_code_location_job,
     sql_job,
 )
 
@@ -87,7 +86,7 @@ class OpenHexaOpenLineageClient:
         self, connection_name: str, db_name: str, table_name: str
     ) -> Dataset:
         return Dataset(
-            namespace=connection_name,
+            namespace=self.namespace,
             name=f"{db_name}.{table_name}",
             facets={
                 "source": {
