@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
-
+from openhexa.sdk.
 from openlineage.client.client import OpenLineageClient, OpenLineageClientOptions
 from openlineage.client.event_v2 import (
     Dataset,
@@ -24,8 +23,8 @@ class OpenHexaOpenLineageClient:
         url: str,
         workspace_slug: str,
         pipeline_slug: str,
-        pipeline_run_id: Optional[str] = None,
-        api_key: Optional[str] = None,
+        pipeline_run_id: str | None = None,
+        api_key: str | None = None,
         producer: str = "https://github.com/openhexa",
     ):
         self.client = OpenLineageClient(
@@ -41,11 +40,11 @@ class OpenHexaOpenLineageClient:
         self,
         event_type: RunState,
         task_name: str,
-        inputs: Optional[List[InputDataset]] = None,
-        outputs: Optional[List[OutputDataset]] = None,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        sql: Optional[str] = None,
+        inputs: list[InputDataset] | None = None,
+        outputs: list[OutputDataset] | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        sql: str | None = None,
     ):
         now = datetime.now(timezone.utc)
         event_time = (start_time or now).isoformat()
@@ -84,9 +83,7 @@ class OpenHexaOpenLineageClient:
     def create_output_dataset(self, namespace: str, name: str) -> OutputDataset:
         return OutputDataset(namespace=namespace, name=name)
 
-    def dataset_from_postgres_table(
-        self, connection_name: str, db_name: str, table_name: str
-    ) -> Dataset:
+    def dataset_from_postgres_table(self, connection_name: str, db_name: str, table_name: str) -> Dataset:
         return Dataset(
             namespace=self.namespace,
             name=f"{db_name}.{table_name}",
