@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.8...v2.7.0) (2025-06-06)
+
+
+### Features
+
+* **dhis2:** extract multiple data element groups ([#166](https://github.com/BLSQ/openhexa-toolbox/issues/166)) ([#167](https://github.com/BLSQ/openhexa-toolbox/issues/167)) ([2fd7698](https://github.com/BLSQ/openhexa-toolbox/commit/2fd7698b1c2af1bf4d88c428d401d24dbdc1e31b))
+* **dhis2:** extract multiple data element groups ([#169](https://github.com/BLSQ/openhexa-toolbox/issues/169)) ([8f8cad9](https://github.com/BLSQ/openhexa-toolbox/commit/8f8cad969caaae1aa466b2a586cfe75b1b205d55))
+
 ## [2.6.8](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.7...v2.6.8) (2025-06-06)
 
 
