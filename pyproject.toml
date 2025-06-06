@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openhexa.toolbox"
-version = "2.6.5"
+version = "2.6.8"
 description = "A set of tools to acquire & process data from various sources"
 authors = [{ name = "Bluesquare", email = "dev@bluesquarehub.com" }]
 maintainers = [{ name = "Bluesquare", email = "dev@bluesquarehub.com" }]
@@ -41,10 +41,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff~=0.8.4",
-    "pytest~=8.3.2",
+    "pytest~=8.4.0",
     "build~=1.2.1",
     "pytest-cov~=6.0.0",
-    "black~=24.10.0",
+    "black~=25.1.0",
     "pre-commit",
     "responses",
 ]
