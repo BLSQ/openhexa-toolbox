@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.7](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.6...v2.6.7) (2025-06-06)
+
+
+### Bug Fixes
+
+* **conda:** fixes recipe openhexa.sdk dependency ([1b3ad25](https://github.com/BLSQ/openhexa-toolbox/commit/1b3ad25272e5df0cc8d30a323962c8ebfae8beea))
+
 ## [2.6.6](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.5...v2.6.6) (2025-06-06)
 
 
