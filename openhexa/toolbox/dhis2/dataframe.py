@@ -457,9 +457,9 @@ def extract_dataset(
     return df
 
 
-def extract_data_element_group(
+def extract_data_element_groups(
     dhis2: DHIS2,
-    data_element_group: str,
+    data_element_groups: list[str],
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     periods: list[str] | None = None,
@@ -474,8 +474,8 @@ def extract_data_element_group(
     ----------
     dhis2 : DHIS2
         DHIS2 instance.
-    data_element_group : str
-        Data element group ID.
+    data_element_groups : list of str
+        Data element group IDs.
     start_date : str, optional
         Start date in the format "YYYY-MM-DD".
         Use either start_date and end_date or periods.
@@ -534,7 +534,7 @@ def extract_data_element_group(
         end_date = end_date.strftime("%Y-%m-%d")
 
     values = dhis2.data_value_sets.get(
-        data_element_groups=[data_element_group],
+        data_element_groups=data_element_groups,
         periods=periods if periods else None,
         start_date=start_date if start_date else None,
         end_date=end_date if end_date else None,
