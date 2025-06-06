@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.6.8](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.7...v2.6.8) (2025-06-06)
+
+
+### Bug Fixes
+
+* **conda:** adds blsqtech channel to ci/cd flow ([4a59709](https://github.com/BLSQ/openhexa-toolbox/commit/4a59709cc68217c2682db4b5735da460f6018109))
+* **deps:** update dependency black to v25 ([#90](https://github.com/BLSQ/openhexa-toolbox/issues/90)) ([5e3149b](https://github.com/BLSQ/openhexa-toolbox/commit/5e3149b2725a559078c542a95e6b3317d61194af))
+* **deps:** update dependency pytest to ~=8.4.0 ([#161](https://github.com/BLSQ/openhexa-toolbox/issues/161)) ([d40b6a8](https://github.com/BLSQ/openhexa-toolbox/commit/d40b6a80bafcd2c3e2e896c8cc1a81c538486a24))
+
 ## [2.6.7](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.6...v2.6.7) (2025-06-06)
 
 
