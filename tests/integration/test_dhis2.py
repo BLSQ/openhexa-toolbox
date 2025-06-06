@@ -150,10 +150,10 @@ def test_extract_dataset(client):
     }
 
 
-def test_extract_data_element_group(client):
-    df = dataframe.extract_data_element_group(
+def test_extract_data_element_groups(client):
+    df = dataframe.extract_data_element_groups(
         dhis2=client,
-        data_element_group="h9cuJOkOwY2",
+        data_element_groups=["h9cuJOkOwY2"],
         start_date=datetime(2020, 11, 1),
         end_date=datetime(2021, 2, 5),
         org_units=["jPidqyo7cpF"],
