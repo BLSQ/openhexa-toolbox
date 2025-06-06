@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.6](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.5...v2.6.6) (2025-06-06)
+
+
+### Bug Fixes
+
+* fixes conda recipe ([89c6859](https://github.com/BLSQ/openhexa-toolbox/commit/89c68594afc7f7c7d37e1e98384c6939c1ffd85c))
+
 ## [2.6.5](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.4...v2.6.5) (2025-05-26)
 
 
