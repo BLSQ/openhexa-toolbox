@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from openhexa.sdk.
+
 from openlineage.client.client import OpenLineageClient, OpenLineageClientOptions
 from openlineage.client.event_v2 import (
     Dataset,
