@@ -37,6 +37,10 @@ requirements:
     - xarray
     - epiweeks
     - fiona
+    - datapi
+    - humanize
+    - openhexa-sdk
+    - rich
 
 test:
   imports:
