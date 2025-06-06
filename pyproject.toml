@@ -35,7 +35,8 @@ dependencies = [
     "datapi >=0.3.0",
     "openhexa.sdk",
     "humanize",
-    "rich"
+    "rich",
+    "openlineage-python"
 ]
 
 [project.optional-dependencies]
