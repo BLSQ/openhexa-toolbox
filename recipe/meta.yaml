@@ -39,7 +39,7 @@ requirements:
     - fiona
     - datapi
     - humanize
-    - openhexa-sdk
+    - openhexa.sdk >=2.2.0
     - rich
 
 test:
