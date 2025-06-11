@@ -3,17 +3,37 @@ from http.client import responses
 import pytest
 
 
-class TestLineage():
+class TestLineage:
     @pytest.fixture
     def mock_responses(self):
         with responses.RequestsMock() as rsps:
             yield rsps
 
     def test_init_client(self):
-        from  openhexa.toolbox import lineage
+        from openhexa.toolbox import lineage
+
         lineage.init_client(url="http://localhost:8080", workspace_slug="default", pipeline_slug="test_pipeline")
         assert lineage._client is not None
         assert lineage._client.client is not None
         assert lineage._client.namespace == "default"
 
+    def test_emit_run_event(self, mock_responses):
+        from openhexa.toolbox import lineage
+        from openhexa.toolbox.lineage.client import OpenHexaOpenLineageClient
+        from openlineage.client.event_v2 import RunState
 
+        lineage.init_client(url="http://localhost:8080", workspace_slug="default", pipeline_slug="test_pipeline")
+
+        client: OpenHexaOpenLineageClient = lineage._client
+        mock_responses.add(responses.POST, "http://localhost:8080/api/v1/lineage/events", json={}, status=200)
+
+        client.emit_run_event(
+            event_type=RunState.START,
+            task_name="test_task",
+            inputs=[],
+            outputs=[],
+            start_time=None,
+            end_time=None,
+            sql=None,
+        )
+        assert mock_responses.calls[0].request.url == "http://localhost:8080/api/v1/lineage/events"

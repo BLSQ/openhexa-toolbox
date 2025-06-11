@@ -29,7 +29,6 @@ class OpenHexaOpenLineageClient:
         api_key: str | None = None,
         producer: str = "https://github.com/openhexa",
     ):
-
         self.client = OpenLineageClient(
             url=url,
             # optional api key in case marquez requires it. When running marquez in
