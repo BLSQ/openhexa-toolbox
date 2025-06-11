@@ -15,6 +15,8 @@ from openlineage.client.facet_v2 import (
     nominal_time_run,
     sql_job,
 )
+from openlineage.client.transport import HttpConfig
+from openlineage.client.transport.http import ApiKeyTokenProvider, HttpCompression, HttpTransport
 
 
 class OpenHexaOpenLineageClient:
@@ -27,9 +29,12 @@ class OpenHexaOpenLineageClient:
         api_key: str | None = None,
         producer: str = "https://github.com/openhexa",
     ):
+
         self.client = OpenLineageClient(
             url=url,
-            options=OpenLineageClientOptions(api_key=api_key) if api_key else None,
+            # optional api key in case marquez requires it. When running marquez in
+            # your local environment, you usually do not need this.
+            options=OpenLineageClientOptions(api_key=api_key),
         )
         self.namespace = workspace_slug
         self.job_name = pipeline_slug
@@ -76,7 +81,7 @@ class OpenHexaOpenLineageClient:
         )
         self.client.emit(event)
 
-    def create_input_dataset(self,name: str) -> InputDataset:
+    def create_input_dataset(self, name: str) -> InputDataset:
         return InputDataset(namespace=self.namespace, name=name)
 
     def create_output_dataset(self, name: str) -> OutputDataset:

@@ -36,7 +36,7 @@ dependencies = [
     "openhexa.sdk",
     "humanize",
     "rich",
-    "openlineage-python"
+    "openlineage-python >=1.33.0"
 ]
 
 [project.optional-dependencies]

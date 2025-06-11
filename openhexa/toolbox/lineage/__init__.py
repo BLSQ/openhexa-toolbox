@@ -7,9 +7,11 @@ from .client import OpenHexaOpenLineageClient
 
 _client: OpenHexaOpenLineageClient | None = None
 
+
 def init_client(*args, **kwargs):
     global _client
     _client = OpenHexaOpenLineageClient(*args, **kwargs)
+
 
 def event(
     event_type: EventType,
@@ -34,10 +36,13 @@ def event(
         outputs=output_objs,
         start_time=start_time,
         end_time=end_time,
-        sql=sql
+        sql=sql,
     )
 
-def _wrap_datasets(datasets: list[str | InputDataset | OutputDataset] | None, is_input: bool) -> list[InputDataset] | list[OutputDataset]:
+
+def _wrap_datasets(
+    datasets: list[str | InputDataset | OutputDataset] | None, is_input: bool
+) -> list[InputDataset] | list[OutputDataset]:
     if not datasets:
         return []
 
@@ -50,4 +55,5 @@ def _wrap_datasets(datasets: list[str | InputDataset | OutputDataset] | None, is
             result.append(d)
     return result
 
-__all__ = ["init_client", "event", "EventType"]
+
+__all__ = ["EventType"]
