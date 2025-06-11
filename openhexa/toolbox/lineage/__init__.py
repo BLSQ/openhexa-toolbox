@@ -44,8 +44,7 @@ def _wrap_datasets(datasets: list[str | InputDataset | OutputDataset] | None, is
     result = []
     for d in datasets:
         if isinstance(d, str):
-            namespace, name = d.split(".", 1)
-            ds = _client.create_input_dataset(namespace, name) if is_input else _client.create_output_dataset(namespace, name)
+            ds = _client.create_input_dataset(d) if is_input else _client.create_output_dataset(d)
             result.append(ds)
         else:
             result.append(d)

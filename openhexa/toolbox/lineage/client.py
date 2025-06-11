@@ -74,14 +74,13 @@ class OpenHexaOpenLineageClient:
             inputs=inputs or [],
             outputs=outputs or [],
         )
-
         self.client.emit(event)
 
-    def create_input_dataset(self, namespace: str, name: str) -> InputDataset:
-        return InputDataset(namespace=namespace, name=name)
+    def create_input_dataset(self,name: str) -> InputDataset:
+        return InputDataset(namespace=self.namespace, name=name)
 
-    def create_output_dataset(self, namespace: str, name: str) -> OutputDataset:
-        return OutputDataset(namespace=namespace, name=name)
+    def create_output_dataset(self, name: str) -> OutputDataset:
+        return OutputDataset(namespace=self.namespace, name=name)
 
     def dataset_from_postgres_table(self, connection_name: str, db_name: str, table_name: str) -> Dataset:
         return Dataset(
