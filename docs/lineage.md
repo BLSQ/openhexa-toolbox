@@ -9,7 +9,7 @@ This functionality is **bundled with the OpenHexa Toolbox** — you don't need t
 ## Quick Start
 
 ```python
-from lineage import init_client, event, LineageEventType
+from lineage import init_client, event, EventType
 from openhexa.sdk import current_run
 from datetime import datetime
 
@@ -23,7 +23,7 @@ init_client(
 
 # Emit START event for a task
 event(
-    LineageEventType.START,
+    EventType.START,
     task_name="extract_users",
     inputs=["openhexa.iaso.users"],
     outputs=["openhexa.postgres.analytics_users"],
@@ -33,7 +33,7 @@ event(
 
 # Emit COMPLETE event for the same task
 event(
-    LineageEventType.COMPLETE,
+    EventType.COMPLETE,
     task_name="extract_users",
     inputs=["openhexa.iaso.users"],
     outputs=["openhexa.postgres.analytics_users"],

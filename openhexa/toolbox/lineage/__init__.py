@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Union
 
-from openlineage.client.event_v2 import InputDataset, OutputDataset, RunState
-from openlineage.client.generated.base import EventType as LineageEventType
+from openlineage.client.event_v2 import InputDataset, OutputDataset
+from openlineage.client.generated.base import EventType
+
 from .client import OpenHexaOpenLineageClient
 
 _client: OpenHexaOpenLineageClient | None = None
@@ -12,7 +12,7 @@ def init_client(*args, **kwargs):
     _client = OpenHexaOpenLineageClient(*args, **kwargs)
 
 def event(
-    event_type: OpenHexaOpenLineageClient,
+    event_type: EventType,
     *,
     task_name: str,
     inputs: list[str | InputDataset] | None = None,
@@ -33,6 +33,7 @@ def event(
         inputs=input_objs,
         outputs=output_objs,
         start_time=start_time,
+        end_time=end_time,
         sql=sql
     )
 
@@ -49,3 +50,5 @@ def _wrap_datasets(datasets: list[str | InputDataset | OutputDataset] | None, is
         else:
             result.append(d)
     return result
+
+__all__ = ["init_client", "event", "EventType"]
