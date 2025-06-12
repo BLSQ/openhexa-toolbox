@@ -59,7 +59,6 @@ class TestLineage:
             start_time=datetime(2025, 6, 12, 7, 24, 48, 727726, tzinfo=timezone.utc),
             end_time=datetime(2025, 6, 12, 7, 27, 48, 727726, tzinfo=timezone.utc),
         )
-
         assert mock_responses.calls[0].request.url == "http://localhost:3000/api/v1/lineage"
         assert mock_responses.calls[0].request.method == "POST"
         assert json.loads(mock_responses.calls[0].request.body) == emit_event_example

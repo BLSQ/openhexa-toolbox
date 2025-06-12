@@ -16,7 +16,7 @@ from openlineage.client.facet_v2 import (
     sql_job,
 )
 from openlineage.client.transport import HttpConfig
-from openlineage.client.transport.http import ApiKeyTokenProvider, HttpCompression, HttpTransport
+from openlineage.client.transport.http import ApiKeyTokenProvider, HttpTransport
 
 
 class OpenHexaOpenLineageClient:
@@ -35,9 +35,9 @@ class OpenHexaOpenLineageClient:
             endpoint=endpoint,
             timeout=5,
             verify=False,
-            auth=ApiKeyTokenProvider({"apiKey": api_key}) if api_key else None,
-            compression=HttpCompression.GZIP,
         )
+        if api_key:
+            http_config.auth = ApiKeyTokenProvider({"apiKey": api_key})
         self.client = OpenLineageClient(transport=HttpTransport(http_config))
         self.namespace = workspace_slug
         self.job_name = pipeline_slug

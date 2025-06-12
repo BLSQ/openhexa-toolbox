@@ -10,7 +10,7 @@ This functionality is **bundled with the OpenHexa Toolbox** — you don't need t
 ## Quick Start
 To initialise OpenLineage client from env variables you need to set the following environment variables:
 ```bash
-export OPENLINEAGE_URL="https://lineage.openhexa.io" # (required) - the OpenLineage server URL
+export OPENLINEAGE_URL="https://lineage.openhexa.org" # (required) - the OpenLineage server URL
 export OPENLINEAGE_ENDPOINT ="api/v1/lineage" # (optional) - if you want to use a custom endpoint
 export OPENLINEAGE_API_KEY="your_api_key" #(optional) - if you want to use API key authentication
 ```
@@ -22,7 +22,7 @@ from openhexa.sdk import current_run, pipeline, workspace
 
 # Initialize once at the start of your pipeline
 lineage.init_client(
-    url ="https://lineage.openhexa.io",
+    url ="https://lineage.openhexa.org",
     workspace_slug=workspace.slug,
     pipeline_slug=pipeline.slug,
     pipeline_run_id=current_run.id,

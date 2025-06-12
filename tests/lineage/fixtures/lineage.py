@@ -4,7 +4,7 @@ emit_event_example = {
     "inputs": [],
     "job": {"facets": {}, "name": "test_pipeline.test_task", "namespace": "default"},
     "outputs": [],
-    "producer": "https://github.com/openhexa",
+    "producer": "https://github.com/BLSQ/openhexa",
     "run": {
         "facets": {
             "nominalTime": {
