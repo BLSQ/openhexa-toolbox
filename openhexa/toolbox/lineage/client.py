@@ -15,6 +15,8 @@ from openlineage.client.facet_v2 import (
     nominal_time_run,
     sql_job,
 )
+from openlineage.client.transport import HttpConfig
+from openlineage.client.transport.http import ApiKeyTokenProvider, HttpCompression, HttpTransport
 
 
 class OpenHexaOpenLineageClient:
@@ -28,21 +30,23 @@ class OpenHexaOpenLineageClient:
         endpoint: str = "/api/v1/lineage",
         producer: str = "https://github.com/openhexa",
     ):
-        self.client = OpenLineageClient(
+        http_config = HttpConfig(
             url=url,
-            # optional api key in case marquez requires it. When running marquez in
-            # your local environment, you usually do not need this.
             endpoint=endpoint,
-            options=OpenLineageClientOptions(api_key=api_key),
+            timeout=5,
+            verify=False,
+            auth=ApiKeyTokenProvider({"apiKey": api_key}) if api_key else None,
+            compression=HttpCompression.GZIP,
         )
+        self.client = OpenLineageClient(transport=HttpTransport(http_config))
         self.namespace = workspace_slug
         self.job_name = pipeline_slug
         self.run_id = pipeline_run_id or str(uuid.uuid4())
         self.producer = producer
 
     @classmethod
-    def from_env(self, workspace_slug: str, pipeline_slug: str, pipeline_run_id: str | None = None):
-        return self(
+    def from_env(cls, workspace_slug: str, pipeline_slug: str, pipeline_run_id: str | None = None):
+        return cls(
             url=os.environ["OPENLINEAGE_URL"],
             endpoint=os.getenv("OPENLINEAGE_ENDPOINT", "/api/v1/lineage"),
             api_key=os.getenv("OPENLINEAGE_API_KEY", None),

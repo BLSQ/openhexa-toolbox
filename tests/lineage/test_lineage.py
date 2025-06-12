@@ -21,6 +21,24 @@ class TestLineage:
         assert lineage._client.client is not None
         assert lineage._client.namespace == "default"
 
+    def test_init_client_from_env(self, monkeypatch):
+        from openhexa.toolbox import lineage
+
+        monkeypatch.setenv("OPENLINEAGE_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENLINEAGE_API_KEY", "test_api_key")
+
+        lineage.init_client_from_env(
+            workspace_slug="default",
+            pipeline_slug="test_pipeline",
+            pipeline_run_id="12345",
+        )
+
+        assert lineage._client is not None
+        assert lineage._client.client is not None
+        assert lineage._client.namespace == "default"
+        assert lineage._client.run_id == "12345"
+
+
     def test_emit_run_event(self, mock_responses):
         from openhexa.toolbox import lineage
         from openhexa.toolbox.lineage.client import OpenHexaOpenLineageClient
@@ -33,10 +51,9 @@ class TestLineage:
             pipeline_run_id="abe36e6a-8af7-4718-a753-c6d2054d1ecf",
         )
 
-        client: OpenHexaOpenLineageClient = lineage._client
         mock_responses.add(responses.POST, "http://localhost:3000/api/v1/lineage", json={}, status=200)
 
-        client.emit_run_event(
+        lineage.event(
             event_type=RunState.START,
             task_name="test_task",
             inputs=[],
