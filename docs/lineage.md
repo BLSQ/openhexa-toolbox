@@ -1,6 +1,7 @@
 # OpenHexa Lineage Client
 
-This module provides an opinionated wrapper around the [OpenLineage](https://openlineage.io) client for use within **OpenHexa pipelines**. It enables tracking of dataset inputs/outputs and emits lineage events at the **task level**, scoped per workspace and pipeline run.
+This module provides an opinionated wrapper around the [OpenLineage](https://openlineage.io) client for use within **OpenHexa pipelines**. 
+It enables tracking of dataset inputs/outputs and emits lineage events at the **task level**, scoped per workspace and pipeline run.
 
 This functionality is **bundled with the OpenHexa Toolbox** — you don't need to install anything separately.
 
@@ -9,45 +10,50 @@ This functionality is **bundled with the OpenHexa Toolbox** — you don't need t
 ## Quick Start
 
 ```python
-from lineage import init_client, event, EventType
-from openhexa.sdk import current_run
-from datetime import datetime
+from datetime import datetime, timezone
+from openhexa.toolbox import lineage
+from openhexa.toolbox.lineage import EventType
+from openhexa.sdk import current_run, pipeline, workspace
 
 # Initialize once at the start of your pipeline
-init_client(
-    url="http://your-marquez-host:5000",
+lineage.init_client(
     workspace_slug=workspace.slug,
     pipeline_slug=pipeline.slug,
     pipeline_run_id=current_run.id,
 )
 
 # Emit START event for a task
-event(
-    EventType.START,
+start_time = datetime.now(timezone.utc)
+lineage.event(
+    event_type=EventType.START,
     task_name="extract_users",
     inputs=["openhexa.iaso.users"],
     outputs=["openhexa.postgres.analytics_users"],
     sql="SELECT * FROM users",
-    start_time=datetime.utcnow()
+    start_time=start_time
 )
 
 # Emit COMPLETE event for the same task
-event(
-    EventType.COMPLETE,
+lineage.event(
+    event_type=EventType.COMPLETE,
     task_name="extract_users",
     inputs=["openhexa.iaso.users"],
     outputs=["openhexa.postgres.analytics_users"],
-    end_time=datetime.utcnow()
+    start_time=start_time,
+    end_time=datetime.now(timezone.utc)
 )
+
 ```
 ## Dataset References
 
-Datasets can be passed to the `event()` function in two ways:
+Datasets can be passed to the `lineage.event()` function in two ways:
 
-- As simple strings in the form `"namespace.dataset_name"`  
-  Example: `"openhexa.iaso.users"`
-- As fully constructed OpenLineage `InputDataset` or `OutputDataset` objects  
-  (used for advanced metadata customization)
+- As strings: in the format `"namespace.dataset_name"`  
+  Example: `"openhexa.iaso.users"`. 
+  These are converted to OpenLineage `InputDataset` or `OutputDataset` objects automatically.
+- As explicit dataset objects  : `InputDataset`/ `OutputDataset` objects,  
+  Example: `lineage.InputDataset(namespace="openhexa.iaso", name="users")`, created using the helper methods provided by the client.
+  You can use this for advanced metadata (e.g. connection information, schema, etc.).
 
 The client provides helper methods to construct datasets for various source types.
 
@@ -55,7 +61,7 @@ The client provides helper methods to construct datasets for various source type
 
 ## Pipeline & Task Mapping
 
-Each lineage event emitted by the client follows this mapping:
+Each lineage event follows this mapping convention:
 
 | Concept       | Mapped to                         |
 |---------------|-----------------------------------|
@@ -64,7 +70,7 @@ Each lineage event emitted by the client follows this mapping:
 | Task          | OpenLineage `job.name = pipeline.task_name` |
 | Pipeline Run  | OpenLineage `run.runId`           |
 
-This ensures that all task-level jobs are tracked under a single pipeline execution context, enabling full traceability.
+This ensures that task-level runs are traceable under one unified pipeline execution context.
 
 ---
 
@@ -74,25 +80,31 @@ You can define structured datasets with the following helper methods from the cl
 
 ```
 python
+from openhexa.toolbox import lineage
 from openhexa.sdk import workspace, connections
 
-# A file-based dataset (input or output)
+# A file-based dataset
 file_path = f"{workspace.files_path}/activities.json"
-dataset = lineage_client.dataset_from_file(file_path)
+file_dataset = lineage._client.dataset_from_file(file_path)
 
-# A PostgreSQL table using a connection
+# A PostgreSQL table
 conn = connections["postgres_connection"]
-dataset = lineage_client.dataset_from_postgres_table(
+pg_dataset = lineage._client.dataset_from_postgres_table(
     connection_name=conn.name,
     db_name="analytics",
     table_name="users"
 )
 
-# A dashboard or BI URL
-dataset = lineage_client.dataset_from_dashboard("https://datastudio.google.com/reporting/abc123")
+# A BI dashboard dataset
+dashboard_dataset = lineage._client.dataset_from_dashboard(
+    "https://datastudio.google.com/reporting/abc123"
+)
 
-# A generic connection as a dataset (e.g., APIs)
-conn = connections["iaso"]
-dataset = lineage_client.dataset_from_connection(connection_name=conn.name, connection_type="IASOConnection")
+# A generic API or external connection
+api_conn = connections["iaso"]
+generic_dataset = lineage._client.dataset_from_connection(
+    connection_name=api_conn.name,
+    connection_type="IASOConnection"
+)
 
 ```
