@@ -38,11 +38,9 @@ class TestLineage:
         assert lineage._client.namespace == "default"
         assert lineage._client.run_id == "12345"
 
-
     def test_emit_run_event(self, mock_responses):
         from openhexa.toolbox import lineage
-        from openhexa.toolbox.lineage.client import OpenHexaOpenLineageClient
-        from openlineage.client.event_v2 import RunState
+        from openhexa.toolbox.lineage import EventType
 
         lineage.init_client(
             url="http://localhost:3000",
@@ -54,7 +52,7 @@ class TestLineage:
         mock_responses.add(responses.POST, "http://localhost:3000/api/v1/lineage", json={}, status=200)
 
         lineage.event(
-            event_type=RunState.START,
+            event_type=EventType.START,
             task_name="test_task",
             inputs=[],
             outputs=[],

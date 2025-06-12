@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 import os
-from openlineage.client.client import OpenLineageClient, OpenLineageClientOptions
+from openlineage.client.client import OpenLineageClient
 from openlineage.client.event_v2 import (
     Dataset,
     InputDataset,
@@ -28,7 +28,7 @@ class OpenHexaOpenLineageClient:
         pipeline_run_id: str | None = None,
         api_key: str | None = None,
         endpoint: str = "/api/v1/lineage",
-        producer: str = "https://github.com/openhexa",
+        producer: str = "https://github.com/BLSQ/openhexa"  # Default producer identifier,
     ):
         http_config = HttpConfig(
             url=url,
