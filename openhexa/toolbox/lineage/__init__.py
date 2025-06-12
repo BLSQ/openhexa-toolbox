@@ -13,6 +13,23 @@ def init_client(*args, **kwargs):
     _client = OpenHexaOpenLineageClient(*args, **kwargs)
 
 
+def init_client_from_env(
+    workspace_slug: str,
+    pipeline_slug: str,
+    pipeline_run_id: str | None = None,
+):
+    """
+    Initialize the lineage client using environment variables for `url` and `api_key`.
+    Requires workspace_slug and pipeline_slug to be passed explicitly.
+    """
+    global _client
+    _client = OpenHexaOpenLineageClient.from_env(
+        workspace_slug=workspace_slug,
+        pipeline_slug=pipeline_slug,
+        pipeline_run_id=pipeline_run_id,
+    )
+
+
 def event(
     event_type: EventType,
     *,
@@ -24,7 +41,9 @@ def event(
     end_time: datetime | None = None,
 ):
     if _client is None:
-        raise RuntimeError("Lineage client not initialized. Call `lineage.init_client(...)` first.")
+        raise RuntimeError(
+            "Lineage client not initialized. Call `init_client(...)` or `init_client_from_env(...)` first."
+        )
 
     input_objs = _wrap_datasets(inputs, is_input=True)
     output_objs = _wrap_datasets(outputs, is_input=False)
@@ -54,6 +73,10 @@ def _wrap_datasets(
         else:
             result.append(d)
     return result
+
+
+def is_initialized() -> bool:
+    return _client is not None
 
 
 __all__ = ["EventType"]
