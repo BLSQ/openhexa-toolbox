@@ -34,6 +34,7 @@ pip install openhexa.toolbox
 [**openhexa.toolbox.kobo**](docs/kobo.md) - Acquire and process submissions from KoboToolbox instances <br>
 [**openhexa.toolbox.hexa**](docs/hexa.md) - Interact with OpenHEXA API <br>
 [**openhexa.toolbox.ERA**](openhexa/toolbox/era5/README.md) - Acquire and process data from ERA5
+[**openhexa.toolbox.hexa**](docs/lineage.md) - Open Lineage client for OpenHEXA <br>
 
 
 ## Release

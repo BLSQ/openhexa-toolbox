@@ -35,7 +35,8 @@ dependencies = [
     "datapi >=0.3.0",
     "openhexa.sdk",
     "humanize",
-    "rich"
+    "rich",
+    "openlineage-python >=1.33.0"
 ]
 
 [project.optional-dependencies]
@@ -59,7 +60,8 @@ include = [
     "openhexa.toolbox.era5",
     "openhexa.toolbox.hexa",
     "openhexa.toolbox.iaso",
-    "openhexa.toolbox.kobo"
+    "openhexa.toolbox.kobo",
+    "openhexa.toolbox.lineage",
 ]
 namespaces = true
 
