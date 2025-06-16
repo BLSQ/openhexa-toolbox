@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.7.0...v2.8.0) (2025-06-16)
+
+
+### Features
+
+* **lineage:** add open lineage doc ([#170](https://github.com/BLSQ/openhexa-toolbox/issues/170)) ([ee1f5d8](https://github.com/BLSQ/openhexa-toolbox/commit/ee1f5d8f0319cfa4dbbbe2b1cd699cf62792656a))
+
 ## [2.7.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.6.8...v2.7.0) (2025-06-06)
 
 
