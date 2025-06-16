@@ -28,7 +28,7 @@ class OpenHexaOpenLineageClient:
         pipeline_run_id: str | None = None,
         api_key: str | None = None,
         endpoint: str = "/api/v1/lineage",
-        producer: str = "https://github.com/BLSQ/openhexa"  # Default producer identifier,
+        producer: str = "https://github.com/BLSQ/openhexa",  # Default producer identifier,
     ):
         http_config = HttpConfig(
             url=url,

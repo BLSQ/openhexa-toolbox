@@ -20,6 +20,7 @@ class TestLineage:
         assert lineage._client is not None
         assert lineage._client.client is not None
         assert lineage._client.namespace == "default"
+        assert lineage.is_initialized() is True
 
     def test_init_client_from_env(self, monkeypatch):
         from openhexa.toolbox import lineage
@@ -37,6 +38,7 @@ class TestLineage:
         assert lineage._client.client is not None
         assert lineage._client.namespace == "default"
         assert lineage._client.run_id == "12345"
+        assert lineage.is_initialized() is True
 
     def test_emit_run_event(self, mock_responses):
         from openhexa.toolbox import lineage

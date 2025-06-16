@@ -45,34 +45,27 @@ def event(
             "Lineage client not initialized. Call `init_client(...)` or `init_client_from_env(...)` first."
         )
 
-    input_objs = _wrap_datasets(inputs, is_input=True)
-    output_objs = _wrap_datasets(outputs, is_input=False)
-
     _client.emit_run_event(
         event_type=event_type,
         task_name=task_name,
-        inputs=input_objs,
-        outputs=output_objs,
+        inputs=_wrap_input_datasets(inputs),
+        outputs=wrap_output_datasets(outputs),
         start_time=start_time,
         end_time=end_time,
         sql=sql,
     )
 
 
-def _wrap_datasets(
-    datasets: list[str | InputDataset | OutputDataset] | None, is_input: bool
-) -> list[InputDataset] | list[OutputDataset]:
+def _wrap_input_datasets(datasets: list[str | InputDataset] | None) -> list[InputDataset]:
     if not datasets:
         return []
+    return [d if not isinstance(d, str) else _client.create_input_dataset(d) for d in datasets]
 
-    result = []
-    for d in datasets:
-        if isinstance(d, str):
-            ds = _client.create_input_dataset(d) if is_input else _client.create_output_dataset(d)
-            result.append(ds)
-        else:
-            result.append(d)
-    return result
+
+def wrap_output_datasets(datasets: list[str | OutputDataset] | None) -> list[OutputDataset]:
+    if not datasets:
+        return []
+    return [d if not isinstance(d, str) else _client.create_output_dataset(d) for d in datasets]
 
 
 def is_initialized() -> bool:

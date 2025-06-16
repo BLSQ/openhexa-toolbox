@@ -33,6 +33,11 @@ lineage.init_client_from_env(
   pipeline_slug=pipeline.slug,
   pipeline_run_id=current_run.id,
 )
+# You can check if the client is initialized correctly
+if lineage.is_initialized():
+    print("OpenLineage client is initialized successfully.")
+else:
+    print("OpenLineage client initialization failed.")
 
 # Emit START event for a task
 start_time = datetime.now(timezone.utc)
