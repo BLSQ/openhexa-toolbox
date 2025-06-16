@@ -72,4 +72,4 @@ def is_initialized() -> bool:
     return _client is not None
 
 
-__all__ = ["EventType"]
+__all__ = ["EventType", "init_client", "init_client_from_env", "event", "is_initialized"]
