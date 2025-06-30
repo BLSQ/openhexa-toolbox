@@ -41,7 +41,7 @@ requirements:
     - humanize
     - openhexa.sdk >=2.2.0
     - rich
-    - openlineage-python >=1.33.0"
+    - openlineage-python >=1.33.0
 
 test:
   imports:
