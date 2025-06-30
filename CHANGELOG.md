@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.8.0...v2.8.1) (2025-06-30)
+
+
+### Bug Fixes
+
+* update conda recipe ([70ec6b0](https://github.com/BLSQ/openhexa-toolbox/commit/70ec6b04d7ed210cdc3cefb54bfaf2b53c20ffc6))
+* update conda recipe for openlineage ([deaa64a](https://github.com/BLSQ/openhexa-toolbox/commit/deaa64a363d86987bc73280af9caf770a9ab57ff))
+
 ## [2.8.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.7.0...v2.8.0) (2025-06-16)
 
 
