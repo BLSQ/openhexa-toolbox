@@ -5,6 +5,9 @@ It enables tracking of dataset inputs/outputs and emits lineage events at the **
 
 This functionality is **bundled with the OpenHexa Toolbox** — you don't need to install anything separately.
 
+## Requirements 
+OpenHexa SDK > 2.8.1
+
 ---
 
 ## Quick Start
@@ -24,14 +27,14 @@ from openhexa.sdk import current_run, pipeline, workspace
 lineage.init_client(
     url ="https://lineage.openhexa.org",
     workspace_slug=workspace.slug,
-    pipeline_slug=pipeline.slug,
-    pipeline_run_id=current_run.id,
+    pipeline_slug=current_run.get_pipeline().code,
+    pipeline_run_id=current_run.pipeline_run_id,
 )
 # or initialize from environment variables
 lineage.init_client_from_env(
   workspace_slug=workspace.slug,
-  pipeline_slug=pipeline.slug,
-  pipeline_run_id=current_run.id,
+  pipeline_slug=current_run.get_pipeline().code,
+  pipeline_run_id=current_run.pipeline_run_id,
 )
 # You can check if the client is initialized correctly
 if lineage.is_initialized():
