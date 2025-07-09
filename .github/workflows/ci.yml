@@ -35,3 +35,34 @@ jobs:
         
       - name: Run tests
         run: pytest --cov=. --cov-report html --cov-report term 
+  conda-build:
+    name: Conda build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-activate-base: true
+          activate-environment: true
+          python-version: 3.13
+
+      - name: Install conda tools
+        run: conda install -y conda-build anaconda-client
+
+      - name: Extract version from pyproject.toml
+        id: extract_version
+        working-directory: .
+        run: |
+          VERSION=$(awk -F\" '/^version =/ { print $2; exit }' pyproject.toml)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"
+
+      - name: Dry-run conda build
+        shell: bash -l {0}
+        working-directory: recipe
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: |
+          conda build . --channel conda-forge --channel bioconda
