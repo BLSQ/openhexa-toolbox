@@ -98,8 +98,7 @@ This ensures that task-level runs are traceable under one unified pipeline execu
 
 You can define structured datasets with the following helper methods from the client:
 
-```
-python
+```python
 from openhexa.toolbox import lineage
 from openhexa.sdk import workspace, connections
 
