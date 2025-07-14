@@ -75,7 +75,12 @@ class OpenHexaOpenLineageClient:
                 nominalEndTime=end_time.isoformat() if end_time else None,
             )
 
-        run = Run(runId=self.run_id, facets=run_facets)
+        if task_name:
+            base_uuid = uuid.UUID(self.run_id)
+            task_run_id = str(uuid.uuid5(base_uuid, task_name))
+        else:
+            task_run_id = self.run_id
+        run = Run(runId=task_run_id, facets=run_facets)
 
         job_facets = {}
         if sql:
