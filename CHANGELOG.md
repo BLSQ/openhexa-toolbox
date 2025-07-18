@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.2](https://github.com/BLSQ/openhexa-toolbox/compare/v2.8.1...v2.8.2) (2025-07-18)
+
+
+### Bug Fixes
+
+* **era5:** enforce consistency between datasets ([#175](https://github.com/BLSQ/openhexa-toolbox/issues/175)) ([2f27ceb](https://github.com/BLSQ/openhexa-toolbox/commit/2f27cebbbacecfb7119f37b266c74a8262701a1e))
+
 ## [2.8.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.8.0...v2.8.1) (2025-06-30)
 
 
