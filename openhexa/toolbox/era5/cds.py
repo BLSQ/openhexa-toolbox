@@ -8,6 +8,7 @@ from __future__ import annotations
 import importlib.resources
 import json
 import logging
+import shutil
 import tempfile
 import zipfile
 from calendar import monthrange
@@ -167,20 +168,19 @@ def list_datetimes_in_dataset(ds: xr.Dataset) -> list[datetime]:
 
 def list_datetimes_in_dir(data_dir: Path) -> list[datetime]:
     """List datetimes in datasets that can be found in an input directory."""
+    # make sure all grib files are decompressed and index files are removed
+    decompress_grib_files(data_dir)
+    remove_index_files(data_dir)
+
     dtimes = []
 
     for f in data_dir.glob("*.grib"):
-        # sometimes gribs are actually zip files
-        with tempfile.NamedTemporaryFile(mode="wb") as tmp:
-            if zipfile.is_zipfile(f):
-                with zipfile.ZipFile(f, "r") as zip:
-                    tmp.write(zip.read("data.grib"))
-                ds = xr.open_dataset(tmp.name, engine="cfgrib")
-
-            else:
-                ds = xr.open_dataset(f, engine="cfgrib")
-
-            dtimes += list_datetimes_in_dataset(ds)
+        ds = xr.open_dataset(f, engine="cfgrib")
+        # xarray drop the time dimension if it has only one value, so we expand it
+        # to make sure structure is consistent with other datasets
+        if "time" not in ds.dims and "time" in ds.coords:
+            ds = ds.expand_dims("time")
+        dtimes += list_datetimes_in_dataset(ds)
 
     dtimes = sorted(set(dtimes))
 
@@ -439,3 +439,25 @@ class CDS:
                 msg = f"Still {len(remotes)} files to download. Waiting 30s before retrying..."
                 log.info(msg)
                 sleep(30)
+
+
+def decompress_grib_files(data_dir: Path) -> None:
+    """Decompress all grib files in a directory."""
+    for fp in data_dir.glob("*.grib"):
+        if zipfile.is_zipfile(fp):
+            with (
+                tempfile.NamedTemporaryFile(suffix=".grib") as tmp,
+                zipfile.ZipFile(fp, "r") as zip_file,
+            ):
+                tmp.write(zip_file.read("data.grib"))
+                shutil.copy(tmp.name, fp)
+                msg = f"Decompressed {fp.name}"
+                log.info(msg)
+
+
+def remove_index_files(data_dir: Path) -> None:
+    """Remove all GRIB index files in a directory."""
+    for fp in data_dir.glob("*.idx"):
+        fp.unlink()
+        msg = f"Removed index file {fp.name}"
+        log.debug(msg)
