@@ -128,9 +128,15 @@ def merge(data_dir: Path | str) -> xr.Dataset:
 
     files = data_dir.glob("*.grib")
     ds = xr.open_dataset(next(files), engine="cfgrib")
+    if "time" not in ds.dims and "time" in ds.coords:
+        # xarray drop the time dimension if it has only one value
+        ds = ds.expand_dims("time")
 
     for f in files:
-        ds = xr.concat([ds, xr.open_dataset(f, engine="cfgrib")], dim="tmp_dim").max(dim="tmp_dim")
+        ds2 = xr.open_dataset(f, engine="cfgrib")
+        if "time" not in ds2.dims and "time" in ds2.coords:
+            ds2 = ds2.expand_dims("time")
+        ds = xr.concat([ds, ds2], dim="tmp_dim").max(dim="tmp_dim")
 
     return ds
 
