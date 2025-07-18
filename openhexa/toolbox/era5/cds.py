@@ -175,7 +175,7 @@ def list_datetimes_in_dir(data_dir: Path) -> list[datetime]:
     dtimes = []
 
     for f in data_dir.glob("*.grib"):
-        ds = xr.open_dataset(f, engine="cfgrib")
+        ds = xr.open_dataset(f, engine="cfgrib", decode_timedelta=True)
         # xarray drop the time dimension if it has only one value, so we expand it
         # to make sure structure is consistent with other datasets
         if "time" not in ds.dims and "time" in ds.coords:
