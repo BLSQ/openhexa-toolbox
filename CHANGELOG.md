@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.3](https://github.com/BLSQ/openhexa-toolbox/compare/v2.8.2...v2.8.3) (2025-08-05)
+
+
+### Bug Fixes
+
+* **deps:** update dependency pytest-cov to ~=6.2.1 ([#122](https://github.com/BLSQ/openhexa-toolbox/issues/122)) ([8e86cba](https://github.com/BLSQ/openhexa-toolbox/commit/8e86cba261b123848c7f1b4b3b44e5c111d3a026))
+
 ## [2.8.2](https://github.com/BLSQ/openhexa-toolbox/compare/v2.8.1...v2.8.2) (2025-07-18)
 
 
