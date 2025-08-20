@@ -492,6 +492,8 @@ df = dataframe.extract_analytics(
     dhis2,
     periods=["2021"],
     data_elements=["pikOziyCXbM", "x3Do5e7g4Qo"],
+    # alternatively:
+    # indicators=[...],
     org_unit_levels=[2]
 )
 ```
