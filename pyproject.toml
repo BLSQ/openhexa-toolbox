@@ -48,6 +48,7 @@ dev = [
     "black~=25.1.0",
     "pre-commit",
     "responses",
+    "great_expectations",
 ]
 
 [tool.setuptools]
@@ -62,6 +63,7 @@ include = [
     "openhexa.toolbox.iaso",
     "openhexa.toolbox.kobo",
     "openhexa.toolbox.lineage",
+    "openhexa.toolbox.expectation",
 ]
 namespaces = true
 

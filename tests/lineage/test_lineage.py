@@ -96,18 +96,16 @@ class TestLineage:
             outputs=["dataset2.csv"],
         )
 
-
         assert len(mock_responses.calls) == 3
-        
+
         event1 = json.loads(mock_responses.calls[0].request.body)
         event2 = json.loads(mock_responses.calls[1].request.body)
         event3 = json.loads(mock_responses.calls[2].request.body)
 
-        
         assert event1["run"]["runId"] == "381a6a74-ad3b-549c-967b-58585197f90a"
         assert event2["run"]["runId"] == "d8bb693b-23bb-54f0-8605-29032f10d5d5"
-        assert event3["run"]["runId"] == "381a6a74-ad3b-549c-967b-58585197f90a" # Same task, same run ID
-        
+        assert event3["run"]["runId"] == "381a6a74-ad3b-549c-967b-58585197f90a"  # Same task, same run ID
+
         assert event1["outputs"][0]["name"] == "dataset1.csv"
         assert event2["outputs"][0]["name"] == "dataset2.csv"
         assert event3["outputs"][0]["name"] == "dataset2.csv"

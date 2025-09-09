@@ -12,7 +12,7 @@ class Expectations:
     This class supports:
     - DataFrame-level checks (row count, column count, emptiness).
     - Column-level checks (type, numeric ranges, allowed values, nullability, string length).
-    """  
+    """
 
     def __init__(self, dataset: pd.DataFrame, expectations_yml_file: str | None = None):
         """Initialize the Expectations validator.
@@ -88,7 +88,7 @@ class Expectations:
 
         Raises:
             ValueError: If expectations do not match dataset properties.
-        """        
+        """
         context = gx.get_context()
         data_source = context.data_sources.add_pandas(name="pandas")
         data_asset = data_source.add_dataframe_asset(name="pd_dataframe_asset")
@@ -111,30 +111,26 @@ class Expectations:
         expected_no_columns = expectations["dataframe"].get("no_columns")
         if expected_no_columns is not None:
             if self.dataset.shape[1] != int(expected_no_columns):
-                raise ValueError(
-                    f"Columns mismatch: expected {expected_no_columns}, got {self.dataset.shape[1]}"
-                )
+                raise ValueError(f"Columns mismatch: expected {expected_no_columns}, got {self.dataset.shape[1]}")
 
         expected_no_rows = expectations["dataframe"].get("no_rows")
         if expected_no_rows is not None:
             if self.dataset.shape[0] != int(expected_no_rows):
-                raise ValueError(
-                    f"Rows mismatch: expected {expected_no_rows}, got {self.dataset.shape[0]}"
-                )
+                raise ValueError(f"Rows mismatch: expected {expected_no_rows}, got {self.dataset.shape[0]}")
 
         # ------------------------
         # Column-level checks
         # ------------------------
-        suite = context.suites.add(
-            gx.core.expectation_suite.ExpectationSuite(name="expectations_suite")
-        )
+        suite = context.suites.add(gx.core.expectation_suite.ExpectationSuite(name="expectations_suite"))
 
         for column, column_expectation in expectations["columns"].items():
             # column presence
             if column not in self.dataset.columns:
-                raise ValueError(f"""
+                raise ValueError(
+                    f"""
                             Column '{column}' defined in expectations.yml but missing in dataset.
-                                 """)
+                                 """
+                )
 
             col_type = column_expectation.get("type")
 
@@ -142,12 +138,7 @@ class Expectations:
             # datatype
             # ------------------------
             if col_type:
-                suite.add_expectation(
-                    gx.expectations.ExpectColumnValuesToBeOfType(
-                        column=column,
-                        type_=col_type
-                    )
-                )
+                suite.add_expectation(gx.expectations.ExpectColumnValuesToBeOfType(column=column, type_=col_type))
 
             # ------------------------
             # numeric ranges
@@ -169,9 +160,7 @@ class Expectations:
             # not-null
             # ------------------------
             if column_expectation.get("not-null", False):
-                suite.add_expectation(
-                    gx.expectations.ExpectColumnValuesToNotBeNull(column=column)
-                )
+                suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column=column))
 
             # ------------------------
             # string expectations
@@ -180,24 +169,20 @@ class Expectations:
                 classes = column_expectation.get("classes")
                 if classes:
                     suite.add_expectation(
-                        gx.expectations.ExpectColumnDistinctValuesToBeInSet(
-                            column=column,
-                            value_set=classes
-                        )
+                        gx.expectations.ExpectColumnDistinctValuesToBeInSet(column=column, value_set=classes)
                     )
 
                 length_between = column_expectation.get("length-between")
                 if length_between:
                     if not isinstance(length_between, (list, tuple)):
-                        raise ValueError(f"""
+                        raise ValueError(
+                            f"""
                                 'length-between' for column {column} must be a list or tuple.
-                                """)
+                                """
+                        )
                     if len(length_between) == 1:
                         suite.add_expectation(
-                            gx.expectations.ExpectColumnValueLengthsToEqual(
-                                column=column,
-                                value=length_between[0]
-                            )
+                            gx.expectations.ExpectColumnValueLengthsToEqual(column=column, value=length_between[0])
                         )
                     elif len(length_between) == 2:
                         suite.add_expectation(
@@ -208,25 +193,23 @@ class Expectations:
                             )
                         )
                     else:
-                        raise ValueError(f"""
+                        raise ValueError(
+                            f"""
                                     Column {column}: 'length-between' should have 1 or 2 entries.
-                                         """)
+                                         """
+                        )
 
         # ------------------------
         # Validation definition
         # ------------------------
         validation_definition = context.validation_definitions.add(
             gx.core.validation_definition.ValidationDefinition(
-                name="validation definition",
-                data=batch_definition,
-                suite=suite
+                name="validation definition", data=batch_definition, suite=suite
             )
         )
 
         checkpoint = context.checkpoints.add(
-            gx.checkpoint.checkpoint.Checkpoint(
-                name="context", validation_definitions=[validation_definition]
-            )
+            gx.checkpoint.checkpoint.Checkpoint(name="context", validation_definitions=[validation_definition])
         )
         checkpoint_result = checkpoint.run(batch_parameters=batch_parameters)
         print(checkpoint_result.describe())
@@ -240,7 +223,7 @@ if __name__ == "__main__":
             "gender": ["male", "female", None],
             "phone": ["0711222333", "0722111333", "+256744123432"],
             "shirt_size": ["s", "m", "l"],
-            }
-        )
+        }
+    )
     validator = Expectations(df)
     validator.validate_expectations()

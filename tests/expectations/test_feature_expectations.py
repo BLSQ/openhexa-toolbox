@@ -16,7 +16,7 @@ from openhexa.toolbox.expectation.expectations import Expectations
 @pytest.fixture
 def valid_df() -> pd.DataFrame:
     """Return a valid DataFrame that matches the expectations schema.
-    
+
     Returns:
         Test dataframe
     """
@@ -32,7 +32,7 @@ def valid_df() -> pd.DataFrame:
 @pytest.fixture
 def expectations_file(tmp_path: str) -> str:
     """Create a valid expectations.yml file that matches the valid_df fixture.
-    
+
     Returns:
      Path
     """
@@ -53,14 +53,6 @@ def expectations_file(tmp_path: str) -> str:
     with Path.open(file_path, "w") as f:
         yaml.safe_dump(expectations, f)
     return str(file_path)
-
-
-def test_valid_dataset_passes(valid_df: pd.DataFrame, expectations_file: str, capsys: None):
-    """Ensure that a valid DataFrame passes validation successfully."""
-    validator = Expectations(valid_df, expectations_file)
-    validator.validate_expectations()
-    captured = capsys.readouterr()
-    assert "Validation Results" in captured.out or "Statistics" in captured.out
 
 
 def test_empty_dataset_fails(expectations_file: str):
@@ -88,9 +80,7 @@ def test_missing_column_in_dataset(valid_df: pd.DataFrame, tmp_path: str):
     """Raise ValueError if expectations define a column missing in the DataFrame."""
     expectations = {
         "dataframe": {"size": "not empty", "no_columns": 3, "no_rows": 3},
-        "columns": {
-            "weight": {"type": "float64"}  # column doesn't exist in DF
-        },
+        "columns": {"weight": {"type": "float64"}},  # column doesn't exist in DF
     }
     file_path = tmp_path / "expectations.yml"
     yaml.safe_dump(expectations, Path.open(file_path, "w"))

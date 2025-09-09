@@ -183,9 +183,11 @@ class Metadata:
 
         def format_unit_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
             return {
-                key: group.get(key)
-                if key != "organisationUnits"
-                else [ou.get("id") for ou in group.get("organisationUnits", [])]
+                key: (
+                    group.get(key)
+                    if key != "organisationUnits"
+                    else [ou.get("id") for ou in group.get("organisationUnits", [])]
+                )
                 for key in fields.split(",")
             }
 
@@ -494,9 +496,11 @@ class Metadata:
 
         def format_group(group: Dict[str, Any], fields: str) -> Dict[str, Any]:
             return {
-                key: group.get(key)
-                if key != "indicators"
-                else [indicator.get("id") for indicator in group.get("indicators", [])]
+                key: (
+                    group.get(key)
+                    if key != "indicators"
+                    else [indicator.get("id") for indicator in group.get("indicators", [])]
+                )
                 for key in fields.split(",")
             }
 

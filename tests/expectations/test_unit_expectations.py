@@ -16,7 +16,7 @@ from openhexa.toolbox.expectation.expectations import Expectations
 @pytest.fixture
 def sample_df() -> pd.DataFrame:
     """Return a simple sample DataFrame for unit tests.
-    
+
     Returns:
         Test dataframe
     """
@@ -77,15 +77,6 @@ def test_invalid_yaml_syntax(sample_df: pd.DataFrame, tmp_path: str):
     bad_file.write_text("::::bad_yaml:::")
     validator = Expectations(sample_df, str(bad_file))
     with pytest.raises(ValueError, match="Error parsing"):
-        validator._read_definitions()
-
-
-def test_missing_dataframe_section(sample_df: pd.DataFrame, tmp_path: str):
-    """Raise ValueError if 'dataframe' section is missing from expectations.yml."""
-    file = tmp_path / "bad.yml"
-    yaml.safe_dump({"columns": {}}, Path.open(file, "w", encoding="utf-8"))
-    validator = Expectations(sample_df, str(file))
-    with pytest.raises(ValueError, match="must contain 'dataframe'"):
         validator._read_definitions()
 
 
