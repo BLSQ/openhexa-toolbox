@@ -1,0 +1,40 @@
+dataframe:
+  size: not empty
+  no_columns: 5
+  no_rows: 3
+
+columns:
+  age:
+    type: int64
+    minimum: 18
+    maximum: 70
+    not-null: true
+  height:
+    type: float64
+    minimum: 5
+    maximum: 8
+    not-null: false
+  gender:
+    type: object
+    classes:
+      - male
+      - female
+      - other
+    not-null: true
+    length-between:
+  phone:
+    type: object
+    classes:
+    not-null: false
+    length-between:
+      - 10
+      - 13
+  shirt_size:
+    type: object
+    classes:
+      - s
+      - m
+      - l
+    not-null: true
+    length-between:
+      - 1
