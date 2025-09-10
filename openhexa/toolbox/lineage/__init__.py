@@ -18,10 +18,6 @@ def init_client_from_env(
     pipeline_slug: str,
     pipeline_run_id: str | None = None,
 ):
-    """
-    Initialize the lineage client using environment variables for `url` and `api_key`.
-    Requires workspace_slug and pipeline_slug to be passed explicitly.
-    """
     global _client
     _client = OpenHexaOpenLineageClient.from_env(
         workspace_slug=workspace_slug,
@@ -68,8 +64,33 @@ def wrap_output_datasets(datasets: list[str | OutputDataset] | None) -> list[Out
     return [d if not isinstance(d, str) else _client.create_output_dataset(d) for d in datasets]
 
 
+def pipeline_start(inputs: list[str | InputDataset] | None = None, outputs: list[str | OutputDataset] | None = None):
+    if _client is None:
+        raise RuntimeError(
+            "Lineage client not initialized. Call `init_client(...)` or `init_client_from_env(...)` first."
+        )
+    
+    _client.emit_pipeline_start_event(
+        inputs=_wrap_input_datasets(inputs),
+        outputs=wrap_output_datasets(outputs),
+    )
+
+
+def pipeline_complete(inputs: list[str | InputDataset] | None = None, outputs: list[str | OutputDataset] | None = None):
+    if _client is None:
+        raise RuntimeError(
+            "Lineage client not initialized. Call `init_client(...)` or `init_client_from_env(...)` first."
+        )
+    
+    _client.emit_pipeline_complete_event(
+        inputs=_wrap_input_datasets(inputs),
+        outputs=wrap_output_datasets(outputs),
+    )
+
+
 def is_initialized() -> bool:
     return _client is not None
 
 
-__all__ = ["EventType", "init_client", "init_client_from_env", "event", "is_initialized"]
+__all__ = ["EventType", "init_client", "init_client_from_env", 
+           "event", "pipeline_start", "pipeline_complete", "is_initialized"]
