@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openhexa.toolbox"
-version = "2.8.3"
+version = "2.9.0"
 description = "A set of tools to acquire & process data from various sources"
 authors = [{ name = "Bluesquare", email = "dev@bluesquarehub.com" }]
 maintainers = [{ name = "Bluesquare", email = "dev@bluesquarehub.com" }]
