@@ -65,4 +65,4 @@ jobs:
         env:
           VERSION: ${{ env.VERSION }}
         run: |
-          conda build . --channel conda-forge --channel bioconda
+          conda build . --channel conda-forge --channel bioconda --channel blsqtech
