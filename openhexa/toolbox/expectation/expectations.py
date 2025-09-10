@@ -1,9 +1,13 @@
 import inspect
 import pathlib
+import json
+import logging
 
 import great_expectations as gx
 import pandas as pd
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 class Expectations:
@@ -212,7 +216,17 @@ class Expectations:
             gx.checkpoint.checkpoint.Checkpoint(name="context", validation_definitions=[validation_definition])
         )
         checkpoint_result = checkpoint.run(batch_parameters=batch_parameters)
-        print(checkpoint_result.describe())
+        result = checkpoint_result.describe()
+
+        if not json.loads(result)["success"]:
+            exception_message = \
+            f""" Data failed validation check!
+            {result}
+            """
+            raise Exception(exception_message)
+        
+        logger.info("Data passed validation check.")
+
 
 
 if __name__ == "__main__":

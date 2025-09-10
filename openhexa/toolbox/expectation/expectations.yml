@@ -10,7 +10,7 @@ columns:
     maximum: 70
     not-null: true
   height:
-    type: float64
+    type: int64
     minimum: 5
     maximum: 8
     not-null: false
@@ -20,7 +20,7 @@ columns:
       - male
       - female
       - other
-    not-null: true
+    not-null: false
     length-between:
   phone:
     type: object

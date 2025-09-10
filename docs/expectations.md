@@ -69,28 +69,47 @@ The `expectations.yml` file must define **two sections**:
 
 ```yaml
 dataframe:
-  size: "not empty"        # or "empty"
-  no_rows: 3
+dataframe:
+  size: not empty # or empty
   no_columns: 5
+  no_rows: 3
 
 columns:
   age:
     type: int64
-    minimum: 0
-    maximum: 120
+    minimum: 18
+    maximum: 70
     not-null: true
-
+  height:
+    type: int64
+    minimum: 5
+    maximum: 8
+    not-null: false
   gender:
-    type: string
-    classes: ["male", "female", "other"]
-
+    type: object
+    classes:
+      - male
+      - female
+      - other
+    not-null: false
+    length-between:
   phone:
-    type: string
-    length-between: [10, 15]
-
+    type: object
+    classes:
+    not-null: false
+    length-between:
+      - 10
+      - 13
   shirt_size:
-    type: string
-    classes: ["s", "m", "l", "xl"]
+    type: object
+    classes:
+      - s
+      - m
+      - l
+    not-null: true
+    length-between:
+      - 1
+
 ```
 
 ---
