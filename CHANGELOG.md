@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.8.3...v2.9.0) (2025-09-10)
+
+
+### Features
+
+* add pipeline level lineage to toolbox ([#185](https://github.com/BLSQ/openhexa-toolbox/issues/185)) ([3ac35ae](https://github.com/BLSQ/openhexa-toolbox/commit/3ac35ae97fc5da17ebca66126e07cd99fd7dd7cf))
+
 ## [2.8.3](https://github.com/BLSQ/openhexa-toolbox/compare/v2.8.2...v2.8.3) (2025-08-05)
 
 

@@ -28,7 +28,8 @@ class OpenHexaOpenLineageClient:
         pipeline_run_id: str | None = None,
         api_key: str | None = None,
         endpoint: str = "/api/v1/lineage",
-        producer: str = "https://github.com/BLSQ/openhexa",  # Default producer identifier,
+        producer: str = "https://github.com/BLSQ/openhexa", 
+        enable_pipeline_jobs: bool = False,
     ):
         http_config = HttpConfig(
             url=url,
@@ -43,6 +44,8 @@ class OpenHexaOpenLineageClient:
         self.job_name = pipeline_slug
         self.run_id = pipeline_run_id or str(uuid.uuid4())
         self.producer = producer
+        self.enable_pipeline_jobs = enable_pipeline_jobs
+        self._task_events = []
 
     @classmethod
     def from_env(cls, workspace_slug: str, pipeline_slug: str, pipeline_run_id: str | None = None):
@@ -53,6 +56,7 @@ class OpenHexaOpenLineageClient:
             workspace_slug=workspace_slug,
             pipeline_slug=pipeline_slug,
             pipeline_run_id=pipeline_run_id,
+            enable_pipeline_jobs=os.getenv("OPENLINEAGE_ENABLE_PIPELINE_JOBS", "false").lower() == "true",
         )
 
     def emit_run_event(
@@ -98,6 +102,15 @@ class OpenHexaOpenLineageClient:
             inputs=inputs or [],
             outputs=outputs or [],
         )
+        
+        if self.enable_pipeline_jobs and task_name:
+            self._task_events.append({
+                'task_name': task_name,
+                'inputs': inputs or [],
+                'outputs': outputs or [],
+                'event_type': event_type,
+            })
+        
         self.client.emit(event)
 
     def create_input_dataset(self, name: str) -> InputDataset:
@@ -139,3 +152,81 @@ class OpenHexaOpenLineageClient:
                 }
             },
         )
+
+    def emit_pipeline_start_event(self, inputs: list[InputDataset] |
+                                  None = None, outputs: list[OutputDataset] | None = None):
+        if not self.enable_pipeline_jobs:
+            return
+            
+        aggregated_inputs, aggregated_outputs = self._get_pipeline_io()
+        self._emit_pipeline_event(
+            event_type=RunState.START,
+            inputs=inputs or aggregated_inputs,
+            outputs=outputs or aggregated_outputs,
+        )
+
+    def emit_pipeline_complete_event(self, inputs: list[InputDataset] |
+                                     None = None, outputs: list[OutputDataset] |
+                                     None = None):
+        if not self.enable_pipeline_jobs:
+            return
+            
+        aggregated_inputs, aggregated_outputs = self._get_pipeline_io()
+        self._emit_pipeline_event(
+            event_type=RunState.COMPLETE,
+            inputs=inputs or aggregated_inputs,
+            outputs=outputs or aggregated_outputs,
+        )
+
+    def _get_pipeline_io(self):
+        all_inputs = set()
+        all_outputs = set()
+        internal_datasets = set()
+        
+        for event in self._task_events:
+            for inp in event['inputs']:
+                all_inputs.add(inp.name)
+            for out in event['outputs']:
+                all_outputs.add(out.name)
+                
+        for event in self._task_events:
+            for out in event['outputs']:
+                if out.name in all_inputs:
+                    internal_datasets.add(out.name)
+        
+        pipeline_inputs = [self.create_input_dataset(name) for name in all_inputs - internal_datasets]
+        pipeline_outputs = [self.create_output_dataset(name) for name in all_outputs - internal_datasets]
+        
+        return pipeline_inputs, pipeline_outputs
+
+    def _emit_pipeline_event(self, event_type: RunState, inputs: list[InputDataset], outputs: list[OutputDataset]):
+        now = datetime.now(timezone.utc)
+        event_time = now.isoformat()
+
+        run = Run(runId=self.run_id, facets={})
+
+        task_count = len(set(event['task_name'] for event in self._task_events))
+        job_facets = {
+            "pipeline": {
+                "_producer": self.producer,
+                "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/PipelineJobFacet.json",
+                "type": "PIPELINE",
+                "taskCount": task_count,
+                "inputCount": len(inputs),
+                "outputCount": len(outputs),
+            }
+        }
+
+        job = Job(namespace=self.namespace, name=self.job_name, facets=job_facets)
+
+        event = RunEvent(
+            eventType=event_type,
+            eventTime=event_time,
+            run=run,
+            job=job,
+            producer=self.producer,
+            inputs=inputs,
+            outputs=outputs,
+        )
+        
+        self.client.emit(event)
