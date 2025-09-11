@@ -5,9 +5,11 @@ import logging
 
 import great_expectations as gx
 import pandas as pd
+import polars as pl
 import yaml
-
-logger = logging.getLogger(__name__)
+logging.basicConfig()
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 class Expectations:
@@ -18,7 +20,7 @@ class Expectations:
     - Column-level checks (type, numeric ranges, allowed values, nullability, string length).
     """
 
-    def __init__(self, dataset: pd.DataFrame, expectations_yml_file: str | None = None):
+    def __init__(self, dataset: pd.DataFrame | pl.DataFrame, expectations_yml_file: str | None = None):
         """Initialize the Expectations validator.
 
         Args:
@@ -33,8 +35,8 @@ class Expectations:
         if not isinstance(expectations_yml_file, str) and expectations_yml_file is not None:
             raise ValueError("expectations_yml_file should be a string")
 
-        if not isinstance(dataset, pd.DataFrame):
-            raise ValueError("dataset should be a pandas dataframe")
+        if not isinstance(dataset, pd.DataFrame) and not isinstance(dataset, pl.DataFrame):
+            raise ValueError("dataset should be a pandas or polars dataframe")
 
         if expectations_yml_file is None:
             caller_file = inspect.stack()[1].filename
@@ -42,8 +44,11 @@ class Expectations:
             self.expectations_yml_file = f"{caller_dir}/expectations.yml"
         else:
             self.expectations_yml_file = expectations_yml_file
-
-        self.dataset = dataset
+        if isinstance(dataset, pd.DataFrame):
+            self.dataset = dataset
+        elif isinstance(dataset, pl.DataFrame):
+            logger.info("Converting polars dataframe to pandas for data validation")
+            self.dataset = dataset.to_pandas()
         # normalize to pandas dtypes
         self.numeric_types = {"int64", "int32", "float64", "float32"}
         self.string_types = {"object", "string"}
@@ -230,7 +235,7 @@ class Expectations:
 
 
 if __name__ == "__main__":
-    df = pd.DataFrame(
+    df = pl.DataFrame(
         {
             "age": [19, 20, 30],
             "height": [7, 5, 6],

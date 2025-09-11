@@ -69,7 +69,6 @@ The `expectations.yml` file must define **two sections**:
 
 ```yaml
 dataframe:
-dataframe:
   size: not empty # or empty
   no_columns: 5
   no_rows: 3
