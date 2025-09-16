@@ -36,7 +36,8 @@ dependencies = [
     "openhexa.sdk",
     "humanize",
     "rich",
-    "openlineage-python >=1.33.0"
+    "openlineage-python >=1.33.0",
+    "great_expectations==1.5.11
 ]
 
 [project.optional-dependencies]
@@ -48,7 +49,7 @@ dev = [
     "black~=25.1.0",
     "pre-commit",
     "responses",
-    "great_expectations",
+    "great_expectations==1.5.11",
 ]
 
 [tool.setuptools]
