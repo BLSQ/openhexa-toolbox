@@ -1,12 +1,15 @@
-# Expectations Module Documentation
+# Expectations Module
 
 ## Overview
 
-The `Expectations` class provides a structured way to **validate datasets** against defined data quality rules using [Great Expectations](https://greatexpectations.io/).  
+The `Expectations` class provides a structured way to **validate datasets** against defined data quality rules using [Great Expectations](https://greatexpectations.io/).
 
 It supports both **DataFrame-level** and **Column-level** checks, with validation rules defined in an external `expectations.yml` file.
 
+The class supports datasets in both **pandas** and **polars**, automatically normalizing to pandas for validation.
+
 ### Features
+
 - **DataFrame-level checks**
   - Validate row/column count
   - Validate emptiness/non-emptiness
@@ -16,7 +19,7 @@ It supports both **DataFrame-level** and **Column-level** checks, with validatio
   - Numeric range validation
   - Nullability checks
   - Allowed categorical values
-  - String length validation
+  - String length validation (fixed length or range)
 
 ---
 
@@ -25,7 +28,7 @@ It supports both **DataFrame-level** and **Column-level** checks, with validatio
 Ensure the following dependencies are installed:
 
 ```bash
-pip install pandas pyyaml great-expectations
+pip install pandas polars pyyaml great-expectations
 ````
 
 ---
@@ -36,30 +39,31 @@ pip install pandas pyyaml great-expectations
 
 ```python
 Expectations(
-    dataset: pd.DataFrame,
+    dataset: pd.DataFrame | pl.DataFrame,
     expectations_yml_file: str | None = None
 )
 ```
 
 #### Parameters
 
-* **dataset** (`pd.DataFrame`)
-  The dataset to validate.
+* **dataset** (`pd.DataFrame | pl.DataFrame`)
+  The dataset to validate. Both pandas and polars are supported.
+  If a `polars.DataFrame` is provided, it will be automatically converted to pandas for validation.
+
 * **expectations\_yml\_file** (`str | None`, optional)
   Path to the expectations YAML file.
-
-  * If not provided, defaults to `expectations.yml` located in the caller’s directory.
+  If not provided, defaults to `expectations.yml` located in the caller’s directory.
 
 #### Raises
 
-* `ValueError`:
+* `ValueError`
 
-  * If `dataset` is not a DataFrame
+  * If `dataset` is not a pandas or polars DataFrame
   * If `expectations_yml_file` is not a string
-* `FileNotFoundError`:
+* `FileNotFoundError`
   If `expectations.yml` file is missing
-* `yaml.YAMLError`:
-  If the YAML file cannot be parsed
+* `yaml.YAMLError` or `ValueError`
+  If the YAML file cannot be parsed or is missing required sections
 
 ---
 
@@ -79,11 +83,13 @@ columns:
     minimum: 18
     maximum: 70
     not-null: true
+
   height:
     type: int64
     minimum: 5
     maximum: 8
     not-null: false
+
   gender:
     type: object
     classes:
@@ -91,14 +97,14 @@ columns:
       - female
       - other
     not-null: false
-    length-between:
+
   phone:
     type: object
-    classes:
     not-null: false
     length-between:
       - 10
       - 13
+
   shirt_size:
     type: object
     classes:
@@ -107,9 +113,30 @@ columns:
       - l
     not-null: true
     length-between:
-      - 1
-
+      - 1   # exact length of 1
 ```
+
+---
+
+## Supported Expectations Mapping
+
+The YAML configuration is translated into the following **Great Expectations classes**:
+
+| YAML Key                     | Great Expectations Class                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `type`                       | `ExpectColumnValuesToBeOfType`                                                |
+| `minimum` / `maximum`        | `ExpectColumnValuesToBeBetween` (only for numeric types)                      |
+| `not-null: true`             | `ExpectColumnValuesToNotBeNull`                                               |
+| `classes`                    | `ExpectColumnDistinctValuesToBeInSet`                                         |
+| `length-between: [N]`        | `ExpectColumnValueLengthsToEqual` (exact length `N`)                          |
+| `length-between: [min, max]` | `ExpectColumnValueLengthsToBeBetween` (string length between `min` and `max`) |
+
+At the **DataFrame-level** (outside columns), the following checks are enforced internally:
+
+* `size: not empty` → raises `ValueError` if DataFrame is empty
+* `size: empty` → raises `ValueError` if DataFrame is not empty
+* `no_columns` → raises `ValueError` if column count mismatches
+* `no_rows` → raises `ValueError` if row count mismatches
 
 ---
 
@@ -134,12 +161,13 @@ Loads and validates expectations from the YAML file.
 
 Validates the dataset against defined expectations.
 
-#### Performs:
+#### Performs
 
 * **DataFrame-level checks**
 
   * Enforces `size` (empty / not empty)
   * Enforces `no_rows` and `no_columns`
+
 * **Column-level checks**
 
   * Ensures required columns exist
@@ -152,17 +180,18 @@ Validates the dataset against defined expectations.
 #### Raises
 
 * `ValueError`: If dataset does not meet defined expectations
+* `Exception`: If Great Expectations validation checkpoint fails
 
 ---
 
 ## Example Usage
 
 ```python
-import pandas as pd
+import polars as pl
 from expectations import Expectations
 
 # Example dataset
-df = pd.DataFrame(
+df = pl.DataFrame(
     {
         "age": [19, 20, 30],
         "height": [7, 5, 6],
@@ -183,12 +212,23 @@ validator.validate_expectations()
 
 ## Output
 
-On execution, a Great Expectations **checkpoint run report** is generated and printed:
+On execution, a Great Expectations **checkpoint run report** is generated.
+If validation fails, an exception is raised with a detailed message.
+
+Example success log:
 
 ```text
-Validation Checkpoint "context" Results:
-  - Success: True
-  - Details: <summary of checks>
+INFO:root:Data passed validation check.
+```
+
+Example failure:
+
+```text
+Exception: Data failed validation check!
+{
+  "success": false,
+  "results": [...]
+}
 ```
 
 ---
@@ -198,3 +238,5 @@ Validation Checkpoint "context" Results:
 * Store `expectations.yml` alongside your pipeline scripts for maintainability.
 * Version control `expectations.yml` to track schema changes over time.
 * Start with broad rules (row/column counts, non-null constraints) and refine incrementally.
+* Use `polars` for data wrangling if performance is critical — the class will handle conversion to pandas for validation.
+
