@@ -42,6 +42,7 @@ requirements:
     - openhexa.sdk >=2.2.0
     - rich
     - openlineage-python >=1.33.0
+    - great_expectations
 
 test:
   imports:
