@@ -26,17 +26,11 @@ dependencies = [
     "polars>=1.0",
     "diskcache",
     "pyjwt",
-    "cdsapi >=0.7.3",
-    "cads-api-client >=1.4.0",
     "rasterio",
-    "cfgrib",
-    "xarray",
     "epiweeks",
-    "datapi >=0.3.0",
     "openhexa.sdk",
     "humanize",
-    "rich",
-    "openlineage-python >=1.33.0"
+    "rich"
 ]
 
 [project.optional-dependencies]
@@ -49,6 +43,21 @@ dev = [
     "pre-commit",
     "responses",
 ]
+
+era5 = [
+    "cdsapi >=0.7.3",
+    "cads-api-client >=1.4.0",
+    "cfgrib",
+    "xarray",
+    "datapi >=0.3.0"
+]
+
+lineage = [
+    "openlineage-python >=1.33.0"
+]
+
+climate = ["openhexa.toolbox[era5]"]
+all = ["openhexa.toolbox[era5,lineage]"]
 
 [tool.setuptools]
 include-package-data = true
