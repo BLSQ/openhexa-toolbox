@@ -44,6 +44,14 @@ dev = [
     "responses",
 ]
 
+test = [
+    "openhexa.toolbox[era5,lineage]",
+    "ruff~=0.12.12",
+    "pytest~=8.4.0",
+    "pytest-cov~=7.0.0",
+    "responses",
+]
+
 era5 = [
     "cdsapi >=0.7.3",
     "cads-api-client >=1.4.0",
