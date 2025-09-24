@@ -42,6 +42,7 @@ dev = [
     "black~=25.1.0",
     "pre-commit",
     "responses",
+    "great_expectations",
 ]
 
 test = [
@@ -87,6 +88,7 @@ include = [
     "openhexa.toolbox.iaso",
     "openhexa.toolbox.kobo",
     "openhexa.toolbox.lineage",
+    "openhexa.toolbox.expectation",
 ]
 namespaces = true
 
@@ -108,4 +110,4 @@ max-doc-length = 120
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
-testpaths = ["tests/dhis2", "tests/era5", "tests/hexa", "tests/iaso"]
+testpaths = ["tests/dhis2", "tests/era5", "tests/hexa", "tests/iaso", "tests/expectations"]
