@@ -31,7 +31,7 @@ jobs:
           python-version: 3.13
       
       - name: "Install dependencies"
-        run: pip install ".[dev]"
+        run: pip install ".[test]"
         
       - name: Run tests
         run: pytest --cov=. --cov-report html --cov-report term 

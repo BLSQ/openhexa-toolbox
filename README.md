@@ -23,8 +23,23 @@ wiki for usage instructions.
 
 ## Installation
 
+### Basic Installation
 ```sh
 pip install openhexa.toolbox
+```
+
+### Optional Dependencies
+For specific modules, install with extras:
+
+```sh
+# For ERA5 climate data functionality
+pip install openhexa.toolbox[era5]
+
+# For data lineage tracking
+pip install openhexa.toolbox[lineage]
+
+# For all optional dependencies
+pip install openhexa.toolbox[all]
 ```
 
 ## Modules
