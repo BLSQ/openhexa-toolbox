@@ -26,17 +26,11 @@ dependencies = [
     "polars>=1.0",
     "diskcache",
     "pyjwt",
-    "cdsapi >=0.7.3",
-    "cads-api-client >=1.4.0",
     "rasterio",
-    "cfgrib",
-    "xarray",
     "epiweeks",
-    "datapi >=0.3.0",
     "openhexa.sdk",
     "humanize",
-    "rich",
-    "openlineage-python >=1.33.0"
+    "rich"
 ]
 
 [project.optional-dependencies]
@@ -50,6 +44,37 @@ dev = [
     "responses",
     "great_expectations",
 ]
+
+test = [
+    "ruff~=0.12.12",
+    "pytest~=8.4.0",
+    "pytest-cov~=7.0.0",
+    "responses",
+    "cdsapi >=0.7.3",
+    "cads-api-client >=1.4.0",
+    "cfgrib",
+    "xarray",
+    "datapi >=0.3.0",
+    "rasterio",
+    "epiweeks",
+    "openlineage-python >=1.33.0"
+]
+
+era5 = [
+    "cdsapi >=0.7.3",
+    "cads-api-client >=1.4.0",
+    "cfgrib",
+    "xarray",
+    "datapi >=0.3.0",
+    "rasterio",
+    "epiweeks"
+]
+
+lineage = [
+    "openlineage-python >=1.33.0"
+]
+
+all = ["openhexa.toolbox[era5,lineage]"]
 
 [tool.setuptools]
 include-package-data = true
