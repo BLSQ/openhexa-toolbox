@@ -89,7 +89,7 @@ include = [
 namespaces = true
 
 [tool.setuptools.package-data]
-"openhexa.toolbox.era5.data" = ["*.json", "*.toml"]
+"openhexa.toolbox.era5" = ["data/*.json", "data/*.toml"]
 
 [project.urls]
 "Homepage" = "https://github.com/blsq/openhexa-toolbox"
