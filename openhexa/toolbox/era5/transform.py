@@ -10,7 +10,7 @@ import rasterio.features
 import rasterio.transform
 import xarray as xr
 
-from era5.dhis2weeks import WeekType, to_dhis2_week
+from openhexa.toolbox.era5.dhis2weeks import WeekType, to_dhis2_week
 
 
 def create_masks(gdf: gpd.GeoDataFrame, id_column: str, ds: xr.Dataset) -> xr.DataArray:

@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from era5.dhis2weeks import WeekType, get_calendar_week
+from openhexa.toolbox.era5.dhis2weeks import WeekType, get_calendar_week
 
 
 def test_standard_iso_week():

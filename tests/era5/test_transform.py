@@ -10,7 +10,7 @@ import polars as pl
 import pytest
 import xarray as xr
 
-from era5.transform import Period, aggregate_in_space, aggregate_in_time, create_masks
+from openhexa.toolbox.era5.transform import Period, aggregate_in_space, aggregate_in_time, create_masks
 
 
 @pytest.fixture

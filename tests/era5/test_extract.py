@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from era5.extract import (
+from openhexa.toolbox.era5.extract import (
     Client,
     Remote,
     Request,

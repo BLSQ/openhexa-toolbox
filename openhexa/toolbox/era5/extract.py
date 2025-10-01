@@ -8,7 +8,6 @@ import importlib.resources
 import logging
 import shutil
 import tempfile
-import tomllib
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -17,6 +16,7 @@ from typing import Literal, TypedDict
 
 import numpy as np
 import numpy.typing as npt
+import tomllib
 import xarray as xr
 import zarr
 from dateutil.relativedelta import relativedelta
@@ -42,7 +42,7 @@ def _get_variables() -> dict[str, Variable]:
         A dictionary mapping variable names to their metadata.
 
     """
-    with importlib.resources.path("era5", "data", "variables.toml") as path, path.open("rb") as f:
+    with importlib.resources.files("openhexa.toolbox.era5").joinpath("data/variables.toml").open("rb") as f:
         return tomllib.load(f)
 
 
