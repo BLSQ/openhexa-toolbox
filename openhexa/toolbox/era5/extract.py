@@ -282,7 +282,7 @@ def append_zarr(ds: xr.Dataset, zarr_store: Path, variable: str) -> None:
     overlap = np.isin(new_times, existing_times)
     if overlap.any():
         logger.warning("Time dimension of GRIB file overlaps with existing Zarr store")
-        ds = ds.sel(time=~overlap)
+        ds = ds.isel(time=~overlap)
         if len(ds.time) == 0:
             logger.debug("No new data to add to Zarr store")
             return
