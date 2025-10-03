@@ -249,21 +249,18 @@ def retrieve_remotes(
     return pending
 
 
-def create_zarr(ds: xr.Dataset, zarr_store: Path, variable: str) -> None:
+def create_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
     """Create a new zarr store from the dataset.
 
     Args:
         ds: The xarray Dataset to store.
         zarr_store: Path to the zarr store to create.
-        variable: Name of the variable to store.
 
     """
-    if not zarr_store.exists():
-        ds.to_zarr(zarr_store, mode="w", consolidated=True, zarr_format=2)
-        logger.debug("Created Zarr store at %s with variable %s", zarr_store, variable)
-    else:
-        ds.to_zarr(zarr_store, mode="a", consolidated=True, zarr_format=2)
-        logger.debug("Added variable %s to existing Zarr store", variable)
+    if zarr_store.exists():
+        raise ValueError(f"Zarr store {zarr_store} already exists")
+    ds.to_zarr(zarr_store, mode="w", consolidated=True, zarr_format=2)
+    logger.debug("Created Zarr store at %s", zarr_store)
 
 
 def append_zarr(ds: xr.Dataset, zarr_store: Path, variable: str) -> None:
@@ -277,17 +274,20 @@ def append_zarr(ds: xr.Dataset, zarr_store: Path, variable: str) -> None:
         variable: Name of the variable to append.
 
     """
-    existing_times = _list_times_in_zarr(zarr_store, variable)
-    new_times = ds.time.values
-    overlap = np.isin(new_times, existing_times)
-    if overlap.any():
-        logger.warning("Time dimension of GRIB file overlaps with existing Zarr store")
-        ds = ds.isel(time=~overlap)
-        if len(ds.time) == 0:
-            logger.debug("No new data to add to Zarr store")
-            return
-    ds.to_zarr(zarr_store, mode="a", append_dim="time", zarr_format=2)
-    logger.debug("Appended %s values to Zarr store for variable %s", len(ds.time), variable)
+    if variable in xr.open_zarr(zarr_store).data_vars:
+        existing_times = _list_times_in_zarr(zarr_store, variable)
+        new_times = ds.time.values
+        overlap = np.isin(new_times, existing_times)
+        if overlap.any():
+            logger.warning("Time dimension of GRIB file overlaps with existing Zarr store")
+            ds = ds.isel(time=~overlap)
+            if len(ds.time) == 0:
+                logger.debug("No new data to add to Zarr store")
+                return
+        ds.to_zarr(zarr_store, mode="a", append_dim="time", zarr_format=2)
+    else:
+        ds.to_zarr(zarr_store, mode="a", zarr_format=2)
+    logger.debug("Added data to Zarr store for variable %s", variable)
 
 
 def _variable_is_in_zarr(zarr_store: Path, variable: str) -> bool:
