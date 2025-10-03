@@ -249,7 +249,7 @@ def test_grib_to_zarr(sample_grib_file_march, sample_grib_file_april):
         _move_grib_to_tmp_dir(sample_grib_file_march, grib_dir)
         _move_grib_to_tmp_dir(sample_grib_file_april, grib_dir)
         zarr_store = Path(tmpdir) / "store.zarr"
-        grib_to_zarr(grib_dir, zarr_store)
+        grib_to_zarr(grib_dir, zarr_store, "t2m")
         # We expect the Zarr store have been created and contains data from both GRIB files
         # Sample GRIB files contains data from 2025-03-28 to 2025-04-05 (9 days)
         assert zarr_store.exists()
@@ -258,4 +258,4 @@ def test_grib_to_zarr(sample_grib_file_march, sample_grib_file_april):
         times = np.array(ds["time"])
         assert np.datetime_as_string(times[0], unit="D") == "2025-03-28"
         assert np.datetime_as_string(times[-1], unit="D") == "2025-04-05"
-        assert len(times) == 9
+        assert len(times) == 9 * 4  # 9 days, 4 time steps per day
