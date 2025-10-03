@@ -437,6 +437,7 @@ def grib_to_zarr(
 
     """
     for fp in src_dir.glob("*.grib"):
+        logger.debug("Processing GRIB file %s", fp.name)
         ds = xr.open_dataset(fp, engine="cfgrib", decode_timedelta=False)
         ds = ds.assign_coords(
             {
