@@ -421,6 +421,8 @@ def grib_to_zarr(
                 "longitude": np.round(ds.longitude.values, 1),
             },
         )
+        ds = drop_incomplete_days(ds, data_var=variable)
+        ds = flatten_time_dimension(ds)
         variable_exists = _variable_is_in_zarr(zarr_store, variable)
         if not variable_exists:
             create_zarr(ds, zarr_store, variable)
