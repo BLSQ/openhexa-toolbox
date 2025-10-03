@@ -249,20 +249,6 @@ def retrieve_remotes(
     return pending
 
 
-def _times_in_zarr(store: Path) -> npt.NDArray[np.datetime64]:
-    """List time dimensions in the zarr store.
-
-    Args:
-        store: Path to the zarr store.
-
-    Returns:
-        Numpy array of datetime64 values in the time dimension of the entire zarr store.
-
-    """
-    ds = xr.open_zarr(store, consolidated=True, decode_timedelta=False)
-    return ds.time.values
-
-
 def create_zarr(ds: xr.Dataset, zarr_store: Path, variable: str) -> None:
     """Create a new zarr store from the dataset.
 
@@ -291,7 +277,7 @@ def append_zarr(ds: xr.Dataset, zarr_store: Path, variable: str) -> None:
         variable: Name of the variable to append.
 
     """
-    existing_times = _times_in_zarr(zarr_store)
+    existing_times = _list_times_in_zarr(zarr_store, variable)
     new_times = ds.time.values
     overlap = np.isin(new_times, existing_times)
     if overlap.any():
@@ -365,6 +351,53 @@ def consolidate_zarr(zarr_store: Path) -> None:
         zarr.consolidate_metadata(zarr_store, zarr_format=2)
 
 
+def drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
+    """Drop days with incomplete data from the dataset.
+
+    Days at the boundaries of the data request might have incomplete data. Ex: 1st day
+    with data only for the last step, or last day with missing data for the last step.
+    We only keep days with complete data to avoid having to deal with missing values &
+    partial appends.
+
+    Args:
+        ds: The xarray dataset to process.
+        data_var: The name of the data variable to check for completeness.
+
+    Returns:
+        The xarray dataset with incomplete days removed.
+    """
+    data_var = list(ds.data_vars)[0]
+    complete_times = ~ds[data_var].isnull().any(dim="step")
+    return ds.sel(time=complete_times)
+
+
+def flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
+    """Flatten the time dimension of the dataset.
+
+    Flatten step dimension into time. Meaning, instead of having time (n=n_days) and
+    step (n=n_hours) dimensions, we only have one (n=n_days*n_hours). This makes
+    analysis easier.
+
+    NB: Unused dimensions (number, surface) are also dropped because they are not
+    relevant to the variables we currently support.
+
+    Args:
+        ds: The xarray dataset to flatten.
+
+    Returns:
+        The flattened xarray dataset.
+
+    """
+    valid_times = ds.valid_time.values.flatten()
+    ds = ds.stack(new_time=("time", "step"))
+    ds = ds.reset_index("new_time", drop=True)
+    ds = ds.assign_coords(new_time=valid_times)
+    ds = ds.drop_vars(["valid_time", "number", "surface"])
+    ds = ds.rename({"new_time": "time"})
+
+    return ds
+
+
 def grib_to_zarr(
     src_dir: Path,
     zarr_store: Path,
@@ -378,7 +411,7 @@ def grib_to_zarr(
     Args:
         src_dir: Directory containing the GRIB files.
         zarr_store: Path to the zarr store to create or update.
-        variable: Name of the variable to process.
+        variable: Short name of the variable to process (e.g. "t2m", "tp", "swvl1").
 
     """
     for fp in src_dir.glob("*.grib"):
