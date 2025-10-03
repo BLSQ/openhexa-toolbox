@@ -8,6 +8,7 @@ import importlib.resources
 import logging
 import shutil
 import tempfile
+import tomllib
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -16,7 +17,6 @@ from typing import Literal, TypedDict
 
 import numpy as np
 import numpy.typing as npt
-import tomllib
 import xarray as xr
 import zarr
 from dateutil.relativedelta import relativedelta
@@ -263,19 +263,24 @@ def _times_in_zarr(store: Path) -> npt.NDArray[np.datetime64]:
     return ds.time.values
 
 
-def create_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
+def create_zarr(ds: xr.Dataset, zarr_store: Path, variable: str) -> None:
     """Create a new zarr store from the dataset.
 
     Args:
         ds: The xarray Dataset to store.
         zarr_store: Path to the zarr store to create.
+        variable: Name of the variable to store.
 
     """
-    ds.to_zarr(zarr_store, mode="w", consolidated=True, zarr_format=2)
-    logger.debug("Created Zarr store at %s", zarr_store)
+    if not zarr_store.exists():
+        ds.to_zarr(zarr_store, mode="w", consolidated=True, zarr_format=2)
+        logger.debug("Created Zarr store at %s with variable %s", zarr_store, variable)
+    else:
+        ds.to_zarr(zarr_store, mode="a", consolidated=True, zarr_format=2)
+        logger.debug("Added variable %s to existing Zarr store", variable)
 
 
-def append_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
+def append_zarr(ds: xr.Dataset, zarr_store: Path, variable: str) -> None:
     """Append new data to an existing zarr store.
 
     The function checks for overlapping time values and only appends new data.
@@ -283,6 +288,7 @@ def append_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
     Args:
         ds: The xarray Dataset to append.
         zarr_store: Path to the existing zarr store.
+        variable: Name of the variable to append.
 
     """
     existing_times = _times_in_zarr(zarr_store)
@@ -295,7 +301,43 @@ def append_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
             logger.debug("No new data to add to Zarr store")
             return
     ds.to_zarr(zarr_store, mode="a", append_dim="time", zarr_format=2)
-    logger.debug("Appended %s values to Zarr store", len(ds.time))
+    logger.debug("Appended %s values to Zarr store for variable %s", len(ds.time), variable)
+
+
+def _variable_is_in_zarr(zarr_store: Path, variable: str) -> bool:
+    """Check if a variable exists in a zarr store.
+
+    Args:
+        zarr_store: Path to the zarr store.
+        variable: Name of the variable to check.
+
+    Returns:
+        True if the variable exists in the zarr store, False otherwise.
+
+    """
+    if not zarr_store.exists():
+        raise ValueError(f"Zarr store {zarr_store} does not exist")
+    ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
+    return variable in ds.data_vars
+
+
+def _list_times_in_zarr(store: Path, variable: str) -> npt.NDArray[np.datetime64]:
+    """List time dimensions for a specific variable in the zarr store.
+
+    Args:
+        store: Path to the zarr store.
+        variable: Name of the variable to check.
+
+    Returns:
+        Numpy array of datetime64 values in the time dimension of the specified variable.
+
+    """
+    if not store.exists():
+        raise ValueError(f"Zarr store {store} does not exist")
+    ds = xr.open_zarr(store, consolidated=True, decode_timedelta=False)
+    if variable not in ds.data_vars:
+        raise ValueError(f"Variable {variable} not found in Zarr store {store}")
+    return ds[variable].time.values
 
 
 def consolidate_zarr(zarr_store: Path) -> None:
@@ -326,6 +368,7 @@ def consolidate_zarr(zarr_store: Path) -> None:
 def grib_to_zarr(
     src_dir: Path,
     zarr_store: Path,
+    variable: str,
 ) -> None:
     """Move data in multiple GRIB files to a zarr store.
 
@@ -335,6 +378,7 @@ def grib_to_zarr(
     Args:
         src_dir: Directory containing the GRIB files.
         zarr_store: Path to the zarr store to create or update.
+        variable: Name of the variable to process.
 
     """
     for fp in src_dir.glob("*.grib"):
@@ -345,10 +389,11 @@ def grib_to_zarr(
                 "longitude": np.round(ds.longitude.values, 1),
             },
         )
-        if not zarr_store.exists():
-            create_zarr(ds, zarr_store)
+        variable_exists = _variable_is_in_zarr(zarr_store, variable)
+        if not variable_exists:
+            create_zarr(ds, zarr_store, variable)
         else:
-            append_zarr(ds, zarr_store)
+            append_zarr(ds, zarr_store, variable)
     consolidate_zarr(zarr_store)
 
 
@@ -356,6 +401,7 @@ def diff_zarr(
     start_date: date,
     end_date: date,
     zarr_store: Path,
+    variable: str,
 ) -> list[date]:
     """Get dates between start and end dates that are not in the zarr store.
 
@@ -363,6 +409,7 @@ def diff_zarr(
         start_date: Start date for data retrieval.
         end_date: End date for data retrieval.
         zarr_store: The Zarr store to check for existing data.
+        variable: Name of the variable to check in the Zarr store.
 
     Returns:
         The list of dates that are not in the Zarr store.
@@ -371,7 +418,10 @@ def diff_zarr(
     if not zarr_store.exists():
         return get_date_range(start_date, end_date)
 
-    zarr_dtimes = _times_in_zarr(zarr_store)
+    if not _variable_is_in_zarr(zarr_store, variable):
+        return get_date_range(start_date, end_date)
+
+    zarr_dtimes = _list_times_in_zarr(zarr_store, variable)
     zarr_dates = zarr_dtimes.astype("datetime64[D]").astype(date).tolist()
 
     date_range = get_date_range(start_date, end_date)
@@ -384,6 +434,7 @@ def get_missing_dates(
     start_date: date,
     end_date: date,
     zarr_store: Path,
+    variable: str,
 ) -> list[date]:
     """Get the list of dates between start_date and end_date that are not in the Zarr store.
 
@@ -393,6 +444,7 @@ def get_missing_dates(
         start_date: Start date for data retrieval.
         end_date: End date for data retrieval.
         zarr_store: The Zarr store to check for existing data.
+        variable: Name of the variable to check in the Zarr store.
 
     Returns:
         A list of dates that are not in the Zarr store.
@@ -408,8 +460,8 @@ def get_missing_dates(
         collection.begin_datetime.date(),
         collection.end_datetime.date(),
     )
-    dates = diff_zarr(start_date, end_date, zarr_store)
-    logger.debug("Missing dates: %s", dates)
+    dates = diff_zarr(start_date, end_date, zarr_store, variable)
+    logger.debug("Missing dates for variable '%s': %s", variable, dates)
     return dates
 
 
@@ -451,6 +503,7 @@ def prepare_requests(
         start_date=start_date,
         end_date=end_date,
         zarr_store=zarr_store,
+        variable=variable,
     )
 
     requests = build_requests(
