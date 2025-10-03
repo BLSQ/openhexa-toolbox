@@ -366,7 +366,6 @@ def drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     Returns:
         The xarray dataset with incomplete days removed.
     """
-    data_var = list(ds.data_vars)[0]
     complete_times = ~ds[data_var].isnull().any(dim="step")
     return ds.sel(time=complete_times)
 
