@@ -351,6 +351,29 @@ def consolidate_zarr(zarr_store: Path) -> None:
         zarr.consolidate_metadata(zarr_store, zarr_format=2)
 
 
+def validate_zarr(zarr_store: Path) -> None:
+    """Validate the zarr store by checking for duplicate or missing time values.
+
+    Args:
+        zarr_store: Path to the zarr store to validate.
+
+    Raises:
+        RuntimeError: If duplicate or inconsistent time values are found.
+    """
+    ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
+    for data_var in ds.data_vars:
+        times = ds.time.values
+        if len(times) != len(np.unique(times)):
+            msg = f"Zarr store {zarr_store} has duplicate time values for variable {data_var}"
+            raise RuntimeError(msg)
+        dates = times.astype("datetime64[D]")
+        _, counts = np.unique(dates, return_counts=True)
+        if not np.all(counts == counts[0]):
+            unique_counts = np.unique(counts)
+            msg = f"Inconsistent steps per day found: {unique_counts}\nExpected all days to have {counts[0]} steps"
+            raise RuntimeError(msg)
+
+
 def drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     """Drop days with incomplete data from the dataset.
 
@@ -366,7 +389,7 @@ def drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     Returns:
         The xarray dataset with incomplete days removed.
     """
-    complete_times = ~ds[data_var].isnull().any(dim="step")
+    complete_times = ~ds[data_var].isnull().any(dim=["step", "latitude", "longitude"])
     return ds.sel(time=complete_times)
 
 
@@ -423,12 +446,12 @@ def grib_to_zarr(
         )
         ds = drop_incomplete_days(ds, data_var=data_var)
         ds = flatten_time_dimension(ds)
-        variable_exists = _variable_is_in_zarr(zarr_store, data_var)
-        if not variable_exists:
+        if not zarr_store.exists():
             create_zarr(ds, zarr_store)
         else:
             append_zarr(ds, zarr_store, data_var)
     consolidate_zarr(zarr_store)
+    validate_zarr(zarr_store)
 
 
 def diff_zarr(
