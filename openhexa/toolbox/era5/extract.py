@@ -425,7 +425,7 @@ def grib_to_zarr(
         ds = flatten_time_dimension(ds)
         variable_exists = _variable_is_in_zarr(zarr_store, variable)
         if not variable_exists:
-            create_zarr(ds, zarr_store, variable)
+            create_zarr(ds, zarr_store)
         else:
             append_zarr(ds, zarr_store, variable)
     consolidate_zarr(zarr_store)
