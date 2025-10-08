@@ -74,20 +74,13 @@ requests = prepare_requests(
 raw_dir = Path("data/2m_temperature/raw")
 raw_dir.mkdir(parents=True, exist_ok=True)
 
-# Submit data requests to the CDS API (max 100)
-remotes = submit_requests(
-    client,
-    collection_id="reanalysis-era5-land",
-    requests=requests,
-)
-
 # Retrieve data requests when they are ready
 # This will download raw GRIB files to `raw_dir`
 retrieve_requests(
     client,
     dataset_id="reanalysis-era5-land",
     requests=requests,
-    src_dir=raw_dir,
+    dst_dir=raw_dir,
 )
 
 # Convert raw GRIB data to Zarr format
