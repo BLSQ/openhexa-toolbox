@@ -279,7 +279,7 @@ def append_zarr(ds: xr.Dataset, zarr_store: Path, data_var: str) -> None:
         new_times = ds.time.values
         overlap = np.isin(new_times, existing_times)
         if overlap.any():
-            logger.warning("Time dimension of GRIB file overlaps with existing Zarr store")
+            logger.debug("Time dimension of GRIB file overlaps with existing Zarr store")
             ds = ds.isel(time=~overlap)
             if len(ds.time) == 0:
                 logger.debug("No new data to add to Zarr store")
@@ -437,7 +437,7 @@ def grib_to_zarr(
 
     """
     for fp in src_dir.glob("*.grib"):
-        logger.debug("Processing GRIB file %s", fp.name)
+        logger.info("Processing GRIB file %s", fp.name)
         ds = xr.open_dataset(fp, engine="cfgrib", decode_timedelta=False)
         ds = ds.assign_coords(
             {
