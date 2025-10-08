@@ -15,13 +15,13 @@ from openhexa.toolbox.era5.extract import (
     Client,
     Remote,
     Request,
-    bound_date_range,
+    _bound_date_range,
+    _get_temporal_chunks,
+    _submit_requests,
     get_date_range,
-    get_temporal_chunks,
     grib_to_zarr,
     prepare_requests,
     retrieve_requests,
-    submit_requests,
 )
 
 
@@ -138,7 +138,7 @@ def test_prepare_requests_with_existing_data(sample_zarr_store, mock_client):
 def test_submit_requests(mock_client, mock_request):
     remote = Mock(spec=Remote)
     mock_client.submit.return_value = remote
-    remotes = submit_requests(
+    remotes = _submit_requests(
         client=mock_client,
         collection_id="reanalysis-era5-land",
         requests=[mock_request, mock_request],
@@ -211,7 +211,7 @@ def test_bound_date_range():
     end = date(2025, 1, 3)
     collection_start = date(2024, 1, 1)
     collection_end = date(2024, 12, 31)
-    bounded_start, bounded_end = bound_date_range(start, end, collection_start, collection_end)
+    bounded_start, bounded_end = _bound_date_range(start, end, collection_start, collection_end)
     assert bounded_start == date(2024, 12, 27)
     assert bounded_end == date(2024, 12, 31)
 
@@ -223,7 +223,7 @@ def test_get_temporal_chunks():
         date(2024, 2, 15),
         date(2024, 3, 1),
     ]
-    result = get_temporal_chunks(dates)
+    result = _get_temporal_chunks(dates)
 
     # We expect 3 chunks: one per month
     assert len(result) == 3

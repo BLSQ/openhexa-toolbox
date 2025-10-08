@@ -35,17 +35,6 @@ class Variable(TypedDict):
     time: list[str]
 
 
-def _get_variables() -> dict[str, Variable]:
-    """Load ERA5-Land variables metadata.
-
-    Returns:
-        A dictionary mapping variable names to their metadata.
-
-    """
-    with importlib.resources.files("openhexa.toolbox.era5").joinpath("data/variables.toml").open("rb") as f:
-        return tomllib.load(f)
-
-
 class Request(TypedDict):
     """Request parameters for the 'reanalysis-era5-land' dataset."""
 
@@ -57,6 +46,41 @@ class Request(TypedDict):
     data_format: Literal["grib", "netcdf"]
     download_format: Literal["unarchived", "zip"]
     area: list[int]
+
+
+class RequestTemporal(TypedDict):
+    """Temporal request parameters."""
+
+    year: str
+    month: str
+    day: list[str]
+
+
+def _get_variables() -> dict[str, Variable]:
+    """Load ERA5-Land variables metadata.
+
+    Returns:
+        A dictionary mapping variable names to their metadata.
+
+    """
+    with importlib.resources.files("openhexa.toolbox.era5").joinpath("data/variables.toml").open("rb") as f:
+        return tomllib.load(f)
+
+
+def _get_name(remote: Remote) -> str:
+    """Create file name from remote request.
+
+    Returns:
+        File name with format: {year}{month}_{request_id}.{ext}
+
+    """
+    request = remote.request
+    data_format = request["data_format"]
+    download_format = request["download_format"]
+    year = request["year"]
+    month = request["month"]
+    ext = "zip" if download_format == "zip" else data_format
+    return f"{year}{month}_{remote.request_id}.{ext}"
 
 
 def get_date_range(
@@ -82,7 +106,7 @@ def get_date_range(
     return date_range
 
 
-def bound_date_range(
+def _bound_date_range(
     start_date: date,
     end_date: date,
     collection_start_date: date,
@@ -105,15 +129,7 @@ def bound_date_range(
     return start, end
 
 
-class RequestTemporal(TypedDict):
-    """Temporal request parameters."""
-
-    year: str
-    month: str
-    day: list[str]
-
-
-def get_temporal_chunks(dates: list[date]) -> list[RequestTemporal]:
+def _get_temporal_chunks(dates: list[date]) -> list[RequestTemporal]:
     """Get monthly temporal request chunks for the given list of dates.
 
     Args:
@@ -139,7 +155,105 @@ def get_temporal_chunks(dates: list[date]) -> list[RequestTemporal]:
     return chunks
 
 
-def submit_requests(
+def _build_requests(
+    dates: list[date],
+    variable: str,
+    time: list[str],
+    area: list[int],
+    data_format: Literal["grib", "netcdf"] = "grib",
+    download_format: Literal["unarchived", "zip"] = "unarchived",
+) -> list[Request]:
+    """Build requests for the reanalysis-era5-land dataset.
+
+    Args:
+        dates: Requested dates.
+        variable: Requested variable (ex: "2m_temperature").
+        time: List of times to request (ex: ["00:00", "01:00", ..., "23:00"]).
+        area: Geographical area to request (north, west, south, east).
+        data_format: Data format to request ("grib" or "netcdf").
+        download_format: Download format ("unarchived" or "zip").
+
+    Returns:
+        A list of Request objects to be submitted to the CDS API.
+
+    """
+    requests: list[Request] = []
+    temporal_chunks = _get_temporal_chunks(dates)
+    for chunk in temporal_chunks:
+        request = Request(
+            variable=[variable],
+            year=chunk["year"],
+            month=chunk["month"],
+            day=chunk["day"],
+            time=time,
+            data_format=data_format,
+            download_format=download_format,
+            area=area,
+        )
+        requests.append(request)
+    return requests
+
+
+def prepare_requests(
+    client: Client,
+    dataset_id: str,
+    start_date: date,
+    end_date: date,
+    variable: str,
+    area: list[int],
+    zarr_store: Path,
+) -> list[Request]:
+    """Prepare requests for data retrieval from the CDS API.
+
+    This function checks the available dates in the Zarr store and prepares
+    requests for the missing dates.
+
+    Args:
+        client: The CDS API client.
+        dataset_id: ID of the CDS dataset (e.g. "reanalysis-era5-land").
+        start_date: Start date for data synchronization.
+        end_date: End date for data synchronization.
+        variable: The variable to synchronize (e.g. "2m_temperature").
+        area: The geographical area to synchronize (north, west, south, east).
+        zarr_store: The Zarr store to update or create.
+
+    Returns:
+        A list of requests to be submitted to the CDS API.
+
+    """
+    variables = _get_variables()
+    if variable not in variables:
+        msg = f"Variable '{variable}' not supported"
+        raise ValueError(msg)
+
+    dates = get_missing_dates(
+        client=client,
+        dataset_id=dataset_id,
+        start_date=start_date,
+        end_date=end_date,
+        zarr_store=zarr_store,
+        data_var=variables[variable]["short_name"],
+    )
+
+    requests = _build_requests(
+        dates=dates,
+        variable=variable,
+        time=variables[variable]["time"],
+        area=area,
+        data_format="grib",
+        download_format="unarchived",
+    )
+
+    max_requests = 100
+    if len(requests) > max_requests:
+        msg = f"Too many data requests ({len(requests)}), max is {max_requests}"
+        logger.error(msg)
+        raise ValueError(msg)
+
+    return requests
+
+
+def _submit_requests(
     client: Client,
     collection_id: str,
     requests: list[Request],
@@ -166,62 +280,7 @@ def submit_requests(
     return remotes
 
 
-def build_requests(
-    dates: list[date],
-    variable: str,
-    time: list[str],
-    area: list[int],
-    data_format: Literal["grib", "netcdf"] = "grib",
-    download_format: Literal["unarchived", "zip"] = "unarchived",
-) -> list[Request]:
-    """Build requests for the reanalysis-era5-land dataset.
-
-    Args:
-        dates: Requested dates.
-        variable: Requested variable (ex: "2m_temperature").
-        time: List of times to request (ex: ["00:00", "01:00", ..., "23:00"]).
-        area: Geographical area to request (north, west, south, east).
-        data_format: Data format to request ("grib" or "netcdf").
-        download_format: Download format ("unarchived" or "zip").
-
-    Returns:
-        A list of Request objects to be submitted to the CDS API.
-
-    """
-    requests: list[Request] = []
-    temporal_chunks = get_temporal_chunks(dates)
-    for chunk in temporal_chunks:
-        request = Request(
-            variable=[variable],
-            year=chunk["year"],
-            month=chunk["month"],
-            day=chunk["day"],
-            time=time,
-            data_format=data_format,
-            download_format=download_format,
-            area=area,
-        )
-        requests.append(request)
-    return requests
-
-
-def _get_name(remote: Remote) -> str:
-    """Create file name from remote request.
-
-    Returns:
-        File name with format: {year}{month}_{request_id}.{ext}
-
-    """
-    request = remote.request
-    data_format = request["data_format"]
-    download_format = request["download_format"]
-    year = request["year"]
-    month = request["month"]
-    ext = "zip" if download_format == "zip" else data_format
-    return f"{year}{month}_{remote.request_id}.{ext}"
-
-
-def retrieve_remotes(
+def _retrieve_remotes(
     queue: list[Remote],
     output_dir: Path,
 ) -> list[Remote]:
@@ -249,45 +308,32 @@ def retrieve_remotes(
     return pending
 
 
-def create_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
-    """Create a new zarr store from the dataset.
+def retrieve_requests(
+    client: Client,
+    dataset_id: str,
+    requests: list[Request],
+    src_dir: Path,
+    wait: int = 30,
+) -> None:
+    """Retrieve the results of the submitted requests.
 
     Args:
-        ds: The xarray Dataset to store.
-        zarr_store: Path to the zarr store to create.
+        client: The CDS API client.
+        dataset_id: The ID of the dataset to retrieve.
+        requests: The list of requests to retrieve.
+        src_dir: The directory containing the source data files.
+        wait: Time in seconds to wait between checking for completed requests.
 
     """
-    if zarr_store.exists():
-        raise ValueError(f"Zarr store {zarr_store} already exists")
-    ds.to_zarr(zarr_store, mode="w", consolidated=True, zarr_format=2)
-    logger.debug("Created Zarr store at %s", zarr_store)
-
-
-def append_zarr(ds: xr.Dataset, zarr_store: Path, data_var: str) -> None:
-    """Append new data to an existing zarr store.
-
-    The function checks for overlapping time values and only appends new data.
-
-    Args:
-        ds: The xarray Dataset to append.
-        zarr_store: Path to the existing zarr store.
-        data_var: Name of the variable to append.
-
-    """
-    if data_var in xr.open_zarr(zarr_store).data_vars:
-        existing_times = _list_times_in_zarr(zarr_store, data_var)
-        new_times = ds.time.values
-        overlap = np.isin(new_times, existing_times)
-        if overlap.any():
-            logger.debug("Time dimension of GRIB file overlaps with existing Zarr store")
-            ds = ds.isel(time=~overlap)
-            if len(ds.time) == 0:
-                logger.debug("No new data to add to Zarr store")
-                return
-        ds.to_zarr(zarr_store, mode="a", append_dim="time", zarr_format=2)
-    else:
-        ds.to_zarr(zarr_store, mode="a", zarr_format=2)
-    logger.debug("Added data to Zarr store for variable %s", data_var)
+    logger.debug("Submitting %s requests", len(requests))
+    remotes = _submit_requests(
+        client=client,
+        collection_id=dataset_id,
+        requests=requests,
+    )
+    while remotes:
+        remotes = _retrieve_remotes(remotes, src_dir)
+        sleep(wait)
 
 
 def _variable_is_in_zarr(zarr_store: Path, data_var: str) -> bool:
@@ -326,55 +372,7 @@ def _list_times_in_zarr(store: Path, data_var: str) -> npt.NDArray[np.datetime64
     return ds[data_var].time.values
 
 
-def consolidate_zarr(zarr_store: Path) -> None:
-    """Consolidate metadata and ensure dimensions are properly sorted.
-
-    The function consolidates the metadata of the zarr store and checks if the time
-    dimension is sorted. If not, it sorts the time dimension and rewrites the zarr
-    store.
-
-    Args:
-        zarr_store: Path to the zarr store to consolidate.
-
-    """
-    zarr.consolidate_metadata(zarr_store)
-    ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
-    ds_sorted = ds.sortby("time")
-    if not np.array_equal(ds.time.values, ds_sorted.time.values):
-        logger.debug("Sorting time dimension in Zarr store")
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_zarr_store = Path(tmp_dir) / zarr_store.name
-            ds_sorted.to_zarr(tmp_zarr_store, mode="w", consolidated=True, zarr_format=2)
-            shutil.rmtree(zarr_store)
-            shutil.move(tmp_zarr_store, zarr_store)
-    else:
-        zarr.consolidate_metadata(zarr_store, zarr_format=2)
-
-
-def validate_zarr(zarr_store: Path) -> None:
-    """Validate the zarr store by checking for duplicate or missing time values.
-
-    Args:
-        zarr_store: Path to the zarr store to validate.
-
-    Raises:
-        RuntimeError: If duplicate or inconsistent time values are found.
-    """
-    ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
-    for data_var in ds.data_vars:
-        times = ds.time.values
-        if len(times) != len(np.unique(times)):
-            msg = f"Zarr store {zarr_store} has duplicate time values for variable {data_var}"
-            raise RuntimeError(msg)
-        dates = times.astype("datetime64[D]")
-        _, counts = np.unique(dates, return_counts=True)
-        if not np.all(counts == counts[0]):
-            unique_counts = np.unique(counts)
-            msg = f"Inconsistent steps per day found: {unique_counts}\nExpected all days to have {counts[0]} steps"
-            raise RuntimeError(msg)
-
-
-def drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
+def _drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     """Drop days with incomplete data from the dataset.
 
     Days at the boundaries of the data request might have incomplete data. Ex: 1st day
@@ -393,7 +391,7 @@ def drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     return ds.sel(time=complete_times)
 
 
-def flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
+def _flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
     """Flatten the time dimension of the dataset.
 
     Flatten step dimension into time. Meaning, instead of having time (n=n_days) and
@@ -420,42 +418,96 @@ def flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
-def grib_to_zarr(
-    src_dir: Path,
-    zarr_store: Path,
-    data_var: str,
-) -> None:
-    """Move data in multiple GRIB files to a zarr store.
-
-    The function processes all GRIB files in the source directory and moves the data
-    to the specified Zarr store (creating or appending as necessary).
+def _create_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
+    """Create a new zarr store from the dataset.
 
     Args:
-        src_dir: Directory containing the GRIB files.
-        zarr_store: Path to the zarr store to create or update.
-        data_var: Short name of the variable to process (e.g. "t2m", "tp", "swvl1").
+        ds: The xarray Dataset to store.
+        zarr_store: Path to the zarr store to create.
 
     """
-    for fp in src_dir.glob("*.grib"):
-        logger.info("Processing GRIB file %s", fp.name)
-        ds = xr.open_dataset(fp, engine="cfgrib", decode_timedelta=False)
-        ds = ds.assign_coords(
-            {
-                "latitude": np.round(ds.latitude.values, 1),
-                "longitude": np.round(ds.longitude.values, 1),
-            },
-        )
-        ds = drop_incomplete_days(ds, data_var=data_var)
-        ds = flatten_time_dimension(ds)
-        if not zarr_store.exists():
-            create_zarr(ds, zarr_store)
-        else:
-            append_zarr(ds, zarr_store, data_var)
-    consolidate_zarr(zarr_store)
-    validate_zarr(zarr_store)
+    if zarr_store.exists():
+        raise ValueError(f"Zarr store {zarr_store} already exists")
+    ds.to_zarr(zarr_store, mode="w", consolidated=True, zarr_format=2)
+    logger.debug("Created Zarr store at %s", zarr_store)
 
 
-def diff_zarr(
+def _append_zarr(ds: xr.Dataset, zarr_store: Path, data_var: str) -> None:
+    """Append new data to an existing zarr store.
+
+    The function checks for overlapping time values and only appends new data.
+
+    Args:
+        ds: The xarray Dataset to append.
+        zarr_store: Path to the existing zarr store.
+        data_var: Name of the variable to append.
+
+    """
+    if data_var in xr.open_zarr(zarr_store).data_vars:
+        existing_times = _list_times_in_zarr(zarr_store, data_var)
+        new_times = ds.time.values
+        overlap = np.isin(new_times, existing_times)
+        if overlap.any():
+            logger.debug("Time dimension of GRIB file overlaps with existing Zarr store")
+            ds = ds.isel(time=~overlap)
+            if len(ds.time) == 0:
+                logger.debug("No new data to add to Zarr store")
+                return
+        ds.to_zarr(zarr_store, mode="a", append_dim="time", zarr_format=2)
+    else:
+        ds.to_zarr(zarr_store, mode="a", zarr_format=2)
+    logger.debug("Added data to Zarr store for variable %s", data_var)
+
+
+def _consolidate_zarr(zarr_store: Path) -> None:
+    """Consolidate metadata and ensure dimensions are properly sorted.
+
+    The function consolidates the metadata of the zarr store and checks if the time
+    dimension is sorted. If not, it sorts the time dimension and rewrites the zarr
+    store.
+
+    Args:
+        zarr_store: Path to the zarr store to consolidate.
+
+    """
+    zarr.consolidate_metadata(zarr_store)
+    ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
+    ds_sorted = ds.sortby("time")
+    if not np.array_equal(ds.time.values, ds_sorted.time.values):
+        logger.debug("Sorting time dimension in Zarr store")
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_zarr_store = Path(tmp_dir) / zarr_store.name
+            ds_sorted.to_zarr(tmp_zarr_store, mode="w", consolidated=True, zarr_format=2)
+            shutil.rmtree(zarr_store)
+            shutil.move(tmp_zarr_store, zarr_store)
+    else:
+        zarr.consolidate_metadata(zarr_store, zarr_format=2)
+
+
+def _validate_zarr(zarr_store: Path) -> None:
+    """Validate the zarr store by checking for duplicate or missing time values.
+
+    Args:
+        zarr_store: Path to the zarr store to validate.
+
+    Raises:
+        RuntimeError: If duplicate or inconsistent time values are found.
+    """
+    ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
+    for data_var in ds.data_vars:
+        times = ds.time.values
+        if len(times) != len(np.unique(times)):
+            msg = f"Zarr store {zarr_store} has duplicate time values for variable {data_var}"
+            raise RuntimeError(msg)
+        dates = times.astype("datetime64[D]")
+        _, counts = np.unique(dates, return_counts=True)
+        if not np.all(counts == counts[0]):
+            unique_counts = np.unique(counts)
+            msg = f"Inconsistent steps per day found: {unique_counts}\nExpected all days to have {counts[0]} steps"
+            raise RuntimeError(msg)
+
+
+def _diff_zarr(
     start_date: date,
     end_date: date,
     zarr_store: Path,
@@ -512,99 +564,47 @@ def get_missing_dates(
     if not collection.begin_datetime or not collection.end_datetime:
         msg = f"Dataset {dataset_id} does not have a defined date range"
         raise ValueError(msg)
-    start_date, end_date = bound_date_range(
+    start_date, end_date = _bound_date_range(
         start_date,
         end_date,
         collection.begin_datetime.date(),
         collection.end_datetime.date(),
     )
-    dates = diff_zarr(start_date, end_date, zarr_store, data_var)
+    dates = _diff_zarr(start_date, end_date, zarr_store, data_var)
     logger.debug("Missing dates for variable '%s': %s", data_var, dates)
     return dates
 
 
-def prepare_requests(
-    client: Client,
-    dataset_id: str,
-    start_date: date,
-    end_date: date,
-    variable: str,
-    area: list[int],
-    zarr_store: Path,
-) -> list[Request]:
-    """Prepare requests for data retrieval from the CDS API.
-
-    This function checks the available dates in the Zarr store and prepares
-    requests for the missing dates.
-
-    Args:
-        client: The CDS API client.
-        dataset_id: ID of the CDS dataset (e.g. "reanalysis-era5-land").
-        start_date: Start date for data synchronization.
-        end_date: End date for data synchronization.
-        variable: The variable to synchronize (e.g. "2m_temperature").
-        area: The geographical area to synchronize (north, west, south, east).
-        zarr_store: The Zarr store to update or create.
-
-    Returns:
-        A list of requests to be submitted to the CDS API.
-
-    """
-    variables = _get_variables()
-    if variable not in variables:
-        msg = f"Variable '{variable}' not supported"
-        raise ValueError(msg)
-
-    dates = get_missing_dates(
-        client=client,
-        dataset_id=dataset_id,
-        start_date=start_date,
-        end_date=end_date,
-        zarr_store=zarr_store,
-        data_var=variables[variable]["short_name"],
-    )
-
-    requests = build_requests(
-        dates=dates,
-        variable=variable,
-        time=variables[variable]["time"],
-        area=area,
-        data_format="grib",
-        download_format="unarchived",
-    )
-
-    max_requests = 100
-    if len(requests) > max_requests:
-        msg = f"Too many data requests ({len(requests)}), max is {max_requests}"
-        logger.error(msg)
-        raise ValueError(msg)
-
-    return requests
-
-
-def retrieve_requests(
-    client: Client,
-    dataset_id: str,
-    requests: list[Request],
+def grib_to_zarr(
     src_dir: Path,
-    wait: int = 30,
+    zarr_store: Path,
+    data_var: str,
 ) -> None:
-    """Retrieve the results of the submitted requests.
+    """Move data in multiple GRIB files to a zarr store.
+
+    The function processes all GRIB files in the source directory and moves the data
+    to the specified Zarr store (creating or appending as necessary).
 
     Args:
-        client: The CDS API client.
-        dataset_id: The ID of the dataset to retrieve.
-        requests: The list of requests to retrieve.
-        src_dir: The directory containing the source data files.
-        wait: Time in seconds to wait between checking for completed requests.
+        src_dir: Directory containing the GRIB files.
+        zarr_store: Path to the zarr store to create or update.
+        data_var: Short name of the variable to process (e.g. "t2m", "tp", "swvl1").
 
     """
-    logger.debug("Submitting %s requests", len(requests))
-    remotes = submit_requests(
-        client=client,
-        collection_id=dataset_id,
-        requests=requests,
-    )
-    while remotes:
-        remotes = retrieve_remotes(remotes, src_dir)
-        sleep(wait)
+    for fp in src_dir.glob("*.grib"):
+        logger.info("Processing GRIB file %s", fp.name)
+        ds = xr.open_dataset(fp, engine="cfgrib", decode_timedelta=False)
+        ds = ds.assign_coords(
+            {
+                "latitude": np.round(ds.latitude.values, 1),
+                "longitude": np.round(ds.longitude.values, 1),
+            },
+        )
+        ds = _drop_incomplete_days(ds, data_var=data_var)
+        ds = _flatten_time_dimension(ds)
+        if not zarr_store.exists():
+            _create_zarr(ds, zarr_store)
+        else:
+            _append_zarr(ds, zarr_store, data_var)
+    _consolidate_zarr(zarr_store)
+    _validate_zarr(zarr_store)
