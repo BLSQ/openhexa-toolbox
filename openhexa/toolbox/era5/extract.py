@@ -312,7 +312,7 @@ def retrieve_requests(
     client: Client,
     dataset_id: str,
     requests: list[Request],
-    src_dir: Path,
+    dst_dir: Path,
     wait: int = 30,
 ) -> None:
     """Retrieve the results of the submitted requests.
@@ -321,7 +321,7 @@ def retrieve_requests(
         client: The CDS API client.
         dataset_id: The ID of the dataset to retrieve.
         requests: The list of requests to retrieve.
-        src_dir: The directory containing the source data files.
+        dst_dir: The directory containing the source data files.
         wait: Time in seconds to wait between checking for completed requests.
 
     """
@@ -332,7 +332,7 @@ def retrieve_requests(
         requests=requests,
     )
     while remotes:
-        remotes = _retrieve_remotes(remotes, src_dir)
+        remotes = _retrieve_remotes(remotes, dst_dir)
         sleep(wait)
 
 

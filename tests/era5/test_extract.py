@@ -169,7 +169,7 @@ def test_retrieve_requests(mock_client, mock_request):
             client=mock_client,
             dataset_id="reanalysis-era5-land",
             requests=[mock_request, mock_request],
-            src_dir=Path(tmpdir),
+            dst_dir=Path(tmpdir),
             wait=0,
         )
         # We expect 2 grib files to have been downloaded
