@@ -481,7 +481,7 @@ def _consolidate_zarr(zarr_store: Path) -> None:
             shutil.rmtree(zarr_store)
             shutil.move(tmp_zarr_store, zarr_store)
     else:
-        zarr.consolidate_metadata(zarr_store, zarr_format=2)
+        zarr.consolidate_metadata(zarr_store)
 
 
 def _validate_zarr(zarr_store: Path) -> None:
