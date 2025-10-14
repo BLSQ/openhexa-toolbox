@@ -387,6 +387,8 @@ def _drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     Returns:
         The xarray dataset with incomplete days removed.
     """
+    if "step" not in ds.dims:
+        return ds
     complete_times = ~ds[data_var].isnull().any(dim=["step", "latitude", "longitude"])
     return ds.sel(time=complete_times)
 
@@ -408,6 +410,10 @@ def _flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
         The flattened xarray dataset.
 
     """
+    if "step" not in ds.dims:
+        ds = ds.drop_vars(["number", "surface"], errors="ignore")
+        return ds
+
     valid_times = ds.valid_time.values.flatten()
     ds = ds.stack(new_time=("time", "step"))
     ds = ds.reset_index("new_time", drop=True)
