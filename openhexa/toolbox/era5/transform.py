@@ -211,3 +211,28 @@ def aggregate_in_time(
         raise ValueError(msg)
 
     return df.select(["boundary", "period", "value"]).sort(["boundary", "period"])
+
+
+def calculate_relative_humidity(t2m: xr.DataArray, d2m: xr.DataArray) -> xr.DataArray:
+    """Calculate relative humidity from 2m temperature and 2m dewpoint temperature.
+
+    Uses Magnus formula to calculate RH from t2m and d2m.
+
+    Args:
+        t2m: 2m temperature in Kelvin.
+        d2m: 2m dewpoint temperature in Kelvin.
+
+    Returns:
+        Relative humidity in percentage.
+    """
+    t2m_c = t2m - 273.15
+    d2m_c = d2m - 273.15
+
+    a = 17.1  # temperature coefficient
+    b = 235.0  # temperature offset (°C)
+    base_pressure = 6.1078
+    vapor_pressure = base_pressure * np.exp(a * d2m_c / (b + d2m_c))
+    sat_vapor_pressure = base_pressure * np.exp(a * t2m_c / (b + t2m_c))
+    rh = vapor_pressure / sat_vapor_pressure
+    rh = rh.clip(0, 1)
+    return xr.DataArray(rh * 100, dims=t2m.dims, coords=t2m.coords, name="rh", attrs={"units": "%"})
