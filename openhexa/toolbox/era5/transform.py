@@ -75,7 +75,7 @@ def create_masks(gdf: gpd.GeoDataFrame, id_column: str, ds: xr.Dataset) -> xr.Da
 def aggregate_in_space(
     ds: xr.Dataset,
     masks: xr.DataArray,
-    variable: str,
+    data_var: str,
     agg: Literal["mean", "sum", "min", "max"],
 ) -> pl.DataFrame:
     """Perform spatial aggregation on the dataset using the provided masks.
@@ -85,7 +85,7 @@ def aggregate_in_space(
             'latitude' and 'longitude' coordinates, and daily data.
         masks: An xarray DataArray containing the masks for spatial aggregation, as returned by the
             `create_masks()` function.
-        variable: Name of the variable to aggregate (e.g. "t2m")
+        data_var: Name of the variable to aggregate in input dataset (e.g. "t2m")
         agg: Spatial aggregation method (one of "mean", "sum", "min", "max").
 
     Returns:
@@ -98,13 +98,13 @@ def aggregate_in_space(
         ValueError: If an unsupported aggregation method is specified.
 
     """
-    if variable not in ds.data_vars:
-        msg = f"Variable '{variable}' not found in dataset"
+    if data_var not in ds.data_vars:
+        msg = f"Variable '{data_var}' not found in dataset"
         raise ValueError(msg)
     if "step" in ds.dims:
         msg = "Dataset still contains 'step' dimension. Please aggregate to daily data first."
         raise ValueError(msg)
-    da = ds[variable]
+    da = ds[data_var]
     area_weights = np.cos(np.deg2rad(ds.latitude))
     results: list[xr.DataArray] = []
     for boundary in masks.boundary:
@@ -213,7 +213,7 @@ def aggregate_in_time(
     return df.select(["boundary", "period", "value"]).sort(["boundary", "period"])
 
 
-def calculate_relative_humidity(t2m: xr.DataArray, d2m: xr.DataArray) -> xr.DataArray:
+def calculate_relative_humidity(t2m: xr.DataArray, d2m: xr.DataArray) -> xr.Dataset:
     """Calculate relative humidity from 2m temperature and 2m dewpoint temperature.
 
     Uses Magnus formula to calculate RH from t2m and d2m.
@@ -235,4 +235,31 @@ def calculate_relative_humidity(t2m: xr.DataArray, d2m: xr.DataArray) -> xr.Data
     sat_vapor_pressure = base_pressure * np.exp(a * t2m_c / (b + t2m_c))
     rh = vapor_pressure / sat_vapor_pressure
     rh = rh.clip(0, 1)
-    return xr.DataArray(rh * 100, dims=t2m.dims, coords=t2m.coords, name="rh", attrs={"units": "%"})
+    rh_da = xr.DataArray(
+        rh * 100,
+        dims=t2m.dims,
+        coords=t2m.coords,
+        attrs={"units": "%"},
+    )
+    return xr.Dataset({"rh": rh_da})
+
+
+def calculate_wind_speed(u10: xr.DataArray, v10: xr.DataArray) -> xr.Dataset:
+    """Calculate wind speed from u10 and v10 components.
+
+    Args:
+        u10: U component of wind at 10m in m/s.
+        v10: V component of wind at 10m in m/s.
+
+    Returns:
+        Wind speed in m/s.
+    """
+    wind_speed = np.sqrt(u10**2 + v10**2)
+    wind_speed_da = xr.DataArray(
+        wind_speed,
+        dims=u10.dims,
+        coords=u10.coords,
+        name="ws",
+        attrs={"units": "m/s"},
+    )
+    return xr.Dataset({"ws": wind_speed_da})
