@@ -373,6 +373,46 @@ def _list_times_in_zarr(store: Path, data_var: str) -> npt.NDArray[np.datetime64
     return ds[data_var].time.values
 
 
+def _clean_dims_and_coords(ds: xr.Dataset) -> xr.Dataset:
+    """Expand time and step dimensions if needed.
+
+    When data is downloaded for a single day (or a single step per day),
+    time and step dimensions can be squeezed into a coordinate instead.
+    In that case, we expand the coordinate into a dimension to ensure
+    compatibility with the subsequent processes.
+
+    Args:
+        ds: The xarray dataset to process (loaded from GRIB file)
+
+    Returns:
+        The xarray dataset with expanded dimensions if needed.
+
+    Raises:
+        ValueError: If the dataset does not have a time or step dimension.
+    """
+    if "time" in ds.coords and "time" not in ds.dims:
+        ds = ds.expand_dims("time")
+    if "step" in ds.coords and "step" not in ds.dims:
+        ds = ds.expand_dims("step")
+    if "time" not in ds.dims:
+        raise ValueError("Dataset does not have a time dimension")
+    if "step" not in ds.dims:
+        raise ValueError("Dataset does not have a step dimension")
+
+    # Drop unused dimensions if they exist
+    ds = ds.drop_vars(["number", "surface"], errors="ignore")
+
+    # Ensure latitude and longitude are rounded to 0.1 degree
+    ds = ds.assign_coords(
+        {
+            "latitude": np.round(ds.latitude.values, 1),
+            "longitude": np.round(ds.longitude.values, 1),
+        },
+    )
+
+    return ds
+
+
 def _drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     """Drop days with incomplete data from the dataset.
 
@@ -388,8 +428,6 @@ def _drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     Returns:
         The xarray dataset with incomplete days removed.
     """
-    if "step" not in ds.dims:
-        return ds
     complete_times = ~ds[data_var].isnull().any(dim=["step", "latitude", "longitude"])
     return ds.sel(time=complete_times)
 
@@ -411,18 +449,6 @@ def _flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
         The flattened xarray dataset.
 
     """
-    # Nothing to do if there is no step dimension (for example, because we only
-    # downloaded data for a single step per day). However we still want to drop
-    # unused dimensions.
-    if "step" not in ds.dims:
-        ds = ds.drop_vars(["number", "surface"], errors="ignore")
-        return ds
-
-    # If data has been downloaded for a single day, time dimension might have been
-    # squeezed into a scalar.
-    if "time" in ds.coords and "time" not in ds.dims:
-        ds = ds.expand_dims("time")
-
     valid_times = ds.valid_time.values.flatten()
     ds = ds.stack(new_time=("time", "step"))
     ds = ds.reset_index("new_time", drop=True)
@@ -609,12 +635,7 @@ def grib_to_zarr(
     for fp in src_dir.glob("*.grib"):
         logger.info("Processing GRIB file %s", fp.name)
         ds = xr.open_dataset(fp, engine="cfgrib", decode_timedelta=False)
-        ds = ds.assign_coords(
-            {
-                "latitude": np.round(ds.latitude.values, 1),
-                "longitude": np.round(ds.longitude.values, 1),
-            },
-        )
+        ds = _clean_dims_and_coords(ds)
         ds = _drop_incomplete_days(ds, data_var=data_var)
         ds = _flatten_time_dimension(ds)
         if not zarr_store.exists():
