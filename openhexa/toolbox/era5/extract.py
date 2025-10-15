@@ -411,9 +411,17 @@ def _flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
         The flattened xarray dataset.
 
     """
+    # Nothing to do if there is no step dimension (for example, because we only
+    # downloaded data for a single step per day). However we still want to drop
+    # unused dimensions.
     if "step" not in ds.dims:
         ds = ds.drop_vars(["number", "surface"], errors="ignore")
         return ds
+
+    # If data has been downloaded for a single day, time dimension might have been
+    # squeezed into a scalar.
+    if "time" in ds.coords and "time" not in ds.dims:
+        ds = ds.expand_dims("time")
 
     valid_times = ds.valid_time.values.flatten()
     ds = ds.stack(new_time=("time", "step"))
