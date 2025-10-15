@@ -439,9 +439,6 @@ def _flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
     step (n=n_hours) dimensions, we only have one (n=n_days*n_hours). This makes
     analysis easier.
 
-    NB: Unused dimensions (number, surface) are also dropped because they are not
-    relevant to the variables we currently support.
-
     Args:
         ds: The xarray dataset to flatten.
 
@@ -453,7 +450,7 @@ def _flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
     ds = ds.stack(new_time=("time", "step"))
     ds = ds.reset_index("new_time", drop=True)
     ds = ds.assign_coords(new_time=valid_times)
-    ds = ds.drop_vars(["valid_time", "number", "surface"])
+    ds = ds.drop_vars(["valid_time"])
     ds = ds.rename({"new_time": "time"})
 
     return ds
