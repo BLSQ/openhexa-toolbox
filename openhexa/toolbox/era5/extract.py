@@ -33,6 +33,7 @@ class Variable(TypedDict):
     short_name: str
     unit: str
     time: list[str]
+    accumulated: bool
 
 
 class Request(TypedDict):

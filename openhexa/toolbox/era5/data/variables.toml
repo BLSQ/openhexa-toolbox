@@ -6,63 +6,74 @@
 # - time: A list of hours (HH:MM) to fetch for daily aggregation.
 #       - Accumulated variables (e.g., precipitation) are fetched at "00:00".
 #       - Instantaneous variables are sampled at four hours.
+# - accumulated: Whether the variable is accumulated (True) or instantaneous (False).
 
 [10m_u_component_of_wind]
 name = "10m_u_component_of_wind"
 short_name = "u10"
 unit = "m s**-1"
 time = ["01:00", "07:00", "13:00", "19:00"]
+accumulated = false
 
 [10m_v_component_of_wind]
 name = "10m_v_component_of_wind"
 short_name = "v10"
 unit = "m s**-1"
 time = ["01:00", "07:00", "13:00", "19:00"]
+accumulated = false
 
 [2m_dewpoint_temperature]
 name = "2m_dewpoint_temperature"
 short_name = "d2m"
 unit = "K"
 time = ["01:00", "07:00", "13:00", "19:00"]
+accumulated = false
 
 [2m_temperature]
 name = "2m_temperature"
 short_name = "t2m"
 unit = "K"
 time = ["01:00", "07:00", "13:00", "19:00"]
+accumulated = false
 
 [runoff]
 name = "runoff"
 short_name = "ro"
 unit = "m"
 time = ["00:00"]
+accumulated = true
 
 [soil_temperature_level_1]
 name = "soil_temperature_level_1"
 short_name = "stl1"
 unit = "K"
 time = ["01:00", "07:00", "13:00", "19:00"]
+accumulated = false
 
 [volumetric_soil_water_layer_1]
 name = "volumetric_soil_water_layer_1"
 short_name = "swvl1"
 unit = "m**3 m**-3"
 time = ["01:00", "07:00", "13:00", "19:00"]
+accumulated = false
 
 [volumetric_soil_water_layer_2]
 name = "volumetric_soil_water_layer_2"
 short_name = "swvl2"
 unit = "m**3 m**-3"
 time = ["01:00", "07:00", "13:00", "19:00"]
+accumulated = false
 
 [total_precipitation]
 name = "total_precipitation"
 short_name = "tp"
 unit = "m"
 time = ["00:00"]
+accumulated = true
 
 [total_evaporation]
 name = "total_evaporation"
 short_name = "e"
 unit = "m"
 time = ["00:00"]
+accumulated = true
