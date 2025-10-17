@@ -1,303 +1,410 @@
-**ERA5 Toolbox**
+# OpenHEXA Toolbox ERA5
 
-Package for downloading, processing, and aggregating ERA5-Land reanalysis data from the ECMWF Climate Data Store (CDS).
+Download and process ERA5-Land climate reanalysis data from the [Copernicus Climate Data
+Store](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://cds.climate.copernicus.eu/&ved=2ahUKEwi0x-Pl4aqQAxUnRKQEHftaGdAQFnoECBEQAQ&usg=AOvVaw1BwvwpB-Kja5hnXP6DTcbl)
+(CDS).
 
 - [Overview](#overview)
-- [Data Source](#data-source)
-- [Data Flow](#data-flow)
-- [Usage](#usage)
-  - [Data Acquisition](#data-acquisition)
-  - [Data Aggregation](#data-aggregation)
+- [Installation](#installation)
 - [Supported variables](#supported-variables)
-- [Zarr store](#zarr-store)
-  - [Why Zarr instead of GRIB?](#why-zarr-instead-of-grib)
-  - [How is the Zarr store managed?](#how-is-the-zarr-store-managed)
-  - [Reading data from the Zarr store](#reading-data-from-the-zarr-store)
+- [Usage](#usage)
+  - [Prepare and retrieve data requests](#prepare-and-retrieve-data-requests)
+  - [Move GRIB files into a Zarr store](#move-grib-files-into-a-zarr-store)
+  - [Read climate data from a Zarr store](#read-climate-data-from-a-zarr-store)
+  - [Aggregate climate data stored in a Zarr store](#aggregate-climate-data-stored-in-a-zarr-store)
+- [Calculate derived variables](#calculate-derived-variables)
+  - [Relative humidity](#relative-humidity)
+  - [Wind speed](#wind-speed)
+- [Tests](#tests)
 
 ## Overview
 
-This package provides tools to:
+The package provides tools to:
 - Download ERA5-Land hourly data from ECMWF's Climate Data Store
 - Convert GRIB files to analysis-ready Zarr format
 - Perform spatial aggregation using geographic boundaries
 - Aggregate data temporally across various periods (daily, weekly, monthly, yearly)
 - Support DHIS2-compatible weekly periods (standard, Wednesday, Thursday, Saturday, Sunday weeks)
 
-## Data Source
+## Installation
 
-ERA5-Land is a reanalysis dataset providing hourly estimates of land variables from 1950 to present at 9km resolution. Data is accessed via the [ECMWF Climate Data Store](https://cds.climate.copernicus.eu/).
+With pip:
 
-**Requirements:**
-- CDS API account and credentials
-- Dataset license accepted in the CDS
-
-## Data Flow
-
-```mermaid
-flowchart LR
-    CDS[(ECMWF CDS)] --> GRIB[GRIB Files] --> ZARR[Zarr Store] --> PROCESS[Aggregate]
-
-    style CDS fill:#e1f5fe
-    style ZARR fill:#f3e5f5
+```bash
+pip install openhexa.toolbox[all]
+# Or
+pip install openhexa.toolbox[era5]
 ```
 
-## Usage
+With uv:
 
-### Data Acquisition
-
-Use `prepare_requests()` to build data requests for a specific variable and time range.
-If the Zarr store already contains data, only missing data will be requested. If the
-Zarr store does not exist, all data in the range will be requested and the store
-created.
-
-```python
-from pathlib import Path
-
-from ecmwf.datastores.client import Client
-from era5.extract import prepare_requests, submit_requests, retrieve_requests, grib_to_zarr
-
-client = Client(url=CDS_API_URL, key=CDS_API_KEY)
-zarr_store = Path("data/2m_temperature.zarr")
-
-# Prepare and chunk data requests
-# Existing data in the zarr store will not be requested
-requests = prepare_requests(
-    client,
-    dataset_id="reanalysis-era5-land",
-    start_date=date(2025, 3, 1),
-    end_date=date(2025, 9, 10),
-    variable="2m_temperature",
-    area=[12, -2, 8, 2],  # North, West, South, East
-    zarr_store=zarr_store
-)
-
-raw_dir = Path("data/2m_temperature/raw")
-raw_dir.mkdir(parents=True, exist_ok=True)
-
-# Retrieve data requests when they are ready
-# This will download raw GRIB files to `raw_dir`
-retrieve_requests(
-    client,
-    dataset_id="reanalysis-era5-land",
-    requests=requests,
-    dst_dir=raw_dir,
-)
-
-# Convert raw GRIB data to Zarr format
-# NB: The zarr store will be created if it does not already existed
-grib_to_zarr(raw_dir, zarr_store)
-```
-
-### Data Aggregation
-
-Use `aggregate_in_space()` to perform spatial aggregation.
-
-```python
-import geopandas as gpd
-from era5.transform import create_masks, aggregate_in_space
-
-boundaries = gpd.read_file("boundaries.geojson")
-dataset = xr.open_zarr(zarr_store, decode_timedelta=True)
-
-# Create spatial masks for aggregation
-masks = create_masks(
-    gdf=boundaries,
-    id_column="boundary_id",
-    ds=dataset
-)
-
-# Convert from hourly to daily data 1st
-daily = dataset.mean(dim="step")
-
-# Aggregate spatially
-results = aggregate_in_space(
-    ds=daily,
-    masks=masks,
-    variable="t2m",
-    agg="mean"
-)
-print(results)
-```
-
-```
-shape: (36, 3)
-┌──────────┬────────────┬────────────┐
-│ boundary ┆ time       ┆ value      │
-│ ---      ┆ ---        ┆ ---        │
-│ str      ┆ date       ┆ f64        │
-╞══════════╪════════════╪════════════╡
-│ geom1    ┆ 2025-03-28 ┆ 305.402924 │
-│ geom1    ┆ 2025-03-29 ┆ 306.365845 │
-│ geom1    ┆ 2025-03-30 ┆ 306.80304  │
-│ geom1    ┆ 2025-03-31 ┆ 307.176575 │
-│ geom1    ┆ 2025-04-01 ┆ 306.338745 │
-│ …        ┆ …          ┆ …          │
-│ geom4    ┆ 2025-04-01 ┆ 305.957886 │
-│ geom4    ┆ 2025-04-02 ┆ 306.503937 │
-│ geom4    ┆ 2025-04-03 ┆ 305.563995 │
-│ geom4    ┆ 2025-04-04 ┆ 306.381927 │
-│ geom4    ┆ 2025-04-05 ┆ 307.367096 │
-└──────────┴────────────┴────────────┘
-```
-
-Use `aggregate_in_time()` to perform temporal aggregation.
-
-```python
-from era5.transform import Period, aggregate_in_time
-
-# Aggregate to weekly periods
-weekly_data = aggregate_in_time(
-    results,
-    period=Period.WEEK,
-    agg="mean"
-)
-
-# DHIS2-compatible Sunday weeks
-sunday_weekly = aggregate_in_time(
-    results,
-    period=Period.WEEK_SUNDAY,
-    agg="mean"
-)
-
-print(sunday_weekly)
-```
-```
-shape: (8, 3)
-┌──────────┬────────────┬────────────┐
-│ boundary ┆ period     ┆ value      │
-│ ---      ┆ ---        ┆ ---        │
-│ str      ┆ str        ┆ f64        │
-╞══════════╪════════════╪════════════╡
-│ geom1    ┆ 2025WedW13 ┆ 306.417426 │
-│ geom1    ┆ 2025WedW14 ┆ 307.149551 │
-│ geom2    ┆ 2025WedW13 ┆ 306.327582 │
-│ geom2    ┆ 2025WedW14 ┆ 306.987686 │
-│ geom3    ┆ 2025WedW13 ┆ 306.03266  │
-│ geom3    ┆ 2025WedW14 ┆ 306.774063 │
-│ geom4    ┆ 2025WedW13 ┆ 305.77348  │
-│ geom4    ┆ 2025WedW14 ┆ 306.454239 │
-└──────────┴────────────┴────────────┘
+```bash
+uv add openhexa.toolbox --extra all
+# Or
+uv add openhexa.toolbox --extra era5
 ```
 
 ## Supported variables
 
-The package supports the following ERA5-Land variables:
+The module supports a subset of ERA5-Land variables commonly used in health:
 
-```
-[10m_u_component_of_wind]
-name = "10m_u_component_of_wind"
-short_name = "u10"
-unit = "m s**-1"
-time = ["01:00", "07:00", "13:00", "19:00"]
+- 10m u-component of wind (`u10`)
+- 10m v-component of wind (`v10`)
+- 2m dewpoint temperature (`d2m`)
+- 2m temperature (`t2m`)
+- Runoff (`ro`)
+- Soil temperature level 1 (`stl1`)
+- Volumetric soil water layer 1 (`swvl1`)
+- Volumetric soil water layer 2 (`swvl2`)
+- Total precipitation (`tp`)
+- Total evaporation (`e`)
 
-[10m_v_component_of_wind]
-name = "10m_v_component_of_wind"
-short_name = "v10"
-unit = "m s**-1"
-time = ["01:00", "07:00", "13:00", "19:00"]
+When fetching hourly data, we sample instantaneous variable at 4 daily steps: 01:00,
+07:00, 13:00 and 19:00. For accumulated variables (e.g. total precipitation), we only
+retrieve totals at the end of each day.
 
-[2m_dewpoint_temperature]
-name = "2m_dewpoint_temperature"
-short_name = "d2m"
-unit = "K"
-time = ["01:00", "07:00", "13:00", "19:00"]
+See [variables.toml](/openhexa/toolbox/era5/data/variables.toml) for more details on
+supported variables.
 
-[2m_temperature]
-name = "2m_temperature"
-short_name = "t2m"
-unit = "K"
-time = ["01:00", "07:00", "13:00", "19:00"]
+## Usage
 
-[runoff]
-name = "runoff"
-short_name = "ro"
-unit = "m"
-time = ["00:00"]
+### Prepare and retrieve data requests
 
-[soil_temperature_level_1]
-name = "soil_temperature_level_1"
-short_name = "stl1"
-unit = "K"
-time = ["01:00", "07:00", "13:00", "19:00"]
+Download ERA5-Land data from the CDS API. You'll need to set up your CDS API credentials
+first (see [CDS API setup](https://cds.climate.copernicus.eu/how-to-api)) and accept the
+license of the dataset you want to download.
 
-[volumetric_soil_water_layer_1]
-name = "volumetric_soil_water_layer_1"
-short_name = "swvl1"
-unit = "m**3 m**-3"
-time = ["01:00", "07:00", "13:00", "19:00"]
+```python
+from datetime import date
+from pathlib import Path
+from ecmwf.datastores import Client
+from openhexa.toolbox.era5.extract import prepare_requests, retrieve_requests
+import os
 
-[volumetric_soil_water_layer_2]
-name = "volumetric_soil_water_layer_2"
-short_name = "swvl2"
-unit = "m**3 m**-3"
-time = ["01:00", "07:00", "13:00", "19:00"]
+client = Client(url=os.getenv("CDS_API_URL"), key=os.getenv("CDS_API_KEY"))
 
-[total_precipitation]
-name = "total_precipitation"
-short_name = "tp"
-unit = "m"
-time = ["00:00"]
+# Prepare the data requests that need to be submitted to the CDS
+# If data already exists in the destination zarr store, it will not be requested again
+# NB: At this point, no data is moved to the Zarr store - it is used to avoid
+# downloading data we already have
+requests = prepare_requests(
+    client=client,
+    dataset_id="reanalysis-era5-land",
+    start_date=date(2025, 3, 28),
+    end_date=date(2025, 4, 5),
+    variable="2m_temperature",
+    area=[10, -1, 8, 1],  # [north, west, south, east] in degrees
+    zarr_store=Path("data/2m_temperature.zarr"),
+)
 
-[total_evaporation]
-name = "total_evaporation"
-short_name = "e"
-unit = "m"
-time = ["00:00"]
+# Submit data requests and retrieve data in GRIB format as they are ready
+# Depending on request size and server load, this may take a while
+retrieve_requests(
+    client=client,
+    dataset_id="reanalysis-era5-land",
+    requests=requests,
+    dst_dir=Path("data/raw"),
+    wait=30,  # Check every 30 seconds for completed requests
+)
 ```
 
-See [documentation](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) for details.
+### Move GRIB files into a Zarr store
 
-## Zarr store
+Convert downloaded GRIB files into an analysis-ready Zarr store for efficient access.
 
-### Why Zarr instead of GRIB?
+```python
+from pathlib import Path
+from openhexa.toolbox.era5.extract import grib_to_zarr
 
-The package converts GRIB files to Zarr format for several reasons:
+grib_to_zarr(
+    src_dir=Path("data/raw"),
+    zarr_store=Path("data/2m_temperature.zarr"),
+    data_var="t2m",  # Short name for 2m temperature
+)
+```
 
-1. **Efficient data access**: Zarr provides chunked, compressed storage that allows reading specific temporal/spatial subsets without loading entire files
-2. **Cloud-optimized**: Unlike GRIB files which require sequential reading, Zarr enables parallel and partial reads, ideal for cloud storage
-3. **Consolidated metadata**: All metadata is stored in a single `.zmetadata` file, making dataset discovery instant
-4. **Append-friendly**: New time steps can be efficiently appended without rewriting existing data
-5. **Analysis-ready**: Direct integration with xarray makes the data immediately usable for scientific computing
+### Read climate data from a Zarr store
 
-### How is the Zarr store managed?
+Data is stored in [Zarr](https://zarr.dev/) stores for efficient storage and access of
+climate variables as N-dimensional arrays. You can read data in Zarr stores using
+[xarray](https://xarray.dev/).
 
-The ERA5 toolbox implements the following data pipeline:
-
-1. **Initial download**: GRIB files from CDS are treated as temporary artifacts
-2. **Conversion**: `grib_to_zarr()` converts GRIB to Zarr, handling:
-   - Automatic creation of new stores
-   - Appending to existing stores without duplicating time steps
-   - Metadata consolidation for optimal performance
-3. **Incremental updates**: When requesting new data, the package:
-   - Checks existing time coverage in the Zarr store
-   - Only downloads missing time periods
-   - Appends new data
-
-### Reading data from the Zarr store
+When opening a Zarr store, no data is loaded into memory yet. You can check the dataset
+structure without loading the data.
 
 ```python
 import xarray as xr
 
-# Open the zarr store (lazy loading - no data read yet)
 ds = xr.open_zarr("data/2m_temperature.zarr", consolidated=True)
+print(ds)
+```
+```
+<xarray.Dataset> Size: 7MB
+Dimensions:    (latitude: 71, longitude: 91, time: 284)
+Coordinates:
+  * latitude   (latitude) float64 568B 16.0 15.9 15.8 15.7 ... 9.3 9.2 9.1 9.0
+  * longitude  (longitude) float64 728B -6.0 -5.9 -5.8 -5.7 ... 2.7 2.8 2.9 3.0
+  * time       (time) datetime64[ns] 2kB 2024-10-01T01:00:00 ... 2024-12-10T1...
+Data variables:
+    t2m        (latitude, longitude, time) float32 7MB ...
+Attributes:
+    Conventions:             CF-1.7
+    GRIB_centre:             ecmf
+    GRIB_centreDescription:  European Centre for Medium-Range Weather Forecasts
+    GRIB_edition:            1
+    GRIB_subCentre:          0
+    history:                 2025-10-14T09:02 GRIB to CDM+CF via cfgrib-0.9.1...
+    institution:             European Centre for Medium-Range Weather Forecasts
+```
 
-# Explore the dataset structure
-print(ds)  # Shows dimensions, coordinates, and variables
-print(ds.time.values)  # Time range available
+You can use real dates and coordinates to index the data.
 
-# Access specific time ranges
-subset = ds.sel(time=slice("2025-01", "2025-03"))
+```python
+import xarray as xr
 
-# Load only specific variables
-temperature = ds["t2m"]  # Still lazy
-temp_values = temperature.values  # Triggers actual data read
+t2m = xr.open_zarr("data/2m_temperature.zarr", consolidated=True)
+t2m_daily_mean = t2m.resample(time="1D").mean()
+t2m_daily_mean.mean(dim=["latitude", "longitude"]).t2m.plot.line()
+```
 
-# Spatial subsetting
-region = ds.sel(latitude=slice(10, 5), longitude=slice(-1, 2))
+![ERA5 2m Temperature Daily Mean](/docs/images/era5_t2m_lineplot.png)
 
-# Time aggregation (hourly to daily)
-daily_mean = ds.resample(time="1D").mean()
+### Aggregate climate data stored in a Zarr store
 
-# Direct computation without loading everything
-monthly_max = ds["t2m"].resample(time="1M").max().compute()
+Aggregate hourly climate data by administrative boundaries and time periods.
+
+```python
+from pathlib import Path
+import geopandas as gpd
+import xarray as xr
+from openhexa.toolbox.era5.transform import (
+    create_masks,
+    aggregate_in_space,
+    aggregate_in_time,
+    Period,
+)
+
+t2m = xr.open_zarr("./2m_temperature.zarr", consolidated=True, decode_timedelta=False)
+```
+
+For instantaneous variables (e.g. 2m temperature, soil moisture...), hourly data should
+be aggregated to daily 1st. In ERA5-Land data, data is structured along 2 temporal
+dimensions: `time` and `step`. To aggregate hourly data to daily, you need to average over
+the `step` dimension:
+
+```python
+t2m_daily = t2m.mean(dim="step")
+
+# or to compute daily extremes
+t2m_daily_max = t2m.max(dim="step")
+t2m_daily_min = t2m.min(dim="step")
+```
+
+```python
+import matplotlib.pyplot as plt
+
+plt.imshow(
+    t2m_daily.sel(time="2024-10-04").t2m,
+    cmap="coolwarm",
+)
+plt.colorbar(label="Temperature (°C)", shrink=0.8)
+plt.axis("off")
+```
+![2m temperature raster](/docs/images/era5_t2m_raster.png)
+
+The module provides helper functions to help you perform spatial aggregation on gridded
+ERA5 data. Use the `create_masks()` function to create raster masks from vector
+boundaries. Raster masks uses the same grid as the ERA5 dataset.
+
+```python
+import geopandas as gpd
+from openhexa.toolbox.era5.transform import create_masks
+
+# Boundaries geographic file should use EPSG:4326 coordinate reference system (lat/lon)
+boundaries = gpd.read_file("boundaries.gpkg")
+
+masks = create_masks(
+    gdf=boundaries,
+    id_column="district_id",  # Column in the GeoDataFrame with unique boundary IDs
+    ds=t2m_daily,
+)
+```
+
+Example of raster mask for 1 vector boundary:
+
+![Boundary vector](/docs/images/era5_boundary_vector.png)
+![Boundary raster mask](/docs/images/era5_boundary_raster.png)
+
+You can now aggregate daily gridded ERA5 data in space and time:
+
+```python
+from openhexa.toolbox.era5.transform import aggregate_in_space, aggregate_in_time, Period
+
+# convert from Kelvin to Celsius
+t2m_daily = t2m_daily - 273.15
+
+t2m_agg = aggregate_in_space(
+    ds=t2m_daily,
+    masks=masks,
+    variable="t2m",
+    agg="mean",
+)
+print(t2m_agg)
+```
+
+```
+shape: (4_970, 3)
+┌─────────────┬────────────┬───────────┐
+│ boundary    ┆ time       ┆ value     │
+│ ---         ┆ ---        ┆ ---       │
+│ str         ┆ date       ┆ f64       │
+╞═════════════╪════════════╪═══════════╡
+│ mPenE8ZIBFC ┆ 2024-10-01 ┆ 26.534632 │
+│ mPenE8ZIBFC ┆ 2024-10-02 ┆ 25.860088 │
+│ mPenE8ZIBFC ┆ 2024-10-03 ┆ 26.068018 │
+│ mPenE8ZIBFC ┆ 2024-10-04 ┆ 26.103462 │
+│ mPenE8ZIBFC ┆ 2024-10-05 ┆ 24.362678 │
+│ …           ┆ …          ┆ …         │
+│ eKYyXbBdvmB ┆ 2024-12-06 ┆ 25.130324 │
+│ eKYyXbBdvmB ┆ 2024-12-07 ┆ 24.946449 │
+│ eKYyXbBdvmB ┆ 2024-12-08 ┆ 24.840832 │
+│ eKYyXbBdvmB ┆ 2024-12-09 ┆ 25.242334 │
+│ eKYyXbBdvmB ┆ 2024-12-10 ┆ 26.697817 │
+└─────────────┴────────────┴───────────┘
+```
+
+Likewise, to aggregate in time (e.g. weekly averages):
+
+```python
+t2m_weekly = aggregate_in_time(
+    dataframe=t2m_agg,
+    period=Period.WEEK,
+    agg="mean",
+)
+print(t2m_weekly)
+```
+
+```
+shape: (770, 3)
+┌─────────────┬─────────┬───────────┐
+│ boundary    ┆ period  ┆ value     │
+│ ---         ┆ ---     ┆ ---       │
+│ str         ┆ str     ┆ f64       │
+╞═════════════╪═════════╪═══════════╡
+│ AKVCJJ2TKSi ┆ 2024W40 ┆ 27.33611  │
+│ AKVCJJ2TKSi ┆ 2024W41 ┆ 27.011093 │
+│ AKVCJJ2TKSi ┆ 2024W42 ┆ 27.905081 │
+│ AKVCJJ2TKSi ┆ 2024W43 ┆ 28.239824 │
+│ AKVCJJ2TKSi ┆ 2024W44 ┆ 27.34595  │
+│ …           ┆ …       ┆ …         │
+│ yhs1ecKsLOc ┆ 2024W46 ┆ 27.711391 │
+│ yhs1ecKsLOc ┆ 2024W47 ┆ 26.394333 │
+│ yhs1ecKsLOc ┆ 2024W48 ┆ 24.863514 │
+│ yhs1ecKsLOc ┆ 2024W49 ┆ 24.714464 │
+│ yhs1ecKsLOc ┆ 2024W50 ┆ 24.923738 │
+└─────────────┴─────────┴───────────┘
+```
+
+Or per week starting on Sundays:
+
+``` python
+t2m_sunday_week = aggregate_in_time(
+    dataframe=t2m_agg,
+    period=Period.WEEK_SUNDAY,
+    agg="mean",
+)
+print(t2m_sunday_week)
+```
+
+```
+shape: (770, 3)
+┌─────────────┬────────────┬───────────┐
+│ boundary    ┆ period     ┆ value     │
+│ ---         ┆ ---        ┆ ---       │
+│ str         ┆ str        ┆ f64       │
+╞═════════════╪════════════╪═══════════╡
+│ AKVCJJ2TKSi ┆ 2024SunW40 ┆ 27.898345 │
+│ AKVCJJ2TKSi ┆ 2024SunW41 ┆ 26.483939 │
+│ AKVCJJ2TKSi ┆ 2024SunW42 ┆ 27.9347   │
+│ AKVCJJ2TKSi ┆ 2024SunW43 ┆ 28.291441 │
+│ AKVCJJ2TKSi ┆ 2024SunW44 ┆ 27.510819 │
+│ …           ┆ …          ┆ …         │
+│ yhs1ecKsLOc ┆ 2024SunW46 ┆ 27.691862 │
+│ yhs1ecKsLOc ┆ 2024SunW47 ┆ 26.316256 │
+│ yhs1ecKsLOc ┆ 2024SunW48 ┆ 25.249807 │
+│ yhs1ecKsLOc ┆ 2024SunW49 ┆ 24.751227 │
+│ yhs1ecKsLOc ┆ 2024SunW50 ┆ 24.542277 │
+└─────────────┴────────────┴───────────┘
+```
+
+Or per month:
+
+``` python
+t2m_monthly = aggregate_in_time(
+    dataframe=t2m_agg,
+    period=Period.MONTH,
+    agg="mean",
+)
+print(t2m_monthly)
+```
+
+```
+shape: (210, 3)
+┌─────────────┬────────┬───────────┐
+│ boundary    ┆ period ┆ value     │
+│ ---         ┆ ---    ┆ ---       │
+│ str         ┆ str    ┆ f64       │
+╞═════════════╪════════╪═══════════╡
+│ AKVCJJ2TKSi ┆ 202410 ┆ 27.615368 │
+│ AKVCJJ2TKSi ┆ 202411 ┆ 26.527692 │
+│ AKVCJJ2TKSi ┆ 202412 ┆ 25.080745 │
+│ AVb6wBstPAo ┆ 202410 ┆ 29.747595 │
+│ AVb6wBstPAo ┆ 202411 ┆ 26.137431 │
+│ …           ┆ …      ┆ …         │
+│ vQ6AJUeqBpc ┆ 202411 ┆ 25.915338 │
+│ vQ6AJUeqBpc ┆ 202412 ┆ 23.130632 │
+│ yhs1ecKsLOc ┆ 202410 ┆ 29.050539 │
+│ yhs1ecKsLOc ┆ 202411 ┆ 26.628291 │
+│ yhs1ecKsLOc ┆ 202412 ┆ 24.688542 │
+└─────────────┴────────┴───────────┘
+```
+
+Note that the period column uses DHIS2 format (e.g. `2024W40` for week 40 of 2024).
+
+## Calculate derived variables
+
+### Relative humidity
+
+You can compute relative humidity from 2m temperature and 2m dewpoint temperature.
+
+```python
+from openhexa.toolbox.era5.transform import calculate_relative_humidity
+
+rh = calculate_relative_humidity(
+    t2m=t2m_daily,
+    d2m=d2m_daily,
+)
+```
+
+### Wind speed
+
+You can compute wind speed from the 10m u-component and v-component of wind.
+
+```python
+from openhexa.toolbox.era5.transform import calculate_wind_speed
+
+ws = calculate_wind_speed(
+    u10=u10_daily,
+    v10=v10_daily,
+)
+```
+
+## Tests
+
+The module uses Pytest. To run tests, install development dependencies and execute
+Pytest in the virtual environment.
+
+```bash
+uv sync --dev
+uv run pytest tests/era5/*
 ```

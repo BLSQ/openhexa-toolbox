@@ -12,6 +12,9 @@ Store](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https:/
   - [Move GRIB files into a Zarr store](#move-grib-files-into-a-zarr-store)
   - [Read climate data from a Zarr store](#read-climate-data-from-a-zarr-store)
   - [Aggregate climate data stored in a Zarr store](#aggregate-climate-data-stored-in-a-zarr-store)
+- [Calculate derived variables](#calculate-derived-variables)
+  - [Relative humidity](#relative-humidity)
+  - [Wind speed](#wind-speed)
 - [Tests](#tests)
 
 ## Overview
@@ -367,6 +370,34 @@ shape: (210, 3)
 ```
 
 Note that the period column uses DHIS2 format (e.g. `2024W40` for week 40 of 2024).
+
+## Calculate derived variables
+
+### Relative humidity
+
+You can compute relative humidity from 2m temperature and 2m dewpoint temperature.
+
+```python
+from openhexa.toolbox.era5.transform import calculate_relative_humidity
+
+rh = calculate_relative_humidity(
+    t2m=t2m_daily,
+    d2m=d2m_daily,
+)
+```
+
+### Wind speed
+
+You can compute wind speed from the 10m u-component and v-component of wind.
+
+```python
+from openhexa.toolbox.era5.transform import calculate_wind_speed
+
+ws = calculate_wind_speed(
+    u10=u10_daily,
+    v10=v10_daily,
+)
+```
 
 ## Tests
 
