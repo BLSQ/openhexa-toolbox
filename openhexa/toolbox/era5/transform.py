@@ -1,5 +1,6 @@
 """Spatial aggregation of ERA5-Land data."""
 
+import logging
 from enum import StrEnum
 from typing import Literal
 
@@ -11,6 +12,8 @@ import rasterio.transform
 import xarray as xr
 
 from openhexa.toolbox.era5.dhis2weeks import WeekType, to_dhis2_week
+
+logger = logging.getLogger(__name__)
 
 
 def create_masks(gdf: gpd.GeoDataFrame, id_column: str, ds: xr.Dataset) -> xr.DataArray:
@@ -33,6 +36,7 @@ def create_masks(gdf: gpd.GeoDataFrame, id_column: str, ds: xr.Dataset) -> xr.Da
         containing the masks. Each mask corresponds to a boundary in the GeoDataFrame.
 
     """
+    logger.debug("Creating masks for %s boundaries", len(gdf))
     lat = ds.latitude.values
     lon = ds.longitude.values
     lat_res = abs(lat[1] - lat[0])
@@ -60,6 +64,8 @@ def create_masks(gdf: gpd.GeoDataFrame, id_column: str, ds: xr.Dataset) -> xr.Da
         )
         masks.append(mask)  # type: ignore
         names.append(row[id_column])  # type: ignore
+
+    logger.debug("Created masks with shape %s", (len(masks), len(lat), len(lon)))
 
     return xr.DataArray(
         np.stack(masks),
@@ -98,6 +104,7 @@ def aggregate_in_space(
         ValueError: If an unsupported aggregation method is specified.
 
     """
+    logger.debug("Aggregating data for variable '%s' using masks", data_var)
     if data_var not in ds.data_vars:
         msg = f"Variable '{data_var}' not found in dataset"
         raise ValueError(msg)
@@ -169,6 +176,7 @@ def aggregate_in_time(
         The aggregated dataframe.
 
     """
+    logger.debug("Aggregating dataframe over period '%s' with method '%s'", period, agg)
     # We 1st create a "period" column to be able to group by it
     if period == Period.DAY:
         df = dataframe.with_columns(

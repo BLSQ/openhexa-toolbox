@@ -608,6 +608,7 @@ def get_missing_dates(
         collection.begin_datetime.date(),
         collection.end_datetime.date(),
     )
+    logger.debug("Checking existing data for variable '%s' from %s to %s", data_var, start_date, end_date)
     dates = _diff_zarr(start_date, end_date, zarr_store, data_var)
     logger.debug("Missing dates for variable '%s': %s", data_var, dates)
     return dates
@@ -636,8 +637,12 @@ def grib_to_zarr(
         ds = _drop_incomplete_days(ds, data_var=data_var)
         ds = _flatten_time_dimension(ds)
         if not zarr_store.exists():
+            logger.debug("Creating new Zarr store '%s'", zarr_store.name)
             _create_zarr(ds, zarr_store)
         else:
+            logger.debug("Appending data to existing Zarr store '%s'", zarr_store.name)
             _append_zarr(ds, zarr_store, data_var)
+    logger.debug("Consolidating Zarr store '%s'", zarr_store.name)
     _consolidate_zarr(zarr_store)
+    logger.debug("Validating Zarr store '%s'", zarr_store.name)
     _validate_zarr(zarr_store)
