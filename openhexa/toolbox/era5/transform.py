@@ -111,7 +111,7 @@ def aggregate_in_space(
     if "step" in ds.dims:
         msg = "Dataset still contains 'step' dimension. Please aggregate to daily data first."
         raise ValueError(msg)
-    da = ds[data_var]
+    da = ds[data_var].compute()
     area_weights = np.cos(np.deg2rad(ds.latitude))
     results: list[xr.DataArray] = []
     for boundary in masks.boundary:
