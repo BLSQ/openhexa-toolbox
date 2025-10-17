@@ -115,6 +115,7 @@ def aggregate_in_space(
     area_weights = np.cos(np.deg2rad(ds.latitude))
     results: list[xr.DataArray] = []
     for boundary in masks.boundary:
+        logger.debug("Aggregating for boundary '%s'", boundary)
         mask = masks.sel(boundary=boundary)
         if agg == "mean":
             weights = area_weights * mask
