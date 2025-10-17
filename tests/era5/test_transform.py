@@ -32,7 +32,7 @@ def sample_dataset() -> xr.Dataset:
     with tempfile.TemporaryDirectory() as tmp_dir:
         with tarfile.open(archive, "r:gz") as tar:
             tar.extractall(path=tmp_dir, filter="data")
-        ds = xr.open_zarr(Path(tmp_dir) / "2m_temperature.zarr")
+        ds = xr.open_zarr(Path(tmp_dir) / "2m_temperature.zarr", decode_timedelta=False)
         ds.load()
         return ds
 
