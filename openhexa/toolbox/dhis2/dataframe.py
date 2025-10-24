@@ -1000,15 +1000,12 @@ def get_programs(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame
     Returns
     -------
     pl.DataFrame
-        Dataframe containing programs metadata with the following columns: id, name.
+        Dataframe containing programs metadata with the following columns: id, name, program_type.
     """
-    rows = []
-    for page in dhis2.api.get_paged("programs", params={"fields": "id,name", "filter": filters}):
-        rows.extend(page["programs"])
-
-    schema = {"id": str, "name": str}
-    return pl.DataFrame(rows, schema=schema)
-
+    meta = dhis2.meta.programs(fields="id,name,programType", filters=filters)
+    schema = {"id": str, "name": str, "programType": str}
+    df = pl.DataFrame(meta, schema=schema)
+    return df.select("id", "name", pl.col("programType").alias("program_type"))
 
 def get_tracked_entity_types(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
     """Extract tracked entity types metadata.
@@ -1032,6 +1029,120 @@ def get_tracked_entity_types(dhis2: DHIS2, filters: list[str] | None = None) -> 
     schema = {"id": str, "name": str}
     return pl.DataFrame(rows, schema=schema)
 
+
+def get_program_stages(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
+    """Extract programStages metadata.
+    We extract all of the programStages, including the ones that are not accessible from the programStages endpoint.
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing program stages metadata with the following columns: 
+        program_stage_id, program_stage_name, program_id, program_name.
+    """
+    meta = dhis2.meta.programs(fields="id,name,programStages[id,name]", filters=filters)
+    schema = {"id": str, "name": str, "programStages": list}
+    df = pl.DataFrame(meta, schema=schema)
+    df_flat = (
+        df.explode("programStages")
+        .with_columns(
+            [
+                pl.col("programStages")
+                .struct.field("name")
+                .alias("program_stage_name"),
+                pl.col("programStages").struct.field("id").alias("program_stage_id"),
+            ]
+        )
+        .select(
+            [
+                pl.col("program_stage_id"),
+                pl.col("program_stage_name"),
+                pl.col("id").alias("program_id"),
+                pl.col("name").alias("program_name"),
+            ]
+        )
+    )
+    return df_flat
+
+
+def get_program_data_elements(
+    dhis2: DHIS2, filters: list[str] | None = None
+) -> pl.DataFrame:
+    """Extract the data elements linked to the programs
+
+    Parameters
+    ----------
+    dhis2 : DHIS2
+        DHIS2 instance.
+    filters : list[str], optional
+        DHIS2 query filter expressions.
+
+    Returns
+    -------
+    pl.DataFrame
+        Dataframe containing dataElements with the following columns:
+        program_stage_id, program_stage_name, program_id, program_name, valid_data_elements, compulsory_data_elements
+    """
+    meta = dhis2.meta.programs(
+        fields="id,name,programStages[id,name,programStageDataElements[dataElement[id],compulsory]]",
+        filters=filters,
+    )
+    schema = {"id": str, "name": str, "programStages": list}
+    df = pl.DataFrame(meta, schema=schema)
+
+    df_flat = (
+        df.explode("programStages")  # one row per program stage
+        .with_columns(
+            [
+                pl.col("programStages")
+                .struct.field("name")
+                .alias("program_stage_name"),
+                pl.col("programStages").struct.field("id").alias("program_stage_id"),
+                pl.col("programStages")
+                .struct.field("programStageDataElements")
+                .alias("dataElements"),
+            ]
+        )
+        .select(
+            [
+                pl.col("id").alias("program_id"),
+                pl.col("name").alias("program_name"),
+                pl.col("program_stage_name"),
+                pl.col("program_stage_id"),
+                pl.col("dataElements"),
+            ]
+        )
+    )
+
+    df_flat = df_flat.with_columns(
+        pl.col("dataElements")
+        .list.eval(pl.element().struct.field("dataElement").struct.field("id"))
+        .alias("valid_data_elements"),
+        pl.col("dataElements")
+        .list.eval(
+            pl.when(pl.element().struct.field("compulsory"))
+            .then(pl.element().struct.field("dataElement").struct.field("id"))
+            .otherwise(None)
+        )
+        .list.drop_nulls()
+        .alias("compulsory_data_elements"),
+    ).select([
+        "program_stage_id",
+        "program_stage_name",
+        "program_id",
+        "program_name",
+        "valid_data_elements",
+        "compulsory_data_elements",
+    ])
+
+    return df_flat
 
 def extract_events(
     dhis2: DHIS2,
