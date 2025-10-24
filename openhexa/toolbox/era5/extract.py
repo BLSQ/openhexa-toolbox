@@ -295,9 +295,9 @@ def retrieve_requests(
     # data requests before submitting new requests
     if cache:
         triage = _triage_requests(client, cache, requests)
-        for job_id in triage.downloaded:
-            cache.retrieve(job_id, dst_dir / f"{job_id}.grib")
-            logger.info("Retrieved file %s from cache", f"{job_id}.grib")
+        for file_name in triage.downloaded:
+            cache.retrieve(file_name, dst_dir / file_name)
+            logger.info("Retrieved file %s from cache", file_name)
         remotes = triage.submitted
         remotes += _submit_requests(
             client=client,
@@ -358,7 +358,7 @@ def _triage_requests(client: Client, cache: Cache, requests: list[Request]) -> T
     for request in requests:
         entry = cache.get(request)
         if entry and entry.file_name:
-            result.downloaded.append(entry.job_id)
+            result.downloaded.append(entry.file_name)
         elif entry:
             remote = client.get_remote(entry.job_id)
             result.submitted.append(remote)

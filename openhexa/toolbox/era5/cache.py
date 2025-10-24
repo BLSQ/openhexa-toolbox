@@ -80,14 +80,14 @@ class Cache:
             with gzip.open(dst_fp, "wb", compresslevel=9) as dst_f:
                 shutil.copyfileobj(src_f, dst_f)
 
-    def retrieve(self, job_id: str, dst_fp: Path) -> None:
+    def retrieve(self, file_name: str, dst_fp: Path) -> None:
         """Retrieve a GRIB file from a gzip archive.
 
         Args:
-            job_id: The ID of the corresponding CDS job.
+            file_name: The name of the cached GRIB file.
             dst_fp: Path to the destination GRIB file.
         """
-        src_fp = self.cache_dir / f"{job_id}.grib.gz"
+        src_fp = self.cache_dir / f"{file_name}.gz"
         if not src_fp.exists():
             raise FileNotFoundError(f"Cached file not found: {src_fp}")
         with gzip.open(src_fp, "rb") as src_f:
