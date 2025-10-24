@@ -296,7 +296,8 @@ def retrieve_requests(
     if cache:
         triage = _triage_requests(client, cache, requests)
         for file_name in triage.downloaded:
-            cache.retrieve(file_name, dst_dir / file_name)
+            dst_fp = dst_dir / file_name.replace(".gz", "")
+            cache.retrieve(file_name, dst_fp)
             logger.info("Retrieved file %s from cache", file_name)
         remotes = triage.submitted
         remotes += _submit_requests(

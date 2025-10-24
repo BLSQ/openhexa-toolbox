@@ -87,7 +87,7 @@ class Cache:
             file_name: The name of the cached GRIB file.
             dst_fp: Path to the destination GRIB file.
         """
-        src_fp = self.cache_dir / f"{file_name}.gz"
+        src_fp = self.cache_dir / file_name
         if not src_fp.exists():
             raise FileNotFoundError(f"Cached file not found: {src_fp}")
         with gzip.open(src_fp, "rb") as src_f:
