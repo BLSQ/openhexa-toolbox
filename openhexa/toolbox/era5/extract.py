@@ -4,12 +4,15 @@ Provides functions to build requests, submit them to the CDS API, retrieve resul
 move GRIB data to an analysis-ready Zarr store for further processing.
 """
 
+import hashlib
 import importlib.resources
+import json
 import logging
 import shutil
 import tempfile
 import tomllib
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from time import sleep
@@ -17,44 +20,17 @@ from typing import Literal, TypedDict
 
 import numpy as np
 import numpy.typing as npt
+import psycopg
 import xarray as xr
 import zarr
 from dateutil.relativedelta import relativedelta
 from ecmwf.datastores import Remote
 from ecmwf.datastores.client import Client
 
+from openhexa.toolbox.era5.cache import Cache
+from openhexa.toolbox.era5.models import Job, Request, RequestTemporal, Variable
+
 logger = logging.getLogger(__name__)
-
-
-class Variable(TypedDict):
-    """Metadata for a single variable in the ERA5-Land dataset."""
-
-    name: str
-    short_name: str
-    unit: str
-    time: list[str]
-    accumulated: bool
-
-
-class Request(TypedDict):
-    """Request parameters for the 'reanalysis-era5-land' dataset."""
-
-    variable: list[str]
-    year: str
-    month: str
-    day: list[str]
-    time: list[str]
-    data_format: Literal["grib", "netcdf"]
-    download_format: Literal["unarchived", "zip"]
-    area: list[int]
-
-
-class RequestTemporal(TypedDict):
-    """Temporal request parameters."""
-
-    year: str
-    month: str
-    day: list[str]
 
 
 def _get_variables() -> dict[str, Variable]:
@@ -254,6 +230,23 @@ def prepare_requests(
     return requests
 
 
+def find_jobs(client: Client) -> list[Job]:
+    """Get the list of current jobs from the CDS API.
+
+    NB: Jobs with expired results are filtered out and we only search for the latest 100
+    jobs.
+
+    Args:
+        client: CDS API client.
+
+    Returns:
+        A list of submitted jobs.
+
+    """
+    r = client.get_jobs(limit=100, sortby="-created", status=["accepted", "running", "successful"])
+    return [Job(**job) for job in r.json["jobs"]]
+
+
 def _submit_requests(
     client: Client,
     collection_id: str,
@@ -314,27 +307,104 @@ def retrieve_requests(
     dataset_id: str,
     requests: list[Request],
     dst_dir: Path,
+    cache: Cache | None = None,
     wait: int = 30,
 ) -> None:
-    """Retrieve the results of the submitted requests.
+    """Submit and retrieve the results of data requests.
 
     Args:
         client: The CDS API client.
         dataset_id: The ID of the dataset to retrieve.
         requests: The list of requests to retrieve.
         dst_dir: The directory containing the source data files.
+        cache: Optional Cache to use for caching downloaded files.
         wait: Time in seconds to wait between checking for completed requests.
 
     """
-    logger.debug("Submitting %s requests", len(requests))
-    remotes = _submit_requests(
-        client=client,
-        collection_id=dataset_id,
-        requests=requests,
-    )
+    logger.debug("Retrieving %s data requests", len(requests))
+
+    # If using cache, check for already downloaded files and already submitted
+    # data requests before submitting new requests
+    if cache:
+        triage = _triage_requests(client, cache, requests)
+        for job_id in triage.downloaded:
+            cache.retrieve(job_id, dst_dir / f"{job_id}.grib")
+            logger.info("Retrieved file %s from cache", f"{job_id}.grib")
+        remotes = triage.submitted
+        remotes += _submit_requests(
+            client=client,
+            collection_id=dataset_id,
+            requests=triage.to_submit,
+        )
+
+    # If not using cache, submit all requests directly
+    else:
+        remotes = _submit_requests(
+            client=client,
+            collection_id=dataset_id,
+            requests=requests,
+        )
+
     while remotes:
         remotes = _retrieve_remotes(remotes, dst_dir)
-        sleep(wait)
+        if remotes:
+            sleep(wait)
+
+
+@dataclass
+class TriageResult:
+    """Result of triaging data requests after checking the cache.
+
+    Attributes:
+        downloaded: Job IDs of already downloaded requests.
+        submitted: Remote objects of already submitted requests.
+        to_submit: Data requests that still need to be submitted.
+    """
+
+    downloaded: list[str]
+    submitted: list[Remote]
+    to_submit: list[Request]
+
+
+def _triage_requests(client: Client, cache: Cache, requests: list[Request]) -> TriageResult:
+    """Triage the requests into downloaded, submitted, and to_submit categories.
+
+    Args:
+        client: The CDS API client.
+        cache: The cache to use for checking existing downloads.
+        requests: The list of requests to triage.
+
+    Returns:
+        A TriageResult object containing the triaged requests.
+    """
+    result = TriageResult(
+        downloaded=[],
+        submitted=[],
+        to_submit=[],
+    )
+
+    jobs = find_jobs(client)
+    cache.clean_expired_jobs(job_ids=[job.jobID for job in jobs if job.expired])
+    cache.clean_missing_files()
+
+    for request in requests:
+        entry = cache.get(request)
+        if entry and entry.file_name:
+            result.downloaded.append(entry.job_id)
+        elif entry:
+            remote = client.get_remote(entry.job_id)
+            result.submitted.append(remote)
+        else:
+            result.to_submit.append(request)
+
+    logger.debug(
+        "Triage result: %s downloaded, %s submitted, %s to submit",
+        len(result.downloaded),
+        len(result.submitted),
+        len(result.to_submit),
+    )
+
+    return result
 
 
 def _variable_is_in_zarr(zarr_store: Path, data_var: str) -> bool:
