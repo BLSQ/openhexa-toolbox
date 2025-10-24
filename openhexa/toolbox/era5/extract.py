@@ -242,13 +242,13 @@ def _submit_requests(
     return remotes
 
 
-def _retrieve_remotes(queue: list[Remote], output_dir: Path, cache: Cache) -> list[Remote]:
+def _retrieve_remotes(queue: list[Remote], output_dir: Path, cache: Cache | None = None) -> list[Remote]:
     """Retrieve the results of the submitted remotes.
 
     Args:
         queue: List of Remote objects to check and download if ready.
         output_dir: Directory to save downloaded files.
-        cache: Cache to update with downloaded files.
+        cache: Cache to use for caching downloaded files (optional).
 
     Returns:
         List of Remote objects that are still pending (not ready).
@@ -284,8 +284,8 @@ def retrieve_requests(
         dataset_id: The ID of the dataset to retrieve.
         requests: The list of requests to retrieve.
         dst_dir: The directory containing the source data files.
-        cache: Optional Cache to use for caching downloaded files.
-        wait: Time in seconds to wait between checking for completed requests.
+        cache: Cache to use for caching downloaded files (optional).
+        wait: Seconds to wait between checks for completed requests (default=30).
 
     """
     logger.debug("Retrieving %s data requests", len(requests))
@@ -313,7 +313,7 @@ def retrieve_requests(
         )
 
     while remotes:
-        remotes = _retrieve_remotes(remotes, dst_dir)
+        remotes = _retrieve_remotes(remotes, dst_dir, cache=cache)
         if remotes:
             sleep(wait)
 
