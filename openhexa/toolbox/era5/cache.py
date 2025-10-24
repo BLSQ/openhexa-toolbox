@@ -69,14 +69,13 @@ class Cache:
         """Create cache directory if it does not exist."""
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-    def _archive(self, src_fp: Path, job_id: str) -> None:
+    def _archive(self, src_fp: Path) -> None:
         """Archive a GRIB file using gzip.
 
         Args:
             src_fp: Path to the source GRIB file.
-            job_id: The ID of the corresponding CDS job.
         """
-        dst_fp = self.cache_dir / f"{job_id}.grib.gz"
+        dst_fp = self.cache_dir / f"{src_fp.name}.gz"
         with open(src_fp, "rb") as src_f:
             with gzip.open(dst_fp, "wb", compresslevel=9) as dst_f:
                 shutil.copyfileobj(src_f, dst_f)
@@ -107,8 +106,8 @@ class Cache:
             file_path: Optional path to the downloaded file to be cached.
         """
         if file_path:
-            self._archive(file_path, job_id)
-            file_name = f"{job_id}.grib.gz"
+            self._archive(file_path)
+            file_name = f"{file_path.name}.gz"
         else:
             file_name = None
 

@@ -4,11 +4,8 @@ Provides functions to build requests, submit them to the CDS API, retrieve resul
 move GRIB data to an analysis-ready Zarr store for further processing.
 """
 
-import importlib.resources
 import logging
 import shutil
-import tempfile
-import tomllib
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
@@ -25,36 +22,10 @@ from ecmwf.datastores import Remote
 from ecmwf.datastores.client import Client
 
 from openhexa.toolbox.era5.cache import Cache
-from openhexa.toolbox.era5.models import Job, Request, RequestTemporal, Variable
+from openhexa.toolbox.era5.models import Job, Request, RequestTemporal
+from openhexa.toolbox.era5.utils import get_name, get_variables
 
 logger = logging.getLogger(__name__)
-
-
-def _get_variables() -> dict[str, Variable]:
-    """Load ERA5-Land variables metadata.
-
-    Returns:
-        A dictionary mapping variable names to their metadata.
-
-    """
-    with importlib.resources.files("openhexa.toolbox.era5").joinpath("data/variables.toml").open("rb") as f:
-        return tomllib.load(f)
-
-
-def _get_name(remote: Remote) -> str:
-    """Create file name from remote request.
-
-    Returns:
-        File name with format: {year}{month}_{request_id}.{ext}
-
-    """
-    request = remote.request
-    data_format = request["data_format"]
-    download_format = request["download_format"]
-    year = request["year"]
-    month = request["month"]
-    ext = "zip" if download_format == "zip" else data_format
-    return f"{year}{month}_{remote.request_id}.{ext}"
 
 
 def get_date_range(
@@ -195,7 +166,7 @@ def prepare_requests(
         A list of requests to be submitted to the CDS API.
 
     """
-    variables = _get_variables()
+    variables = get_variables()
     if variable not in variables:
         msg = f"Variable '{variable}' not supported"
         raise ValueError(msg)
@@ -290,7 +261,7 @@ def _retrieve_remotes(
 
     for remote in queue:
         if remote.results_ready:
-            name = _get_name(remote)
+            name = get_name(remote)
             fp = output_dir / name
             remote.download(target=fp.as_posix())
             logger.info("Downloaded %s", name)
@@ -523,6 +494,24 @@ def _flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
+def _prepare_for_zarr(ds: xr.Dataset) -> xr.Dataset:
+    """Prepare dataset for zarr storage by setting optimal chunks.
+
+    Args:
+        ds: The xarray Dataset to prepare (after all transformations)
+
+    Returns:
+        Dataset with optimal chunking for zarr storage.
+    """
+    # Clear previous encoding for all data vars
+    for var in ds.data_vars:
+        ds[var].encoding.pop("chunks", None)
+
+    chunks = {"time": 30, "latitude": -1, "longitude": -1}
+
+    return ds.chunk(chunks)
+
+
 def _create_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
     """Create a new zarr store from the dataset.
 
@@ -533,6 +522,7 @@ def _create_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
     """
     if zarr_store.exists():
         raise ValueError(f"Zarr store {zarr_store} already exists")
+    ds = _prepare_for_zarr(ds)
     ds.to_zarr(zarr_store, mode="w", consolidated=True, zarr_format=2)
     logger.debug("Created Zarr store at %s", zarr_store)
 
@@ -548,7 +538,20 @@ def _append_zarr(ds: xr.Dataset, zarr_store: Path, data_var: str) -> None:
         data_var: Name of the variable to append.
 
     """
-    if data_var in xr.open_zarr(zarr_store).data_vars:
+    existing_ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
+
+    # Validate that lat/lon coordinates match
+    if not np.array_equal(existing_ds.latitude.values, ds.latitude.values):
+        msg = f"Latitude coordinates don't match with zarr store {zarr_store.name}"
+        logger.error(msg)
+        raise ValueError(msg)
+    if not np.array_equal(existing_ds.longitude.values, ds.longitude.values):
+        msg = f"Longitude coordinates don't match with zarr store {zarr_store.name}"
+        logger.error(msg)
+        raise ValueError(msg)
+
+    # Check for overlapping times and only append non-overlapping data
+    if data_var in existing_ds.data_vars:
         existing_times = _list_times_in_zarr(zarr_store, data_var)
         new_times = ds.time.values
         overlap = np.isin(new_times, existing_times)
@@ -558,6 +561,9 @@ def _append_zarr(ds: xr.Dataset, zarr_store: Path, data_var: str) -> None:
             if len(ds.time) == 0:
                 logger.debug("No new data to add to Zarr store")
                 return
+
+    ds = _prepare_for_zarr(ds)
+    if data_var in existing_ds.data_vars:
         ds.to_zarr(zarr_store, mode="a", append_dim="time", zarr_format=2)
     else:
         ds.to_zarr(zarr_store, mode="a", zarr_format=2)
@@ -577,32 +583,12 @@ def _consolidate_zarr(zarr_store: Path) -> None:
     """
     zarr.consolidate_metadata(zarr_store)
     ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
-    ds_sorted = ds.sortby("time")
-    if not np.array_equal(ds.time.values, ds_sorted.time.values):
-        logger.debug("Sorting time dimension in Zarr store")
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_zarr_store = Path(tmp_dir) / zarr_store.name
-            ds_sorted.to_zarr(tmp_zarr_store, mode="w", consolidated=True, zarr_format=2)
-            shutil.rmtree(zarr_store)
-            shutil.move(tmp_zarr_store, zarr_store)
-    else:
-        zarr.consolidate_metadata(zarr_store)
 
-
-def _validate_zarr(zarr_store: Path) -> None:
-    """Validate the zarr store by checking for duplicate or missing time values.
-
-    Args:
-        zarr_store: Path to the zarr store to validate.
-
-    Raises:
-        RuntimeError: If duplicate or inconsistent time values are found.
-    """
-    ds = xr.open_zarr(zarr_store, consolidated=True, decode_timedelta=False)
+    # Validate input dataset (duplicate time, inconsistent steps per day)
     for data_var in ds.data_vars:
         times = ds.time.values
         if len(times) != len(np.unique(times)):
-            msg = f"Zarr store {zarr_store} has duplicate time values for variable {data_var}"
+            msg = f"Duplicate time values found in Zarr store {zarr_store.name} for variable {data_var}"
             raise RuntimeError(msg)
         dates = times.astype("datetime64[D]")
         _, counts = np.unique(dates, return_counts=True)
@@ -610,6 +596,32 @@ def _validate_zarr(zarr_store: Path) -> None:
             unique_counts = np.unique(counts)
             msg = f"Inconsistent steps per day found: {unique_counts}\nExpected all days to have {counts[0]} steps"
             raise RuntimeError(msg)
+
+    # Make sure time dimension is sorted
+    ds_sorted = ds.sortby("time")
+    if not np.array_equal(ds.time.values, ds_sorted.time.values):
+        logger.warning("Time dimension is unsorted, rewriting zarr store")
+        ds_sorted = _prepare_for_zarr(ds_sorted)
+        _safe_rewrite_zarr(ds_sorted, zarr_store)
+
+
+def _safe_rewrite_zarr(ds: xr.Dataset, zarr_store: Path) -> None:
+    """Safely rewrite a zarr store with backup."""
+    backup = zarr_store.parent / f"{zarr_store.name}.backup"
+
+    for var in ds.data_vars:
+        ds[var].encoding.pop("chunks", None)
+
+    try:
+        shutil.move(zarr_store, backup)
+        ds.to_zarr(zarr_store, mode="w", consolidated=True, zarr_format=2)
+        shutil.rmtree(backup)
+    except Exception as e:
+        if backup.exists():
+            if zarr_store.exists():
+                shutil.rmtree(zarr_store)
+            shutil.move(backup, zarr_store)
+        raise e
 
 
 def _diff_zarr(
@@ -697,12 +709,13 @@ def grib_to_zarr(
         data_var: Short name of the variable to process (e.g. "t2m", "tp", "swvl1").
 
     """
-    for fp in src_dir.glob("*.grib"):
+    for fp in sorted(src_dir.glob("*.grib")):
         logger.info("Processing GRIB file %s", fp.name)
         ds = xr.open_dataset(fp, engine="cfgrib", decode_timedelta=False)
         ds = _clean_dims_and_coords(ds)
         ds = _drop_incomplete_days(ds, data_var=data_var)
         ds = _flatten_time_dimension(ds)
+
         if not zarr_store.exists():
             logger.debug("Creating new Zarr store '%s'", zarr_store.name)
             _create_zarr(ds, zarr_store)
@@ -712,4 +725,3 @@ def grib_to_zarr(
     logger.debug("Consolidating Zarr store '%s'", zarr_store.name)
     _consolidate_zarr(zarr_store)
     logger.debug("Validating Zarr store '%s'", zarr_store.name)
-    _validate_zarr(zarr_store)
