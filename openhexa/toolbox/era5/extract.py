@@ -242,15 +242,13 @@ def _submit_requests(
     return remotes
 
 
-def _retrieve_remotes(
-    queue: list[Remote],
-    output_dir: Path,
-) -> list[Remote]:
+def _retrieve_remotes(queue: list[Remote], output_dir: Path, cache: Cache) -> list[Remote]:
     """Retrieve the results of the submitted remotes.
 
     Args:
         queue: List of Remote objects to check and download if ready.
         output_dir: Directory to save downloaded files.
+        cache: Cache to update with downloaded files.
 
     Returns:
         List of Remote objects that are still pending (not ready).
@@ -264,6 +262,7 @@ def _retrieve_remotes(
             name = get_name(remote)
             fp = output_dir / name
             remote.download(target=fp.as_posix())
+            cache.set(request=Request(**remote.request), job_id=remote.request_id, file_path=fp)
             logger.info("Downloaded %s", name)
         else:
             pending.append(remote)
