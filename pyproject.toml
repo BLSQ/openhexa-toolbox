@@ -31,6 +31,7 @@ dependencies = [
     "openhexa.sdk",
     "humanize",
     "rich",
+    "psycopg>=3.2.11",
 ]
 
 [project.optional-dependencies]
@@ -71,7 +72,7 @@ lineage = [
     "openlineage-python >=1.33.0"
 ]
 
-all = ["openhexa.toolbox[era5,lineage]"]
+all = []
 
 [tool.setuptools]
 include-package-data = true
