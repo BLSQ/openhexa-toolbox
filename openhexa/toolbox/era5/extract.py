@@ -562,7 +562,7 @@ def _append_zarr(ds: xr.Dataset, zarr_store: Path, data_var: str) -> None:
                 logger.debug("No new data to add to Zarr store")
                 return
 
-    ds = _prepare_for_zarr(ds)
+    ds = ds.load()
     if data_var in existing_ds.data_vars:
         ds.to_zarr(zarr_store, mode="a", append_dim="time", zarr_format=2)
     else:
