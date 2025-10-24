@@ -43,9 +43,9 @@ class Cache:
         """Create schema and table if they do not exist."""
         with psycopg.connect(self.database_uri) as conn:
             with conn.cursor() as cur:
-                cur.execute("--sql create schema if not exists era5")
+                cur.execute("create schema if not exists era5")
                 cur.execute(
-                    """--sql
+                    """
                     create table if not exists era5.cds_cache (
                         cache_key varchar(32) primary key,
                         request json not null,
@@ -58,7 +58,7 @@ class Cache:
                     """
                 )
                 cur.execute(
-                    """--sql
+                    """
                     create index if not exists idx_cds_cache_expires
                         on era5.cds_cache(expires_at)
                     """
@@ -116,7 +116,7 @@ class Cache:
         with psycopg.connect(self.database_uri) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """--sql
+                    """
                     insert into era5.cds_cache (
                         cache_key, request, job_id, file_name
                     ) values (%s, %s, %s, %s)
@@ -139,7 +139,7 @@ class Cache:
         with psycopg.connect(self.database_uri) as conn:
             with conn.cursor(row_factory=class_row(CacheEntry)) as cur:
                 cur.execute(
-                    """--sql
+                    """
                     select job_id, file_name from era5.cds_cache
                     where cache_key = %s
                     """,
@@ -159,7 +159,7 @@ class Cache:
         with psycopg.connect(self.database_uri) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """--sql
+                    """
                     delete from era5.cds_cache
                     where job_id = any(%s) and file_name is null
                     """,
@@ -172,7 +172,7 @@ class Cache:
         with psycopg.connect(self.database_uri) as conn:
             with conn.cursor(row_factory=class_row(CacheEntry)) as cur:
                 cur.execute(
-                    """--sql
+                    """
                     select job_id, file_name from era5.cds_cache
                     where file_name is not null
                     """
@@ -187,7 +187,7 @@ class Cache:
             if missing_job_ids:
                 with conn.cursor() as cur:
                     cur.execute(
-                        """--sql
+                        """
                         delete from era5.cds_cache
                         where job_id = any(%s)
                         """,
