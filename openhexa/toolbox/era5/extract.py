@@ -4,9 +4,7 @@ Provides functions to build requests, submit them to the CDS API, retrieve resul
 move GRIB data to an analysis-ready Zarr store for further processing.
 """
 
-import hashlib
 import importlib.resources
-import json
 import logging
 import shutil
 import tempfile
@@ -16,11 +14,10 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from time import sleep
-from typing import Literal, TypedDict
+from typing import Literal
 
 import numpy as np
 import numpy.typing as npt
-import psycopg
 import xarray as xr
 import zarr
 from dateutil.relativedelta import relativedelta
