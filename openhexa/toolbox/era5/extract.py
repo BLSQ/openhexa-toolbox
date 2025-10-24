@@ -262,7 +262,8 @@ def _retrieve_remotes(queue: list[Remote], output_dir: Path, cache: Cache | None
             name = get_name(remote)
             fp = output_dir / name
             remote.download(target=fp.as_posix())
-            cache.set(request=Request(**remote.request), job_id=remote.request_id, file_path=fp)
+            if cache:
+                cache.set(request=Request(**remote.request), job_id=remote.request_id, file_path=fp)
             logger.info("Downloaded %s", name)
         else:
             pending.append(remote)
