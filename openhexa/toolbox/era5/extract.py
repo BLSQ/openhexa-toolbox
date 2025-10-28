@@ -453,12 +453,11 @@ def _clean_dims_and_coords(ds: xr.Dataset) -> xr.Dataset:
 
 
 def _drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
-    """Drop days with incomplete data from the dataset.
+    """Drop days with incomplete temporal steps from the dataset.
 
-    Days at the boundaries of the data request might have incomplete data. Ex: 1st day
-    with data only for the last step, or last day with missing data for the last step.
-    We only keep days with complete data to avoid having to deal with missing values &
-    partial appends.
+    A day is incomplete if any temporal step (hour) has completely missing data
+    across all spatial points. Days with spatial nulls (e.g., water bodies) are
+    kept as long as each temporal step has at least some valid data.
 
     Args:
         ds: The xarray dataset to process.
@@ -467,8 +466,9 @@ def _drop_incomplete_days(ds: xr.Dataset, data_var: str) -> xr.Dataset:
     Returns:
         The xarray dataset with incomplete days removed.
     """
-    complete_times = ~ds[data_var].isnull().any(dim=["step", "latitude", "longitude"])
-    return ds.sel(time=complete_times)
+    has_valid_data = ~ds[data_var].isnull().all(dim=["latitude", "longitude"])
+    all_steps_complete = has_valid_data.all(dim="step")
+    return ds.sel(time=all_steps_complete)
 
 
 def _flatten_time_dimension(ds: xr.Dataset) -> xr.Dataset:
@@ -588,6 +588,9 @@ def _consolidate_zarr(zarr_store: Path) -> None:
     # Validate input dataset (duplicate time, inconsistent steps per day)
     for data_var in ds.data_vars:
         times = ds.time.values
+        if len(times) == 0:
+            msg = f"Zarr store {zarr_store.name} has not time values for variable {data_var}"
+            raise RuntimeError(msg)
         if len(times) != len(np.unique(times)):
             msg = f"Duplicate time values found in Zarr store {zarr_store.name} for variable {data_var}"
             raise RuntimeError(msg)
@@ -714,7 +717,13 @@ def grib_to_zarr(
         logger.info("Processing GRIB file %s", fp.name)
         ds = xr.open_dataset(fp, engine="cfgrib", decode_timedelta=False)
         ds = _clean_dims_and_coords(ds)
+        if ds[data_var].isnull().all():
+            logger.warning("GRIB file %s is completely empty, skipping", fp.name)
+            continue
         ds = _drop_incomplete_days(ds, data_var=data_var)
+        if len(ds.time) == 0:
+            logger.warning("All days dropped from %s after filtering, skipping", fp.name)
+            continue
         ds = _flatten_time_dimension(ds)
 
         if not zarr_store.exists():
