@@ -55,7 +55,7 @@ test = [
     "epiweeks",
     "openlineage-python >=1.33.0",
     "ecmwf-datastores-client>=0.4.0",
-    "pyarrow>=21.0.0",
+    "pyarrow>=18.1.0",
     "xarray>=2025.9.1",
     "zarr>=3.1.3",
 ]
