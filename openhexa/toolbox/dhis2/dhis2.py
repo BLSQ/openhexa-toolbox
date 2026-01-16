@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from functools import cached_property
 from itertools import islice
 from pathlib import Path
+import regex as re
 from typing import Any, Dict, Generator, Iterator, List, Optional, Tuple, Union
 
 import pandas as pd
@@ -709,6 +710,62 @@ class Metadata:
         if src_format == "pandas":
             df = df.to_pandas()
         return df
+    
+    def programs(
+        self,
+        fields: str = "id,name,programType",
+        page: Optional[int] = None,
+        pageSize: Optional[int] = None,
+        filters: Optional[List[str]] = None,
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        """Get program metadata from DHIS2.
+
+        Parameters
+        ----------
+        fields: str, optional
+            Comma-separated DHIS2 fields to include in the response.
+        page: int, optional
+            Page number for paginated requests.
+        pageSize: int, optional
+            Number of results per page.
+        filters: list of str, optional
+            DHIS2 query filters.
+
+        Returns
+        -------
+        Union[List[Dict[str, Any]], Dict[str, Any]]
+            - If `page` and `pageSize` are **not** provided: Returns a **list** of programs.
+            - If `page` and `pageSize` **are** provided: Returns a **dict** with `programs` and `pager`
+            for pagination.
+        """
+
+        def format_program(program: Dict[str, Any], fields: str) -> Dict[str, Any]:
+            splitted_fields = [f.split("[")[0] for f in re.split(r",(?![^\[]*\])", fields)]
+            return {key: program.get(key) for key in splitted_fields}
+
+        params = {"fields": fields}
+
+        if filters:
+            params["filter"] = filters
+
+        if page and pageSize:
+            params["page"] = page
+            params["pageSize"] = pageSize
+            response = self.client.api.get("programs", params=params)
+
+            program_stages = [
+                format_program(ou, fields) for ou in response.get("programs", [])
+            ]
+
+            return {"items": program_stages, "pager": response.get("pager", {})}
+
+        programs = [
+            format_program(program, fields)
+            for page in self.client.api.get_paged("programs", params=params)
+            for program in page.get("programs", [])
+        ]
+
+        return programs
 
 
 def _split_list(src_list: list, length: int) -> Iterator[List]:

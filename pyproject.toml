@@ -30,7 +30,8 @@ dependencies = [
     "epiweeks",
     "openhexa.sdk",
     "humanize",
-    "rich"
+    "rich",
+    "regex"
 ]
 
 [project.optional-dependencies]
