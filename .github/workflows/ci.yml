@@ -31,7 +31,7 @@ jobs:
           python-version: 3.13
       
       - name: "Install dependencies"
-        run: pip install ".[test]"
+        run: pip install ".[test,era5,lineage]"
         
       - name: Run tests
         run: pytest --cov=. --cov-report html --cov-report term 
