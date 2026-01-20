@@ -45,6 +45,8 @@ requirements:
     - psycopg
     - ecmwf-datastores-client
     - zarr
+    - dask
+    - regex
 
 test:
   imports:
