@@ -32,6 +32,7 @@ dependencies = [
     "humanize",
     "rich",
     "psycopg>=3.2.11",
+    "regex"
 ]
 
 [project.optional-dependencies]

@@ -85,6 +85,30 @@ def test_get_programs(client):
     assert df.schema == {
         "id": pl.String,
         "name": pl.String,
+        "program_type": pl.String
+    }
+
+
+def test_get_program_stages(client):
+    df = dataframe.get_program_stages(client)
+    assert len(df) > 10
+    assert df.schema == {
+        "program_stage_id": pl.String,
+        "program_stage_name": pl.String,
+        "program_id": pl.String,
+        "program_name": pl.String,
+    }
+
+def test_get_program_data_elements(client):
+    df = dataframe.get_program_data_elements(client)
+    assert len(df) > 10
+    assert df.schema == {
+        "program_stage_id": pl.String,
+        "program_stage_name": pl.String,
+        "program_id": pl.String,
+        "program_name": pl.String,
+        "valid_data_elements": pl.List(pl.String),
+        "compulsory_data_elements": pl.List(pl.String),
     }
 
 
