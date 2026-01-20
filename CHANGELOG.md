@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.9.0...v2.10.0) (2026-01-20)
+
+
+### Features
+
+* **dhis2:** add functions related to programs ([#197](https://github.com/BLSQ/openhexa-toolbox/issues/197)) ([220277a](https://github.com/BLSQ/openhexa-toolbox/commit/220277a3ef7fc3a1d3066dab19289f9ef91e2a41))
+* **era5:** rewrite era5 package based on ecmwf-datastores-client ([#193](https://github.com/BLSQ/openhexa-toolbox/issues/193)) ([5585586](https://github.com/BLSQ/openhexa-toolbox/commit/558558656748c18c1640101440be64ffb121e020))
+
 ## [2.9.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.8.3...v2.9.0) (2025-09-10)
 
 
