@@ -13,21 +13,47 @@ import polars as pl
 from openhexa.toolbox.iaso import IASO
 
 
-def _get_org_units_csv(iaso: IASO) -> str:
+def _get_org_units_csv(iaso: IASO, **kwargs) -> str:
     """Extract org units in CSV format."""
-    r = iaso.api_client.get(url="api/orgunits", params={"csv": True}, stream=True, timeout=30)
+    params: dict[str, bool | int] = {"csv": True}
+
+    param_mapping = {
+        "ou_type_id": "orgUnitTypeId",
+        "ou_parent_id": "orgUnitParentId",
+        "project_id": "project",
+    }
+
+    for src_key, dst_key in param_mapping.items():
+        value = kwargs.get(src_key)
+        if value is not None:
+            params[dst_key] = value
+
+    r = iaso.api_client.get(url="api/orgunits", params=params, stream=True)
     r.raise_for_status()
     return r.content.decode("utf8")
 
 
-def _get_org_units_gpkg(iaso: IASO) -> bytes:
+def _get_org_units_gpkg(iaso: IASO, **kwargs) -> bytes:
     """Extract org units in GPKG format."""
-    r = iaso.api_client.get(url="api/orgunits", params={"gpkg": True}, stream=True, timeout=30)
+    params: dict[str, bool | int] = {"gpkg": True}
+
+    param_mapping = {
+        "ou_type_id": "orgUnitTypeId",
+        "ou_parent_id": "orgUnitParentId",
+        "project_id": "project",
+    }
+
+    for src_key, dst_key in param_mapping.items():
+        value = kwargs.get(src_key)
+        if value is not None:
+            params[dst_key] = value
+
+    r = iaso.api_client.get(url="api/orgunits", params=params, stream=True)
     r.raise_for_status()
     return r.content
 
 
-def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
+def _get_org_units_geometries(iaso: IASO, **kwargs) -> dict[int, str]:
     """Get the org units geometries from IASO.
 
     Org unit geometries are absent from the CSV export, so we need to fetch them separately.
@@ -42,7 +68,7 @@ def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
     dict[int, str]
         A dict with org unit ids as keys and GeoJSON geometries as values.
     """
-    gpkg = _get_org_units_gpkg(iaso)
+    gpkg = _get_org_units_gpkg(iaso, **kwargs)
     features = {}
     layers = fiona.listlayers(BytesIO(gpkg))
     for layer in layers:
@@ -56,7 +82,12 @@ def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
     return features
 
 
-def get_organisation_units(iaso: IASO) -> pl.DataFrame:
+def get_organisation_units(
+    iaso: IASO,
+    ou_type_id: int | None = None,
+    ou_parent_id: int | None = None,
+    project_id: int | None = None,
+) -> pl.DataFrame:
     """Get the organisation units from IASO.
 
     Parameters
@@ -69,7 +100,9 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
     pl.DataFrame
         The organisation units dataframe.
     """
-    csv = _get_org_units_csv(iaso)
+    csv = _get_org_units_csv(
+        iaso, ou_type_id=ou_type_id, ou_parent_id=ou_parent_id, project_id=project_id
+    )
     df = pl.read_csv(StringIO(csv))
 
     df = df.select(
@@ -90,12 +123,20 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
             for lvl in range(1, 10)
             if f"Ref Ext parent {lvl}" in df.columns
         ],
-        *[pl.col(f"parent {lvl}").alias(f"level_{lvl}_name") for lvl in range(1, 10) if f"parent {lvl}" in df.columns],
+        *[
+            pl.col(f"parent {lvl}").alias(f"level_{lvl}_name")
+            for lvl in range(1, 10)
+            if f"parent {lvl}" in df.columns
+        ],
     )
 
-    geoms = _get_org_units_geometries(iaso)
+    geoms = _get_org_units_geometries(
+        iaso, ou_type_id=ou_type_id, ou_parent_id=ou_parent_id, project_id=project_id
+    )
     df = df.with_columns(
-        pl.col("id").map_elements(lambda x: geoms.get(x, None), return_dtype=pl.String).alias("geometry")
+        pl.col("id")
+        .map_elements(lambda x: geoms.get(x, None), return_dtype=pl.String)
+        .alias("geometry")
     )
 
     return df
@@ -111,7 +152,9 @@ def _iter_children(children: list[dict]) -> Iterable[dict]:
 
 def _get_form_versions(iaso: IASO, form_id: int) -> dict:
     """Extract form versions metadata from IASO."""
-    r = iaso.api_client.get(url="api/formversions", params={"form_id": form_id, "fields": "descriptor"}, timeout=5)
+    r = iaso.api_client.get(
+        url="api/formversions", params={"form_id": form_id, "fields": "descriptor"}, timeout=5
+    )
     r.raise_for_status()
     return r.json()
 
@@ -201,11 +244,23 @@ def get_form_metadata(iaso: IASO, form_id: int) -> dict:
     return meta
 
 
-def _get_instances_csv(iaso: IASO, form_id: int, last_updated: str | None = None) -> str:
+def _get_instances_csv(iaso: IASO, form_id: int, **kwargs) -> str:
     """Extract form instances in CSV format."""
-    params = {"form_id": form_id, "csv": True}
-    if last_updated is not None:
-        params["modificationDateFrom"] = last_updated
+    params: dict[str, bool | int | str] = {"form_id": form_id, "csv": True}
+
+    param_mapping = {
+        "ou_parent_id": "orgUnitParentId",
+        "date_from": "dateFrom",
+        "date_to": "dateTo",
+        "last_updated": "modificationDateFrom",
+        "modification_date_to": "modificationDateTo",
+    }
+
+    for src_key, dst_key in param_mapping.items():
+        value = kwargs.get(src_key)
+        if value is not None:
+            params[dst_key] = value
+
     r = iaso.api_client.get(url="api/instances", params=params, stream=True, timeout=30)
     r.raise_for_status()
     return r.content.decode("utf8")
@@ -230,17 +285,18 @@ def _process_instance(instance: dict, form_metadata: dict, mapping: dict) -> dic
     dict
         The row as a dict (with column names as key).
     """
+    created_at_str = instance.get("Date de création")
+    updated_at_str = instance.get("Date de modification")
+
     row = {
         "id": instance.get("ID du formulaire"),
         "form_version": instance.get("Version du formulaire"),
-        "created_at": datetime.strptime(
-            instance.get("Date de création"),
-            "%Y-%m-%d %H:%M:%S",
-        ),
-        "updated_at": datetime.strptime(
-            instance.get("Date de modification"),
-            "%Y-%m-%d %H:%M:%S",
-        ),
+        "created_at": datetime.strptime(created_at_str, "%Y-%m-%d %H:%M:%S")
+        if created_at_str
+        else None,
+        "updated_at": datetime.strptime(updated_at_str, "%Y-%m-%d %H:%M:%S")
+        if updated_at_str
+        else None,
         "org_unit_id": instance.get("Org unit id"),
         "org_unit_name": instance.get("Org unit"),
         "org_unit_ref": instance.get("Référence externe"),
@@ -324,7 +380,15 @@ def _merge_schemas(schemas: list[dict]) -> dict:
     return final_schema
 
 
-def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = None) -> pl.DataFrame:
+def extract_submissions(
+    iaso: IASO,
+    form_id: int,
+    last_updated: str | None = None,
+    modification_date_to: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    ou_parent_id: int | None = None,
+) -> pl.DataFrame:
     """Extract submissions instances for a IASO form.
 
     Parameters
@@ -335,13 +399,28 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
         The form id.
     last_updated: str, optional
         The last updated date to fetch in ISO format.
-
+    modification_date_to: str, optional
+        The modification date to fetch up to in ISO format.
+    date_from: str, optional
+        The start date to filter submissions in ISO format.
+    date_to: str, optional
+        The end date to filter submissions in ISO format.
+    ou_parent_id: int, optional
+        The parent org unit id to filter submissions.
     Returns
     -------
     pl.DataFrame
         The submissions dataframe with one row per submission.
     """
-    csv = _get_instances_csv(iaso=iaso, form_id=form_id, last_updated=last_updated)
+    csv = _get_instances_csv(
+        iaso=iaso,
+        form_id=form_id,
+        last_updated=last_updated,
+        modification_date_to=modification_date_to,
+        date_from=date_from,
+        date_to=date_to,
+        ou_parent_id=ou_parent_id,
+    )
     form_metadata = get_form_metadata(iaso=iaso, form_id=form_id)
     rows = []
 
@@ -407,7 +486,9 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
     return pl.DataFrame(rows, schema=schema)
 
 
-def replace_labels(submissions: pl.DataFrame, form_metadata: dict, language: str | None = None) -> pl.DataFrame:
+def replace_labels(
+    submissions: pl.DataFrame, form_metadata: dict, language: str | None = None
+) -> pl.DataFrame:
     """Replace choice list values with labels.
 
     Parameters
@@ -440,7 +521,7 @@ def replace_labels(submissions: pl.DataFrame, form_metadata: dict, language: str
             qtype = question["type"]
             if qtype not in ["select one", "select all that apply", "rank"]:
                 continue
-            if question not in submissions.columns:
+            if name not in submissions.columns:
                 continue
             mapping[form_version][qtype][name] = {}
             for choice in choices[question["list_name"]]:
@@ -451,7 +532,9 @@ def replace_labels(submissions: pl.DataFrame, form_metadata: dict, language: str
                 else:
                     if language not in choice["label"]:
                         raise ValueError(f"Language {language} not found in choice list labels")
-                    mapping[form_version][qtype][name][choice["name"]] = choice["label"].get(language)
+                    mapping[form_version][qtype][name][choice["name"]] = choice["label"].get(
+                        language
+                    )
 
     # replace values with labels (select one)
     for form_version, label_mapping in mapping.items():
@@ -459,7 +542,11 @@ def replace_labels(submissions: pl.DataFrame, form_metadata: dict, language: str
         for question, choices in label_mapping["select one"].items():
             submissions = submissions.with_columns(
                 pl.when(pl.col("form_version") == form_version)
-                .then(pl.col(question).map_elements(lambda x: choices.get(x, x), return_dtype=pl.String))
+                .then(
+                    pl.col(question).map_elements(
+                        lambda x: choices.get(x, x), return_dtype=pl.String
+                    )
+                )
                 .otherwise(pl.col(question))
                 .alias(question)
             )
@@ -467,7 +554,9 @@ def replace_labels(submissions: pl.DataFrame, form_metadata: dict, language: str
             submissions = submissions.with_columns(
                 pl.when(pl.col("form_version") == form_version)
                 .then(
-                    pl.col(question).map_elements(lambda x: [choices.get(v, v) for v in x], return_dtype=pl.List(str))
+                    pl.col(question).map_elements(
+                        lambda x: [choices.get(v, v) for v in x], return_dtype=pl.List(str)
+                    )
                 )
                 .otherwise(pl.col(question))
                 .alias(question)
@@ -476,7 +565,9 @@ def replace_labels(submissions: pl.DataFrame, form_metadata: dict, language: str
             submissions = submissions.with_columns(
                 pl.when(pl.col("form_version") == form_version)
                 .then(
-                    pl.col(question).map_elements(lambda x: [choices.get(v, v) for v in x], return_dtype=pl.List(str))
+                    pl.col(question).map_elements(
+                        lambda x: [choices.get(v, v) for v in x], return_dtype=pl.List(str)
+                    )
                 )
                 .otherwise(pl.col(question))
                 .alias(question)
