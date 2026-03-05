@@ -53,7 +53,7 @@ def _get_org_units_gpkg(iaso: IASO, **kwargs) -> bytes:
     return r.content
 
 
-def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
+def _get_org_units_geometries(iaso: IASO, **kwargs) -> dict[int, str]:
     """Get the org units geometries from IASO.
 
     Org unit geometries are absent from the CSV export, so we need to fetch them separately.
@@ -68,7 +68,7 @@ def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
     dict[int, str]
         A dict with org unit ids as keys and GeoJSON geometries as values.
     """
-    gpkg = _get_org_units_gpkg(iaso)
+    gpkg = _get_org_units_gpkg(iaso, **kwargs)
     features = {}
     layers = fiona.listlayers(BytesIO(gpkg))
     for layer in layers:
@@ -82,7 +82,12 @@ def _get_org_units_geometries(iaso: IASO) -> dict[int, str]:
     return features
 
 
-def get_organisation_units(iaso: IASO) -> pl.DataFrame:
+def get_organisation_units(
+    iaso: IASO,
+    ou_type_id: int | None = None,
+    ou_parent_id: int | None = None,
+    project_id: int | None = None,
+) -> pl.DataFrame:
     """Get the organisation units from IASO.
 
     Parameters
@@ -95,7 +100,9 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
     pl.DataFrame
         The organisation units dataframe.
     """
-    csv = _get_org_units_csv(iaso)
+    csv = _get_org_units_csv(
+        iaso, ou_type_id=ou_type_id, ou_parent_id=ou_parent_id, project_id=project_id
+    )
     df = pl.read_csv(StringIO(csv))
 
     df = df.select(
@@ -123,7 +130,9 @@ def get_organisation_units(iaso: IASO) -> pl.DataFrame:
         ],
     )
 
-    geoms = _get_org_units_geometries(iaso)
+    geoms = _get_org_units_geometries(
+        iaso, ou_type_id=ou_type_id, ou_parent_id=ou_parent_id, project_id=project_id
+    )
     df = df.with_columns(
         pl.col("id")
         .map_elements(lambda x: geoms.get(x, None), return_dtype=pl.String)
@@ -371,7 +380,15 @@ def _merge_schemas(schemas: list[dict]) -> dict:
     return final_schema
 
 
-def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = None) -> pl.DataFrame:
+def extract_submissions(
+    iaso: IASO,
+    form_id: int,
+    last_updated: str | None = None,
+    modification_date_to: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    ou_parent_id: int | None = None,
+) -> pl.DataFrame:
     """Extract submissions instances for a IASO form.
 
     Parameters
@@ -382,13 +399,28 @@ def extract_submissions(iaso: IASO, form_id: int, last_updated: str | None = Non
         The form id.
     last_updated: str, optional
         The last updated date to fetch in ISO format.
-
+    modification_date_to: str, optional
+        The modification date to fetch up to in ISO format.
+    date_from: str, optional
+        The start date to filter submissions in ISO format.
+    date_to: str, optional
+        The end date to filter submissions in ISO format.
+    ou_parent_id: int, optional
+        The parent org unit id to filter submissions.
     Returns
     -------
     pl.DataFrame
         The submissions dataframe with one row per submission.
     """
-    csv = _get_instances_csv(iaso=iaso, form_id=form_id, last_updated=last_updated)
+    csv = _get_instances_csv(
+        iaso=iaso,
+        form_id=form_id,
+        last_updated=last_updated,
+        modification_date_to=modification_date_to,
+        date_from=date_from,
+        date_to=date_to,
+        ou_parent_id=ou_parent_id,
+    )
     form_metadata = get_form_metadata(iaso=iaso, form_id=form_id)
     rows = []
 
