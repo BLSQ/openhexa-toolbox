@@ -103,7 +103,7 @@ class Survey:
 
     def get_data(self, limit: int = 1000) -> List[dict]:
         """Download survey data."""
-        r = self.client.session.get(self.meta["data"], params={"limit": limit)
+        r = self.client.session.get(self.meta["data"], params={"limit": limit})
         r.raise_for_status()
         return r.json().get("results")
 
