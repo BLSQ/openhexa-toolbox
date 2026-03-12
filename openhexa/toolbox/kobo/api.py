@@ -101,9 +101,9 @@ class Survey:
                 choice_lists[list_name].append(choice)
         return choice_lists
 
-    def get_data(self) -> List[dict]:
+    def get_data(self, limit: int = 1000) -> List[dict]:
         """Download survey data."""
-        r = self.client.session.get(self.meta["data"])
+        r = self.client.session.get(self.meta["data"], params={"limit": limit)
         r.raise_for_status()
         return r.json().get("results")
 
