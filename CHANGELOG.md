@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.11.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.10.0...v2.11.0) (2026-03-12)
+
+
+### Features
+
+* **kobo:** Add limit parameter to get_data method ([#204](https://github.com/BLSQ/openhexa-toolbox/issues/204)) ([a4d1067](https://github.com/BLSQ/openhexa-toolbox/commit/a4d1067566b9b78d9d4820f45a657b40775036d3))
+
+
+### Bug Fixes
+
+* **kobo:** Syntax error in get_data method ([#206](https://github.com/BLSQ/openhexa-toolbox/issues/206)) ([8b128d2](https://github.com/BLSQ/openhexa-toolbox/commit/8b128d265689d0b6d9df0584ba239bd31ebc90b6))
+
 ## [2.10.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.9.0...v2.10.0) (2026-01-20)
 
 
