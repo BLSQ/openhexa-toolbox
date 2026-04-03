@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 import pytest
 import responses
 
@@ -6,11 +10,11 @@ from openhexa.toolbox.iaso.api_client import ApiClient
 from tests.iaso.fixtures.iaso_api_fixtures import (
     iaso_mocked_auth_token,
     iaso_mocked_forms,
-    iaso_mocked_orgunits,
-    iaso_mocked_refreshed_auth_token,
-    iaso_mocked_projects,
     iaso_mocked_instances,
+    iaso_mocked_orgunits,
     iaso_mocked_orgunits_tree_search,
+    iaso_mocked_projects,
+    iaso_mocked_refreshed_auth_token,
 )
 
 

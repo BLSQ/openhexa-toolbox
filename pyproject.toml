@@ -32,7 +32,8 @@ dependencies = [
     "humanize",
     "rich",
     "psycopg>=3.2.11",
-    "regex"
+    "regex",
+    "pytest>=8.4.2",
 ]
 
 [project.optional-dependencies]
