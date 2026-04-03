@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 import pytest
 import responses
 
@@ -17,6 +16,8 @@ from tests.iaso.fixtures.iaso_api_fixtures import (
     iaso_mocked_refreshed_auth_token,
 )
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 
 class TestIasoAPI:
     @pytest.fixture
@@ -26,7 +27,10 @@ class TestIasoAPI:
 
     def test_authenticate(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
 
         iaso_api_client = ApiClient("https://iaso-staging.bluesquare.org", "username", "password")
@@ -35,10 +39,16 @@ class TestIasoAPI:
 
     def test_get_projects(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
         mock_responses.add(
-            responses.GET, "https://iaso-staging.bluesquare.org/api/projects/", json=iaso_mocked_projects, status=200
+            responses.GET,
+            "https://iaso-staging.bluesquare.org/api/projects/",
+            json=iaso_mocked_projects,
+            status=200,
         )
 
         iaso = IASO("https://iaso-staging.bluesquare.org", "username", "password")
@@ -47,7 +57,10 @@ class TestIasoAPI:
 
     def test_get_org_units(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
         mock_responses.add(
             responses.GET,
@@ -61,7 +74,10 @@ class TestIasoAPI:
 
     def test_get_org_units_optimized(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
         mock_responses.add(
             responses.GET,
@@ -75,7 +91,10 @@ class TestIasoAPI:
 
     def test_get_org_units_with_search(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
         mock_responses.add(
             responses.GET,
@@ -89,10 +108,16 @@ class TestIasoAPI:
 
     def test_get_forms(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
         mock_responses.add(
-            responses.GET, "https://iaso-staging.bluesquare.org/api/forms/", json=iaso_mocked_forms, status=200
+            responses.GET,
+            "https://iaso-staging.bluesquare.org/api/forms/",
+            json=iaso_mocked_forms,
+            status=200,
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "username", "password")
         r = iaso.get_forms(org_units=[781], projects=[149])
@@ -100,10 +125,16 @@ class TestIasoAPI:
 
     def test_get_form_instances(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
         mock_responses.add(
-            responses.GET, "https://iaso-staging.bluesquare.org/api/instances/", json=iaso_mocked_instances, status=200
+            responses.GET,
+            "https://iaso-staging.bluesquare.org/api/instances/",
+            json=iaso_mocked_instances,
+            status=200,
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "user", "test")
         form_instances = iaso.get_form_instances(form_ids=276)
@@ -111,7 +142,10 @@ class TestIasoAPI:
 
     def test_failing_forms(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
         mock_responses.add(
             responses.GET,
@@ -127,7 +161,10 @@ class TestIasoAPI:
 
     def test_verify_expired_token(self, mock_responses):
         mock_responses.add(
-            responses.POST, "https://iaso-staging.bluesquare.org/api/token/", json=iaso_mocked_auth_token, status=200
+            responses.POST,
+            "https://iaso-staging.bluesquare.org/api/token/",
+            json=iaso_mocked_auth_token,
+            status=200,
         )
         mock_responses.add(
             responses.GET,
@@ -143,5 +180,8 @@ class TestIasoAPI:
         )
         iaso = IASO("https://iaso-staging.bluesquare.org", "user", "test")
         iaso.get_projects()
-        assert mock_responses.calls[2].request.url == "https://iaso-staging.bluesquare.org/api/token/refresh/"
+        assert (
+            mock_responses.calls[2].request.url
+            == "https://iaso-staging.bluesquare.org/api/token/refresh/"
+        )
         assert iaso.api_client.token == iaso_mocked_refreshed_auth_token["access"]
