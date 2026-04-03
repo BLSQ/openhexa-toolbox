@@ -146,7 +146,7 @@ class Api:
         r = self.get(endpoint=endpoint, params=params, use_cache=use_cache)
         yield r
 
-        if "pager" in r:
+        if ("pager" in r) and ("tracker" not in endpoint):
             logger.debug(f"Pager found, using page size {params['pageSize']}")
             params["page"] = r["pager"]["page"]
             while "nextPage" in r["pager"]:
