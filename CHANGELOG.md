@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.11.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.0...v2.11.1) (2026-04-03)
+
+
+### Bug Fixes
+
+* **deps:** update dependency black to ~=25.12.0 ([#192](https://github.com/BLSQ/openhexa-toolbox/issues/192)) ([a4d4fd3](https://github.com/BLSQ/openhexa-toolbox/commit/a4d4fd3fe25b4475c8f9043a8ea921a3fd167159))
+* **deps:** update dependency pytest to v9 ([#198](https://github.com/BLSQ/openhexa-toolbox/issues/198)) ([5cf9de7](https://github.com/BLSQ/openhexa-toolbox/commit/5cf9de7f33f6405f129c82d1c513b10de45bd7f5))
+* **iaso_dataframe:** extend parameters call from API and timeout error orgunit extraction ([#203](https://github.com/BLSQ/openhexa-toolbox/issues/203)) ([dd66f67](https://github.com/BLSQ/openhexa-toolbox/commit/dd66f673a9066cfdff98b11b9009e6881fa1de29))
+
 ## [2.11.0](https://github.com/BLSQ/openhexa-toolbox/compare/v2.10.0...v2.11.0) (2026-03-12)
 
 
