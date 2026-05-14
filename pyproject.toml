@@ -47,7 +47,7 @@ dev = [
 ]
 
 test = [
-    "ruff~=0.12.12",
+    "ruff~=0.15.13",
     "pytest~=9.0.2",
     "pytest-cov~=7.0.0",
     "responses",
