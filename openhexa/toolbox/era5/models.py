@@ -69,12 +69,12 @@ class Job:
     type: str
     jobID: str
     status: str
-    created: str
-    started: str
-    finished: str
-    updated: str
-    links: list[JobLink]
-    metadata: JobMetadata
+    created: str | None = None
+    started: str | None = None
+    finished: str | None = None
+    updated: str | None = None
+    links: list[JobLink] | None = None
+    metadata: JobMetadata | None = None
 
     @property
     def expired(self) -> bool:
@@ -84,7 +84,7 @@ class Job:
         but the results expired and cannot be downloaded anymore. This doesn't change
         the status, we have to dig into job metadata for this info.
         """
-        if "results" in self.metadata:
+        if self.metadata and "results" in self.metadata:
             if "type" in self.metadata["results"]:
                 if self.metadata["results"]["type"] == "results expired":
                     return True
