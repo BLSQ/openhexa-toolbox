@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.2](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.1...v2.11.2) (2026-07-29)
+
+
+### Bug Fixes
+
+* **dhis2:** Adapt extract_events to newer versions of dhis2 ([#215](https://github.com/BLSQ/openhexa-toolbox/issues/215)) ([458b29a](https://github.com/BLSQ/openhexa-toolbox/commit/458b29ac9ea49a32a58f3092fdb0b5e6ee039d66))
+
 ## [2.11.1](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.0...v2.11.1) (2026-05-26)
 
 
