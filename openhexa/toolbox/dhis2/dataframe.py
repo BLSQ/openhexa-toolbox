@@ -1007,6 +1007,7 @@ def get_programs(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame
     df = pl.DataFrame(meta, schema=schema)
     return df.select("id", "name", pl.col("programType").alias("program_type"))
 
+
 def get_tracked_entity_types(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
     """Extract tracked entity types metadata.
 
@@ -1044,7 +1045,7 @@ def get_program_stages(dhis2: DHIS2, filters: list[str] | None = None) -> pl.Dat
     Returns
     -------
     pl.DataFrame
-        Dataframe containing program stages metadata with the following columns: 
+        Dataframe containing program stages metadata with the following columns:
         program_stage_id, program_stage_name, program_id, program_name.
     """
     meta = dhis2.meta.programs(fields="id,name,programStages[id,name]", filters=filters)
@@ -1054,9 +1055,7 @@ def get_program_stages(dhis2: DHIS2, filters: list[str] | None = None) -> pl.Dat
         df.explode("programStages")
         .with_columns(
             [
-                pl.col("programStages")
-                .struct.field("name")
-                .alias("program_stage_name"),
+                pl.col("programStages").struct.field("name").alias("program_stage_name"),
                 pl.col("programStages").struct.field("id").alias("program_stage_id"),
             ]
         )
@@ -1072,9 +1071,7 @@ def get_program_stages(dhis2: DHIS2, filters: list[str] | None = None) -> pl.Dat
     return df_flat
 
 
-def get_program_data_elements(
-    dhis2: DHIS2, filters: list[str] | None = None
-) -> pl.DataFrame:
+def get_program_data_elements(dhis2: DHIS2, filters: list[str] | None = None) -> pl.DataFrame:
     """Extract the data elements linked to the programs
 
     Parameters
@@ -1101,13 +1098,9 @@ def get_program_data_elements(
         df.explode("programStages")  # one row per program stage
         .with_columns(
             [
-                pl.col("programStages")
-                .struct.field("name")
-                .alias("program_stage_name"),
+                pl.col("programStages").struct.field("name").alias("program_stage_name"),
                 pl.col("programStages").struct.field("id").alias("program_stage_id"),
-                pl.col("programStages")
-                .struct.field("programStageDataElements")
-                .alias("dataElements"),
+                pl.col("programStages").struct.field("programStageDataElements").alias("dataElements"),
             ]
         )
         .select(
@@ -1133,16 +1126,19 @@ def get_program_data_elements(
         )
         .list.drop_nulls()
         .alias("compulsory_data_elements"),
-    ).select([
-        "program_stage_id",
-        "program_stage_name",
-        "program_id",
-        "program_name",
-        "valid_data_elements",
-        "compulsory_data_elements",
-    ])
+    ).select(
+        [
+            "program_stage_id",
+            "program_stage_name",
+            "program_id",
+            "program_name",
+            "valid_data_elements",
+            "compulsory_data_elements",
+        ]
+    )
 
     return df_flat
+
 
 def extract_events(
     dhis2: DHIS2,
@@ -1187,7 +1183,12 @@ def extract_events(
         if occurred_before:
             params["occurredBefore"] = occurred_before
         for page in dhis2.api.get_paged("tracker/events", params=params):
-            data.extend(page["instances"])
+            if "events" in page:
+                data.extend(page["events"])
+            elif "instances" in page:
+                data.extend(page["instances"])
+            else:
+                raise ValueError(f"No 'events' or 'instances' key in tracker response: {list(page.keys())}")
 
     schema = {
         "event": str,
