@@ -103,9 +103,17 @@ class Survey:
 
     def get_data(self, limit: int = 1000) -> List[dict]:
         """Download survey data."""
-        r = self.client.session.get(self.meta["data"], params={"limit": limit})
-        r.raise_for_status()
-        return r.json().get("results")
+        results = []
+        url = self.meta["data"]
+        params = {"limit": limit}
+        while url:
+            r = self.client.session.get(url, params=params)
+            r.raise_for_status()
+            payload = r.json()
+            results.extend(payload.get("results", []))
+            url = payload.get("next")
+            params = None
+        return results
 
     @cached_property
     def _xpaths_labels_mapping(self) -> dict:

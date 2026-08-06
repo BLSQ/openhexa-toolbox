@@ -63,7 +63,7 @@ def rename_columns(df: pl.DataFrame) -> pl.DataFrame:
 def to_dataframe(survey: Survey) -> pl.DataFrame:
     """Get survey data as a polars dataframe."""
     rows = survey.get_data()
-    df = pl.DataFrame(rows)
+    df = pl.DataFrame(rows, infer_schema_length=None)
 
     # columns with no data in the survey are not returned by the api
     # add the missing columns as String with only null values
