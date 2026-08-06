@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.3](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.2...v2.11.3) (2026-08-06)
+
+
+### Bug Fixes
+
+* **kobo:** paginate get_data and infer schema on all rows in to_dataframe ([#217](https://github.com/BLSQ/openhexa-toolbox/issues/217)) ([1924134](https://github.com/BLSQ/openhexa-toolbox/commit/19241340da0ddab7d4391807d714cf7dba0fd9eb))
+
 ## [2.11.2](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.1...v2.11.2) (2026-07-29)
 
 
