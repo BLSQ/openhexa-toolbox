@@ -48,7 +48,7 @@ dev = [
 
 test = [
     "ruff~=0.12.12",
-    "pytest~=9.0.2",
+    "pytest~=9.1.1",
     "pytest-cov~=7.0.0",
     "responses",
     "xarray",
