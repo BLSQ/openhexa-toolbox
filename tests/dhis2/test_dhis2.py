@@ -1,11 +1,12 @@
-from datetime import date
+import logging
+from datetime import date, timedelta
 
 import pytest
 from dateutil.relativedelta import relativedelta
 
 from openhexa.sdk.workspaces.connection import DHIS2Connection
 from openhexa.toolbox.dhis2 import DHIS2
-from openhexa.toolbox.dhis2.dhis2 import _batch, _batch_dates, _iter_batches
+from openhexa.toolbox.dhis2.dhis2 import _batch, _batch_dates, _format_delta, _iter_batches
 
 
 def test_dhis2_init_connection():
@@ -54,6 +55,52 @@ def test_batch_dates():
     assert batches[3] == (date(2023, 12, 1), date(2024, 1, 1))
     assert batches[4] == (date(2024, 1, 1), date(2024, 2, 1))
     assert batches[5] == (date(2024, 2, 1), date(2024, 3, 1))
+
+
+def test_iter_batches_warns_when_dates_are_split(caplog):
+    with caplog.at_level(logging.WARNING, logger="openhexa.toolbox.dhis2.dhis2"):
+        list(
+            _iter_batches(
+                data_elements=["dx1"],
+                org_units=["ou1"],
+                start_date="2021-10-01",
+                end_date="2022-02-01",
+                max_dates_delta=relativedelta(months=2),
+            )
+        )
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "split into 2 sub-ranges of 2 months" in warnings[0].message
+
+
+def test_iter_batches_no_warning_when_dates_are_not_split(caplog):
+    with caplog.at_level(logging.WARNING, logger="openhexa.toolbox.dhis2.dhis2"):
+        list(
+            _iter_batches(
+                data_elements=["dx1"],
+                org_units=["ou1"],
+                start_date="2021-10-01",
+                end_date="2021-11-01",
+                max_dates_delta=relativedelta(months=2),
+            )
+        )
+
+    assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
+
+
+@pytest.mark.parametrize(
+    ("delta", "expected"),
+    [
+        (relativedelta(years=1), "1 year"),
+        (relativedelta(months=6), "6 months"),
+        (relativedelta(years=1, months=2), "1 year 2 months"),
+        (timedelta(days=1), "1 day"),
+        (timedelta(days=90), "90 days"),
+    ],
+)
+def test_format_delta(delta, expected):
+    assert _format_delta(delta) == expected
 
 
 def test_iter_batches():
