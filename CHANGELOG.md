@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.4](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.3...v2.11.4) (2026-09-04)
+
+
+### Bug Fixes
+
+* **dhis2:** warn when a date range is split into chunks ([#219](https://github.com/BLSQ/openhexa-toolbox/issues/219)) ([10765e7](https://github.com/BLSQ/openhexa-toolbox/commit/10765e7469241eae685c68bc8670791ebbd93863))
+
 ## [2.11.3](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.2...v2.11.3) (2026-08-06)
 
 
