@@ -800,6 +800,35 @@ def _batch_dates(start: date, end: date, delta: timedelta | relativedelta) -> Ge
         current_date = next_date
 
 
+def _format_delta(delta: timedelta | relativedelta) -> str:
+    """Describe a date range delta in human-readable form.
+
+    Parameters
+    ----------
+    delta : timedelta or relativedelta
+        Delta to describe.
+
+    Returns
+    -------
+    str
+        A human-readable description of the delta, e.g. "1 year" or "6 months".
+    """
+    if isinstance(delta, timedelta):
+        components = [("day", delta.days), ("second", delta.seconds)]
+    else:
+        components = [
+            ("year", delta.years),
+            ("month", delta.months),
+            ("day", delta.days),
+            ("hour", delta.hours),
+            ("minute", delta.minutes),
+            ("second", delta.seconds),
+        ]
+
+    parts = [f"{value} {unit}{'s' if value > 1 else ''}" for unit, value in components if value]
+    return " ".join(parts) if parts else str(delta)
+
+
 def _batch(items: list, n: int) -> Generator[list]:
     """Yield successive n-sized chunks from items.
 
@@ -909,7 +938,19 @@ def _iter_batches(
     if start_date and end_date:
         start_date = date.fromisoformat(start_date)
         end_date = date.fromisoformat(end_date)
-        batches.append(Batch(type="dates", items=b) for b in _batch_dates(start_date, end_date, max_dates_delta))
+        date_batches = list(_batch_dates(start_date, end_date, max_dates_delta))
+
+        if len(date_batches) > 1:
+            logger.warning(
+                f"The date range {start_date.isoformat()} to {end_date.isoformat()} is being split into "
+                f"{len(date_batches)} sub-ranges of {_format_delta(max_dates_delta)}. DHIS2 only returns data for "
+                "periods that are fully contained in the requested date range, so any period straddling a split "
+                "boundary will be missing from the results. This can cause data loss for period types that do not "
+                "align with the split frequency (e.g. weekly or bi-monthly periods). To avoid this, request the "
+                "periods explicitly with the `periods` parameter, or use a shorter date range."
+            )
+
+        batches.append(Batch(type="dates", items=b) for b in date_batches)
 
     for batch in itertools.product(*batches):
         yield {b.type: b.items for b in batch}
