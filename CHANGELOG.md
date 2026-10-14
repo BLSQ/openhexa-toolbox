@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.5](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.4...v2.11.5) (2026-10-14)
+
+
+### Bug Fixes
+
+* **deps:** update dependency build to ~=1.6.1 ([#200](https://github.com/BLSQ/openhexa-toolbox/issues/200)) ([2ee38ab](https://github.com/BLSQ/openhexa-toolbox/commit/2ee38abaca1e8039e9070f538a17dd86eadf02a8))
+
 ## [2.11.4](https://github.com/BLSQ/openhexa-toolbox/compare/v2.11.3...v2.11.4) (2026-09-04)
 
 
