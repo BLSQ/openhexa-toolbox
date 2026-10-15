@@ -15,7 +15,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: 3.13
+          python-version: 3.15
 
       - uses: pre-commit/action@v3.0.1
   test:
@@ -28,7 +28,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: 3.13
+          python-version: 3.15
       
       - name: "Install dependencies"
         run: pip install ".[test,era5,lineage]"
@@ -46,7 +46,7 @@ jobs:
         with:
           auto-activate-base: true
           activate-environment: true
-          python-version: 3.13
+          python-version: 3.15
 
       - name: Install conda tools
         run: conda install -y conda-build anaconda-client
